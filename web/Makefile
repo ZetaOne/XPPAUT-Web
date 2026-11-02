@@ -53,7 +53,10 @@ WASM_LDFLAGS := -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createXpp \
                 -sINVOKE_RUN=0 -sEXIT_RUNTIME=1 -sFORCE_FILESYSTEM=1 \
                 -sEXPORTED_RUNTIME_METHODS=callMain,FS,NODEFS,ENV,HEAPU8,HEAP32,UTF8ToString,stringToUTF8 \
                 -sEXPORTED_FUNCTIONS=_main,_malloc,_free,$(XW_EXPORTS) \
-                -sSTACK_SIZE=4MB -lnodefs.js
+                -sSTACK_SIZE=4MB -lnodefs.js \
+                -Wl,--wrap=fopen -Wl,--wrap=fclose
+# fopen/fclose are wrapped (platform_web.c) so the page learns about every
+# file XPP writes and can download it
 WJ := $(ROOT)/build/wasm-jspi
 WASM_OBJS = $(addprefix $(WA)/,$(OBJECTS) $(XLIB) platform_web.o)
 

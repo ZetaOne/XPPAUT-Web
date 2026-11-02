@@ -11,6 +11,10 @@
  *   then     emscripten_sleep()      give the browser a turn (Asyncify)
  */
 #include <emscripten.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include <X11/Xlib.h>
 #include "xw.h"
 
@@ -72,4 +76,53 @@ EMSCRIPTEN_KEEPALIVE int xw_toplevel_info(Window w, int *out)
   out[3] = t->height;
   out[4] = t->mapped;
   return 1;
+}
+
+/* ---- files XPP writes ---------------------------------------------------
+   Linked with -Wl,--wrap=fopen -Wl,--wrap=fclose: XPP's calls come here.
+   When a file opened for writing is closed, tell the page (Module.xppFileWritten
+   with the absolute path) so it can download it or save it to a folder. */
+FILE *__real_fopen(const char *path, const char *mode);
+int __real_fclose(FILE *f);
+
+EM_JS(void, js_file_written, (const char *path), {
+  if (Module.xppFileWritten) Module.xppFileWritten(UTF8ToString(path));
+});
+
+#define MAX_OPEN 64
+static struct { FILE *f; char *path; } writing[MAX_OPEN];
+
+FILE *__wrap_fopen(const char *path, const char *mode)
+{
+  FILE *f = __real_fopen(path, mode);
+  if (f && path && mode && (strchr(mode, 'w') || strchr(mode, 'a') || strchr(mode, '+'))) {
+    char full[1024];
+    if (path[0] == '/') snprintf(full, sizeof full, "%s", path);
+    else {
+      char cwd[512];
+      if (!getcwd(cwd, sizeof cwd)) strcpy(cwd, "/");
+      snprintf(full, sizeof full, "%s/%s", strcmp(cwd, "/") ? cwd : "", path);
+    }
+    for (int i = 0; i < MAX_OPEN; i++)
+      if (!writing[i].f) {
+        writing[i].f = f;
+        writing[i].path = strdup(full);
+        break;
+      }
+  }
+  return f;
+}
+
+int __wrap_fclose(FILE *f)
+{
+  int r = __real_fclose(f);
+  for (int i = 0; i < MAX_OPEN; i++)
+    if (f && writing[i].f == f) {
+      js_file_written(writing[i].path);
+      free(writing[i].path);
+      writing[i].f = NULL;
+      writing[i].path = NULL;
+      break;
+    }
+  return r;
 }

@@ -65,6 +65,8 @@ export interface XppCallbacks {
   onOutput?: (line: string) => void;
   onExit?: (status: number) => void;
   onNotice?: (message: string) => void;
+  /** XPP finished writing a file in its working folder (an export) */
+  onFileWritten?: (name: string) => void;
 }
 
 export class XppSession {
@@ -138,6 +140,9 @@ export class XppSession {
       },
       xppCursor: (w: number, shape: number) => this.setCursor(w, shape),
       xppBell: () => this.bell(),
+      xppFileWritten: (path: string) => {
+        if (path.startsWith('/work/') && !path.slice(6).includes('/')) this.cb.onFileWritten?.(path.slice(6));
+      },
       xppOpenHelp: () => {
         const w = window.open(new URL('help/xpphelp.html', document.baseURI).href, 'xpp-help');
         if (!w) this.cb.onNotice?.('Pop-up blocked: XPP help is at help/xpphelp.html');

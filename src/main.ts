@@ -31,9 +31,16 @@ app.innerHTML = `
             <button class="small" id="zipall">Download all (.zip)</button>
           </div>
           <table id="filelist"></table>
-          <p class="files-note">Plots: XPP's <b>Graphic stuff → Postscript</b> (or SVG) writes a file here; ⤓ on any window's title bar saves it as PNG.</p>
+          <p class="files-note">Everything XPP saves (Graphic stuff → Postscript/SVG, data, .set files, AUTO diagrams) is also downloaded or saved to your folder, as chosen under <b>Exports</b>. ⤓ on any window's title bar saves it as PNG.</p>
         </div>
       </details>
+      <label title="What happens when XPP saves a file (plots, data, .set, AUTO diagrams)">Exports
+        <select id="exportmode">
+          <option value="download">Download</option>
+          <option value="folder">Save to a folder…</option>
+          <option value="files">Keep in Files only</option>
+        </select>
+      </label>
       <label title="XPP's terminal output (messages, errors, printed values)">Output
         <select id="termmode">
           <option value="hidden">Hidden</option>
@@ -156,6 +163,7 @@ async function launch(name: string, text: string, extras: Array<{ name: string; 
   session = new XppSession(desktop, {
     onOutput: (line) => terminal.write(line),
     onNotice: notice,
+    onFileWritten: exported,
     onExit: (status) => {
       $('status').textContent = `${name} — XPP exited (${status})`
     },
@@ -200,7 +208,7 @@ const wasmReady: Promise<ArrayBuffer> = (async () => {
     got += value.length
     const f = total ? Math.min(1, got / total) : 0
     fill.style.width = (total ? f * 100 : 30 + ((got / 50000) % 60)) + '%'
-    if (total) $('loadbar').setAttribute('aria-valuenow', String(Math.round(f * 100)))
+    if (total) document.getElementById('loadbar')?.setAttribute('aria-valuenow', String(Math.round(f * 100)))
     label.textContent = total ? `Loading XPP… ${mb(got)} of ${mb(total)}` : `Loading XPP… ${mb(got)}`
   }
   const buf = new Uint8Array(got)
@@ -211,7 +219,7 @@ const wasmReady: Promise<ArrayBuffer> = (async () => {
   }
   fill.style.width = '100%'
   label.textContent = 'XPP is ready.'
-  setTimeout(() => $('loadbar').classList.add('done'), 300)
+  setTimeout(() => document.getElementById('loadbar')?.classList.add('done'), 300) // may be gone already
   return buf.buffer
 })()
 wasmReady.catch(() => {
@@ -306,6 +314,80 @@ separate.addEventListener('change', () => {
   if (session) session.popOutNew = separate.checked
   store.set('xpp-separate', separate.checked ? '1' : '0')
 })
+
+// ---- exports: files XPP writes are downloaded or saved to a chosen folder ----
+type ExportMode = 'download' | 'folder' | 'files'
+interface DirHandle {
+  name: string
+  getFileHandle(n: string, o: { create: boolean }): Promise<{ createWritable(): Promise<{ write(d: BlobPart): Promise<void>; close(): Promise<void> }> }>
+}
+const exportSelect = $<HTMLSelectElement>('exportmode')
+const canPickFolder = 'showDirectoryPicker' in window
+let exportMode: ExportMode = 'download'
+let exportDir: DirHandle | null = null
+if (!canPickFolder) {
+  const opt = exportSelect.querySelector('option[value="folder"]') as HTMLOptionElement
+  opt.disabled = true
+  opt.textContent = 'Save to a folder… (Chrome/Edge only)'
+}
+{
+  const saved = store.get('xpp-exports')
+  if (saved === 'files' || saved === 'download') exportMode = saved
+  exportSelect.value = exportMode // a folder has to be picked again after reloading
+}
+exportSelect.addEventListener('change', async () => {
+  const want = exportSelect.value as ExportMode
+  if (want === 'folder') {
+    try {
+      const pick = (window as unknown as { showDirectoryPicker(o: object): Promise<DirHandle> }).showDirectoryPicker
+      exportDir = await pick({ mode: 'readwrite', id: 'xpp-exports' })
+      exportMode = 'folder'
+      notice(`XPP will save files in the folder "${exportDir.name}"`)
+    } catch {
+      exportSelect.value = exportMode // cancelled: keep the previous choice
+    }
+    return
+  }
+  exportMode = want
+  store.set('xpp-exports', want)
+})
+
+const pendingExports = new Map<string, ReturnType<typeof setTimeout>>()
+function exported(name: string) {
+  if (/^fort\.\d+$/.test(name)) return // AUTO's scratch files
+  // XPP sometimes reopens a file to append; deliver once it settles
+  clearTimeout(pendingExports.get(name))
+  pendingExports.set(name, setTimeout(() => deliverExport(name), 250))
+}
+
+async function deliverExport(name: string) {
+  pendingExports.delete(name)
+  updateFileCount()
+  if (!session || exportMode === 'files') {
+    notice(`Saved ${name} (see Files)`)
+    return
+  }
+  let data: Uint8Array
+  try {
+    data = session.readFile(name)
+  } catch {
+    return // removed again (temporary file)
+  }
+  if (exportMode === 'folder' && exportDir) {
+    try {
+      const fh = await exportDir.getFileHandle(name, { create: true })
+      const w = await fh.createWritable()
+      await w.write(data as BlobPart)
+      await w.close()
+      notice(`Saved ${name} in "${exportDir.name}"`)
+      return
+    } catch {
+      notice(`Could not write to "${exportDir.name}"; downloading ${name} instead`)
+    }
+  }
+  download(name, data)
+  notice(`Downloaded ${name}`)
+}
 
 // ---- files ------------------------------------------------------------------
 function formatSize(n: number): string {

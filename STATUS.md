@@ -170,6 +170,18 @@ original).
     Actions annotations: actions/* v4/v5 run on deprecated Node 20 (forced
     to Node 24) - bump action versions when convenient.
 
+16. **Exports download** (user's bug report): the WebAssembly build wraps
+    fopen/fclose (`-Wl,--wrap`, platform_web.c), so whenever XPP closes a
+    file it wrote in its working folder the page delivers it according to
+    the toolbar "Exports" setting: Download (default), Save to a folder…
+    (File System Access API, Chrome/Edge; picked again after a reload), or
+    Keep in Files only. AUTO's fort.* scratch files and its .b/.d/.s
+    working files are not downloaded (they stay in Files). Verified in
+    headless Chrome: SVG, PostScript and data-browser Write download;
+    Files-only does not. The folder mode needs a real browser dialog and
+    was not tested headlessly. Also fixed a page error when the loading
+    area was removed before its fade-out timer.
+
 ## Next
 
 - Browser overhead (~1.3x with JSPI) is mostly yielding ~30 times a second
