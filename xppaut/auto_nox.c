@@ -2390,7 +2390,7 @@ void auto_start_at_homoclinic()
   if(HomoFlag==2)
     xAuto.iequib=-2;
   flag=get_homo_info(HomoFlag,&xAuto.nunstab,&xAuto.nstab,homo_l,homo_r);
-  if(flag)do_auto(opn,close,Auto.itp);
+  if(flag)do_auto(opn,cls,Auto.itp); /* XPPAUT-Web: was "close" (libc function), a typo for cls */
 
   
 }

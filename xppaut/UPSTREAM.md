@@ -16,3 +16,16 @@ Removed when importing (not source, not needed):
 
 The GitHub repository github.com/Ermentrout/xppaut was last updated in
 February 2016 and is older than this release, so it is not used.
+
+## Patches
+
+Changes to upstream files are marked with `XPPAUT-Web:` comments.
+
+| File | Change | Why |
+|---|---|---|
+| `extra.c` | Gave the no-DLL stub functions proper return types and defined `MAXW` there | The no-DLL branch did not compile with clang (and `MAXW` was only defined in the DLL branch) |
+| `extra.c` | `add_export_list`: `malloc(l1)` to `malloc(l1+1)` (same for `l2`) | 1-byte heap overflow; any `.ode` using `export` aborts on Ubuntu's gcc and would corrupt the heap in WebAssembly |
+| `auto_nox.c` | `auto_start_at_homoclinic`: `do_auto(opn,close,...)` to `do_auto(opn,cls,...)` | Typo passed the address of libc `close` as the save flag, so AUTO appended to `.b`/`.d` files instead of overwriting them |
+| `gogoauto.c` | `dump_params` given a `void` return type | Implicit `int` is an error in clang |
+
+The last AUTO fix is a deliberate behaviour difference from the unpatched desktop build.

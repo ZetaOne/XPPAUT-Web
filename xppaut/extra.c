@@ -161,6 +161,9 @@ int my_fun(double *in, double *out, int nin,int nout,double *v,double *c)
   return(1);
 }  
 #else
+/* XPPAUT-Web: give the no-DLL stubs proper types (they did not compile
+   with clang) and define MAXW, which was only defined in the DLL branch. */
+#define MAXW 50
 
 void get_import_values(int n, double *ydot, char *soname, char *sofun,
 		       int ivar, double *wgt[MAXW],
@@ -168,18 +171,16 @@ void get_import_values(int n, double *ydot, char *soname, char *sofun,
 {
 
 }
-load_new_dll()
+void load_new_dll(void)
 {
 
 }
-my_fun(double *in, double *out, int nin,int nout,double *v,double *c)
+int my_fun(double *in, double *out, int nin,int nout,double *v,double *c)
 {
-
-
-
+  return 0;
 }
 
-auto_load_dll()
+void auto_load_dll(void)
 {
 
 }
@@ -214,8 +215,9 @@ void add_export_list(char *in,char *out)
   int l1=strlen(in);
   int l2=strlen(out);
   int i;
-  in_out.lin=(char *)malloc(l1);
-  in_out.lout=(char *)malloc(l2);
+  /* XPPAUT-Web: +1 for the terminating NUL (was a 1-byte heap overflow) */
+  in_out.lin=(char *)malloc(l1+1);
+  in_out.lout=(char *)malloc(l2+1);
   strcpy(in_out.lin,in);
   strcpy(in_out.lout,out);
   i=get_export_count(in);
