@@ -1,0 +1,6 @@
+# slider setup dialog
+window "XPP Ver"
+click 30 360
+sleep 800
+window "Set Sliders"
+shot slider.ppm

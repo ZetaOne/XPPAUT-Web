@@ -1,0 +1,15 @@
+# File / Calculator: evaluate a formula, check the Answer window.
+# (Not compared: the main window afterwards. Without a window manager the
+# Answer window opens over the command line, and raising the main window
+# for the shot makes the real X server expose it, which moves XPP's
+# cursor; our top-levels are composited, so nothing is exposed.)
+window "XPP Ver"
+move 400 200
+key f
+key c
+sleep 800
+type 2*iapp+1
+key Return
+sleep 500
+window "Answer"
+shot calc.ppm

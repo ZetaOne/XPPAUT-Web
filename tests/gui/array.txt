@@ -1,0 +1,8 @@
+# Viewaxes / Array: array plot and its edit dialog
+window "XPP Ver"
+move 400 200
+key v
+key a
+sleep 800
+window "Edit arrayplot"
+shot arraydlg.ppm

@@ -1,0 +1,15 @@
+# Xi vs t: time plot of V
+window "XPP Ver"
+move 400 200
+key i
+key g
+sleep 500
+key x
+sleep 300
+key Return
+sleep 800
+shot xvst.ppm
+key w
+key f
+sleep 800
+shot fit.ppm

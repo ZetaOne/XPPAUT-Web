@@ -71,7 +71,15 @@ original).
      looped forever when the Equations window opened).
    - Keys typed during an integration are discarded by XPP itself (its
      abort check reads them), as on the desktop.
-5. **Pixel-identical to the desktop XPP** on the scenarios tested so far.
+5. **Pixel-identical to the desktop XPP**: 32 screenshots in 22 scenarios
+   (`tests/gui/`), including 3D view, array plot, animation (pend.ani
+   loaded and played), file selector, calculator, sliders, numerics and
+   kinescope menus, singular points, Lorenz in 3D, data browser scrolling,
+   Makewindow, Xi vs t, window fit. Scripts can set `# ode:` and `# files:`.
+   `XPPWEB_NOWM=1` makes the harness a bare X server like Xvfb (top-level
+   borders, exposure between top-levels), for these comparisons only.
+   Known test-only artefact: in calc.txt the main window is not compared
+   (it depends on top-levels overlapping without a window manager).
    `scripts/compare-gui.sh tests/gui/*.txt` runs each script on the real
    XPP (Xvfb + xdotool, `scripts/xref.py`) and on our Xlib (headless
    harness, `XPPWEB_NOWM=1`), and compares every shot. All 10 identical:
@@ -89,13 +97,19 @@ original).
    - Batch output still byte-identical on all 144 examples (wasm vs musl
      baseline) with Asyncify.
 
+6. **Separate browser windows** (user's request): any XPP window can be
+   popped out with ⧉ in its title bar; closing the browser window docks it
+   back, and closing it in XPP closes the browser window. Toolbar option
+   "New windows in separate browser windows" (remembered per browser)
+   opens XPP's new windows that way; needs pop-ups allowed for the site.
+   Input uses pointer events with capture and per-window coordinates, so
+   everything works the same docked or popped out.
+
 ## Next
 
-- **Finish step 3:** add comparison scenarios (tests/gui/) for the
-  remaining window types: animation (kinescope/aniparse), array plots, file
-  browser, help, extra graph windows (Makewindow), 3D, sliders, browser
-  editing, AUTO periodic orbits, other .ode examples. Speed of long
-  integrations in the browser.
+- **Finish step 3:** more scenarios (AUTO periodic orbits and two-
+  parameter runs, kinescope capture/playback, editing in the data browser,
+  help, more .ode examples); speed of long integrations in the browser.
 - **Step 4:** fuller downloads (plots as PNG/SVG/PS, .set files, AUTO
   output), saving an edited .ode, uploading data files.
 

@@ -6,7 +6,9 @@
  * screenshots always show a fully drawn interface.
  *
  *   window "<title prefix>"   following coordinates are relative to that
- *                             top-level window ("window root" to reset)
+ *                             top-level window ("window root" to reset,
+ *                             "window *" = newest window except the main one,
+ *                             for windows with random titles)
  *   move X Y                  move the pointer
  *   click X Y [BUTTON]        press and release (default button 1)
  *   press X Y [BUTTON] / release X Y [BUTTON]
@@ -42,6 +44,7 @@ static int sw, sh;
 static void screen_size(void)
 {
   if (sw) return;
+  xw_bare_x = getenv("XPPWEB_NOWM") != NULL;
   sw = 1280;
   sh = 1024;
   const char *s = getenv("XPPWEB_SCREEN");
@@ -88,6 +91,19 @@ static Window find_window(const char *prefix)
 {
   Window tops[256];
   int n = xw_toplevels(tops, 256);
+  if (!strcmp(prefix, "*")) { /* newest mapped window other than the first */
+    Window best = None, first = None;
+    for (int i = 0; i < n; i++) {
+      xw_drawable *t = xw_lookup(tops[i]);
+      if (!t || !t->mapped) continue;
+      if (first == None || tops[i] < first) first = tops[i];
+    }
+    for (int i = 0; i < n; i++) {
+      xw_drawable *t = xw_lookup(tops[i]);
+      if (t && t->mapped && tops[i] != first && tops[i] > best) best = tops[i];
+    }
+    return best;
+  }
   for (int i = n - 1; i >= 0; i--) { /* topmost first */
     xw_drawable *t = xw_lookup(tops[i]);
     if (t && t->mapped && !strncmp(xw_title(tops[i]), prefix, strlen(prefix))) return tops[i];
@@ -100,8 +116,10 @@ static void to_root(int *x, int *y)
   if (cur_win == None) return;
   xw_drawable *t = xw_lookup(cur_win);
   if (!t) fail("window no longer exists", NULL);
-  *x += t->x;
-  *y += t->y;
+  int ox, oy;
+  xw_root_origin(t, &ox, &oy);
+  *x += ox;
+  *y += oy;
 }
 
 static void write_ppm(const char *path, const uint8_t *rgba, int w, int h)
@@ -128,11 +146,12 @@ static void screenshot(const char *path)
   for (int k = 0; k < n; k++) {
     xw_drawable *t = xw_lookup(tops[k]);
     if (!t || !t->mapped) continue;
-    int w, h;
+    int w, h, ox, oy;
     uint8_t *img = xw_render(tops[k], &w, &h);
+    xw_root_origin(t, &ox, &oy);
     for (int y = 0; y < h; y++)
       for (int x = 0; x < w; x++) {
-        int X = t->x + x, Y = t->y + y;
+        int X = ox + x, Y = oy + y;
         if (X < 0 || Y < 0 || X >= sw || Y >= sh) continue;
         memcpy(screen + 4 * ((size_t)Y * sw + X), img + 4 * ((size_t)y * w + x), 4);
       }

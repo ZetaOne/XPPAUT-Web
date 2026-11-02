@@ -1,0 +1,24 @@
+# Animation: load pend.ani in the Toon window and play it
+# ode: pend.ode
+# files: pend.ani
+window "XPP Ver"
+move 400 200
+key i
+key g
+sleep 800
+key v
+key t
+sleep 800
+window *
+click 30 10
+sleep 800
+window "*.ani"
+shot anifile.ppm
+# clicking a file name loads it and closes the selector
+click 65 93
+sleep 800
+window *
+shot aniload.ppm
+click 103 10
+sleep 6000
+shot aniend.ppm

@@ -1,0 +1,8 @@
+# Viewaxes / 3D dialog
+window "XPP Ver"
+move 400 200
+key v
+key 3
+sleep 800
+window "3D View"
+shot view3d.ppm

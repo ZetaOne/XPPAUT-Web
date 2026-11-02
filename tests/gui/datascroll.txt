@@ -1,0 +1,17 @@
+# Data viewer: scroll and page through the data after a run
+window "XPP Ver"
+move 400 200
+key i
+key g
+sleep 500
+click 257 8
+sleep 500
+window "Data Viewer"
+click 226 10
+click 226 10
+click 226 29
+sleep 300
+shot datascroll.ppm
+click 266 29
+sleep 300
+shot datapage.ppm

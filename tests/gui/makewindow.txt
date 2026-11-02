@@ -1,0 +1,11 @@
+# Makewindow / Create: a second graph window
+window "XPP Ver"
+move 400 200
+key i
+key g
+sleep 500
+key m
+key c
+sleep 800
+window "W vs V"
+shot makewindow.ppm

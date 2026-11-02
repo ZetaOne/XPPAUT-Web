@@ -1,0 +1,16 @@
+# Lorenz attractor: integrate, then the 3D view of x,y,z
+# ode: lorenz.ode
+window "XPP Ver"
+move 400 200
+key i
+key g
+sleep 1500
+shot lorenz.ppm
+key v
+key 3
+sleep 800
+window "3D View"
+key Return
+sleep 1500
+window "XPP Ver"
+shot lorenz3d.ppm

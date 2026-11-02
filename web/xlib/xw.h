@@ -75,6 +75,7 @@ struct _XGC {
 
 /* ---- core (xlib.c) ------------------------------------------------------- */
 extern Display *xw_display;
+extern int xw_bare_x; /* set by the platform; see xlib.c */
 xw_drawable *xw_lookup(XID id);
 xw_drawable *xw_root(void);
 xw_drawable *xw_toplevel_of(xw_drawable *w);

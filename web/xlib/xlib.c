@@ -22,6 +22,10 @@ static xw_drawable *res[MAX_RES]; /* indexed by XID - XID_BASE */
 static XID next_xid = XID_BASE + 1;
 
 Display *xw_display;
+/* 0: a window manager composites top-levels (browser): no X borders on
+   top-levels, covering one top-level never loses another's contents.
+   1: bare X server, like Xvfb with no WM (tests against the real XPP). */
+int xw_bare_x;
 static Screen xw_screen;
 static Visual xw_visual;
 static Depth xw_depth;
@@ -120,7 +124,7 @@ void xw_root_origin(xw_drawable *w, int *x, int *y)
 {
   int ax = 0, ay = 0;
   for (; w && w != root; w = w->parent) {
-    if (w->parent == root) { ax += w->x; ay += w->y; } /* WM owns top-level borders */
+    if (w->parent == root && !xw_bare_x) { ax += w->x; ay += w->y; } /* WM owns top-level borders */
     else { ax += w->x + w->border_width; ay += w->y + w->border_width; }
   }
   *x = ax;
@@ -264,7 +268,7 @@ static int intersect(xw_rect a, xw_rect b, xw_rect *out)
 /* outer rectangle (including border) of a child, in its parent's coordinates */
 static xw_rect outer_rect(xw_drawable *c)
 {
-  int bw = c->parent == root ? 0 : c->border_width;
+  int bw = c->parent == root && !xw_bare_x ? 0 : c->border_width;
   return (xw_rect){c->x, c->y, c->width + 2 * bw, c->height + 2 * bw};
 }
 
@@ -299,8 +303,8 @@ static int child_index(xw_drawable *p, xw_drawable *c)
    at stacking index idx, is now uncovered */
 static void reveal(xw_drawable *p, xw_rect r, int idx)
 {
-  if (!p || p == root || !xw_viewable(p)) return;
-  expose_rect(p, r, 0);
+  if (!p || (p == root && !xw_bare_x) || !xw_viewable(p)) return;
+  if (p != root) expose_rect(p, r, 0);
   for (int i = 0; i < idx && i < p->nchildren; i++) {
     xw_drawable *s = p->children[i];
     xw_rect part;
@@ -315,7 +319,7 @@ static void reveal(xw_drawable *p, xw_rect r, int idx)
 static void expose_raised(xw_drawable *w, int from)
 {
   xw_drawable *p = w->parent;
-  if (!p || p == root || !w->mapped) return;
+  if (!p || (p == root && !xw_bare_x) || !w->mapped) return;
   xw_rect me = outer_rect(w);
   int bw = w->border_width;
   for (int i = from + 1; i < p->nchildren; i++) {
@@ -342,7 +346,7 @@ static xw_drawable *window_at(xw_drawable *w, int x, int y)
   for (int i = w->nchildren - 1; i >= 0; i--) {
     xw_drawable *c = w->children[i];
     if (!c->mapped) continue;
-    int bw = w == root ? 0 : c->border_width;
+    int bw = w == root && !xw_bare_x ? 0 : c->border_width;
     int cx = c->x, cy = c->y;
     if (x >= cx && y >= cy && x < cx + c->width + 2 * bw && y < cy + c->height + 2 * bw)
       return window_at(c, x - cx - bw, y - cy - bw);
@@ -549,6 +553,7 @@ void xw_input_raise(Window top)
 {
   xw_drawable *t = xw_lookup(top);
   if (!t || t->parent != root) return;
+  if (xw_bare_x) expose_raised(t, child_index(root, t)); /* no compositor */
   remove_child(root, t);
   add_child(root, t);
   active_top = top;
@@ -885,7 +890,7 @@ int XLowerWindow(Display *d, Window win)
   if (!w || !w->is_window || w == root) return 1;
   xw_drawable *p = w->parent;
   int from = child_index(p, w);
-  if (w->mapped && p != root) { /* siblings below w lose its cover */
+  if (w->mapped && (p != root || xw_bare_x)) { /* siblings below w lose its cover */
     xw_rect me = outer_rect(w), part;
     for (int i = 0; i < from; i++) {
       xw_drawable *s = p->children[i];
@@ -963,7 +968,7 @@ static void configure(xw_drawable *w, int x, int y, int width, int height, int m
      (XPP re-resizes windows from its ConfigureNotify handler) */
   if (!resized && !moved) return;
   xw_rect old = outer_rect(w);
-  int viewable = w->parent != root && xw_viewable(w);
+  int viewable = (w->parent != root || xw_bare_x) && xw_viewable(w);
   if (move) { w->x = x; w->y = y; }
   if (resized) {
     resize_buffer(w, width, height);
@@ -1006,7 +1011,7 @@ int XSetWindowBorderWidth(Display *d, Window win, unsigned int width)
     xw_rect old = outer_rect(w);
     int shrink = (int)width < w->border_width;
     w->border_width = width;
-    if (shrink && w->mapped && w->parent != root && xw_viewable(w))
+    if (shrink && w->mapped && (w->parent != root || xw_bare_x) && xw_viewable(w))
       reveal(w->parent, old, child_index(w->parent, w));
     if (w->parent) xw_mark_dirty(w->parent);
   }

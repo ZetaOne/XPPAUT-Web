@@ -99,6 +99,14 @@ label select {
   color: var(--muted);
 }
 
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
 .files {
   position: relative;
 }
@@ -205,7 +213,7 @@ label select {
   text-overflow: ellipsis;
 }
 
-.xwin-close {
+.xwin-btn {
   padding: 0 6px;
   border: 0;
   background: transparent;

@@ -51,6 +51,13 @@ def geometry(win):
 
 
 def find(prefix):
+    ids = run("xdotool", "search", "--onlyvisible", "--name", ".", check=False).split()
+    if prefix == "*":  # newest viewable window other than the first (main) one
+        ids = sorted(ids, key=int)
+        live = [i for i in ids if "IsViewable" in run("xwininfo", "-id", i, check=False)]
+        if len(live) < 2:
+            sys.exit("xref: no second window")
+        return live[-1]
     for line in run("xdotool", "search", "--onlyvisible", "--name", ".", check=False).split():
         name = run("xdotool", "getwindowname", line, check=False).strip()
         if name.startswith(prefix):
@@ -116,7 +123,10 @@ try:
                 im = Image.open(png)
                 im.crop((bw, bw, im.width - bw, im.height - bw)).save(png)
             os.remove(xwd)
-        elif cmd in ("list", "probe", "quit"):
+        elif cmd == "list":
+            for wid in run("xdotool", "search", "--onlyvisible", "--name", ".", check=False).split():
+                print("  ref window", wid, repr(run("xdotool", "getwindowname", wid, check=False).strip()))
+        elif cmd in ("probe", "quit"):
             pass
         else:
             sys.exit("xref: unknown command " + cmd)

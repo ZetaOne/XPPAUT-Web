@@ -1,0 +1,11 @@
+# nUmerics and Kinescope submenus
+window "XPP Ver"
+move 400 200
+key u
+sleep 300
+shot numerics.ppm
+key Escape
+sleep 300
+key k
+sleep 300
+shot kinescope.ppm

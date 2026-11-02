@@ -16,6 +16,9 @@ app.innerHTML = `
     </div>
     <div class="session" id="session" hidden>
       <span id="status"></span>
+      <label class="check" title="Open XPP's new windows as separate browser windows (allow pop-ups for this site). Any window can also be popped out with ⧉ in its title bar.">
+        <input type="checkbox" id="separate"> New windows in separate browser windows
+      </label>
       <details class="files" id="files">
         <summary>Files</summary>
         <ul id="filelist"></ul>
@@ -52,12 +55,33 @@ async function launch(name: string, text: string) {
   history.replaceState(null, '', '?ode=' + encodeURIComponent(name))
   session = new XppSession(desktop, {
     onOutput: output,
+    onNotice: (msg) => {
+      $('status').textContent = msg
+      setTimeout(() => ($('status').textContent = name), 6000)
+    },
     onExit: (status) => {
       $('status').textContent = `${name} — XPP exited (${status})`
     },
   })
+  session.popOutNew = $<HTMLInputElement>('separate').checked
   await session.start(name, text)
 }
+
+// remember the separate-windows choice (per browser)
+const separate = $<HTMLInputElement>('separate')
+try {
+  separate.checked = localStorage.getItem('xpp-separate') === '1'
+} catch {
+  /* storage unavailable */
+}
+separate.addEventListener('change', () => {
+  if (session) session.popOutNew = separate.checked
+  try {
+    localStorage.setItem('xpp-separate', separate.checked ? '1' : '0')
+  } catch {
+    /* storage unavailable */
+  }
+})
 
 async function loadExample(name: string) {
   const res = await fetch('odes/' + encodeURIComponent(name))

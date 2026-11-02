@@ -1,0 +1,8 @@
+# File / Read set: file selector
+window "XPP Ver"
+move 400 200
+key f
+key r
+sleep 800
+window "*.set"
+shot filesel.ppm

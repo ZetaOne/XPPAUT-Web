@@ -12,6 +12,10 @@
 //   drag X1 Y1 X2 Y2   press, move, release
 //   shot FILE.png      screenshot of the viewport
 //   eval JS            print the value of an expression
+//   targets            list open browser windows (pages) and their titles
+//   popshot TITLE F    screenshot of another browser window by title prefix
+//   popclose TITLE     close another browser window by title prefix
+//   popclick TITLE X Y click in another browser window
 //
 // Console output from the page is printed with a "page:" prefix.
 import { spawn } from 'node:child_process';
@@ -106,6 +110,48 @@ try {
     } else if (cmd === 'shot') {
       const r = await send('Page.captureScreenshot', { format: 'png' });
       writeFileSync(rest, Buffer.from(r.data, 'base64'));
+    } else if (cmd === 'targets') {
+      const list = await (await fetch(`http://127.0.0.1:${port}/json`)).json();
+      console.log(JSON.stringify(list.filter((t) => t.type === 'page').map((t) => t.title)));
+    } else if (cmd === 'popshot') {
+      const title = a[0];
+      const list = await (await fetch(`http://127.0.0.1:${port}/json`)).json();
+      const t = list.find((x) => x.type === 'page' && x.title.startsWith(title));
+      if (!t) throw new Error('no browser window titled ' + title);
+      const pws = new WebSocket(t.webSocketDebuggerUrl);
+      await new Promise((r) => pws.addEventListener('open', r));
+      const shot = await new Promise((res) => {
+        pws.addEventListener('message', (m) => {
+          const msg = JSON.parse(m.data);
+          if (msg.id === 1) res(msg.result);
+        });
+        pws.send(JSON.stringify({ id: 1, method: 'Page.captureScreenshot', params: { format: 'png' } }));
+      });
+      writeFileSync(a[1], Buffer.from(shot.data, 'base64'));
+      pws.close();
+    } else if (cmd === 'popclick') {
+      const list = await (await fetch(`http://127.0.0.1:${port}/json`)).json();
+      const t = list.find((x) => x.type === 'page' && x.title.startsWith(a[0]));
+      if (!t) throw new Error('no browser window titled ' + a[0]);
+      const pws = new WebSocket(t.webSocketDebuggerUrl);
+      await new Promise((r) => pws.addEventListener('open', r));
+      let id = 0;
+      const call = (method, params) => new Promise((res) => {
+        const my = ++id;
+        const on = (m) => { const msg = JSON.parse(m.data); if (msg.id === my) { pws.removeEventListener('message', on); res(msg); } };
+        pws.addEventListener('message', on);
+        pws.send(JSON.stringify({ id: my, method, params }));
+      });
+      const [x, y] = [+a[1], +a[2]];
+      await call('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, button: 'none' });
+      await call('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', buttons: 1, clickCount: 1 });
+      await call('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', buttons: 0, clickCount: 1 });
+      pws.close();
+    } else if (cmd === 'popclose') {
+      const list = await (await fetch(`http://127.0.0.1:${port}/json`)).json();
+      const t = list.find((x) => x.type === 'page' && x.title.startsWith(rest));
+      if (!t) throw new Error('no browser window titled ' + rest);
+      await fetch(`http://127.0.0.1:${port}/json/close/${t.id}`);
     } else if (cmd === 'eval') {
       const r = await send('Runtime.evaluate', { expression: rest, returnByValue: true });
       console.log(JSON.stringify(r.result.value ?? r.result.description));

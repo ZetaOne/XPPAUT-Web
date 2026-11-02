@@ -1,0 +1,8 @@
+# Viewaxes / Toon: animation window
+window "XPP Ver"
+move 400 200
+key v
+key t
+sleep 800
+window *
+shot toon.ppm

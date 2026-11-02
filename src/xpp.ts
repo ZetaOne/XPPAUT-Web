@@ -1,5 +1,6 @@
 // Runs XPPAUT (WebAssembly) in the page and acts as its window manager:
-// every top-level X window becomes a draggable panel holding a <canvas>.
+// every top-level X window becomes a draggable panel holding a <canvas>, and
+// any panel can be popped out into its own browser window.
 // See web/xlib/platform_web.c for the C side of these hooks.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -35,21 +36,33 @@ for (let i = 1; i <= 12; i++) SPECIAL_KEYS['F' + i] = [0xffbe + i - 1, ''];
 // X font cursor shape (id - 1) -> CSS cursor
 const CURSORS: Record<number, string> = { 60: 'pointer', 152: 'text', 34: 'crosshair', 68: 'default' };
 
+// PointerEvent.buttons bit -> X button number (left, right, middle)
+const BUTTON_BITS: Array<[number, number]> = [[1, 1], [2, 3], [4, 2]];
+
 interface Panel {
   id: number;
   el: HTMLDivElement;
   title: HTMLSpanElement;
   canvas: HTMLCanvasElement;
+  grip: HTMLDivElement;
   ctx: CanvasRenderingContext2D;
   placed: boolean;
+  mapped: boolean;
+  x: number; // XPP's idea of the window's position (root coordinates)
+  y: number;
+  popup: Window | null; // separate browser window, when popped out
 }
 
 export interface XppCallbacks {
   onOutput?: (line: string) => void;
   onExit?: (status: number) => void;
+  onNotice?: (message: string) => void;
 }
 
 export class XppSession {
+  /** Open XPP's new windows (other than the main one) as browser windows. */
+  popOutNew = false;
+
   private mod: XppModule;
   private panels = new Map<number, Panel>();
   private input: Array<() => void> = [];
@@ -57,10 +70,11 @@ export class XppSession {
   private listPtr = 0;
   private sizePtr = 0;
   private zTop = 10;
-  private buttons = 0;
+  private buttons = 0; // X button state mask
   private needSync = true;
   private cascade = 0;
   private running = false;
+  private keyHandler: ((e: KeyboardEvent) => void) | null = null;
 
   private desktop: HTMLElement;
   private cb: XppCallbacks;
@@ -83,7 +97,9 @@ export class XppSession {
       onExit: (status: number) => this.exited(status),
       xppPresent: () => this.present(),
       xppDrainInput: () => this.drainInput(),
-      xppToplevelChanged: () => { this.needSync = true; },
+      xppToplevelChanged: () => {
+        this.needSync = true;
+      },
       xppCursor: (w: number, shape: number) => this.setCursor(w, shape),
       xppBell: () => this.bell(),
       xppScreenWidth: () => this.desktop.clientWidth,
@@ -96,8 +112,10 @@ export class XppSession {
     m.FS.mkdir('/work');
     m.FS.chdir('/work');
     m.FS.writeFile('/work/' + fileName, contents);
-    this.installKeyboard();
-    this.installPointer();
+    this.installKeyboard(window);
+    window.addEventListener('pagehide', () => {
+      for (const p of this.panels.values()) p.popup?.close();
+    });
     this.running = true;
     try {
       m.callMain([fileName]);
@@ -122,7 +140,7 @@ export class XppSession {
     const m = this.mod;
     if (this.needSync) this.syncPanels();
     for (const p of this.panels.values()) {
-      if (p.el.style.display === 'none' || !m._xw_toplevel_dirty(p.id)) continue;
+      if (!p.mapped || !m._xw_toplevel_dirty(p.id)) continue;
       const ptr = m._xw_render(p.id, this.sizePtr, this.sizePtr + 4);
       const w = m.HEAP32[this.sizePtr >> 2];
       const h = m.HEAP32[(this.sizePtr >> 2) + 1];
@@ -130,6 +148,8 @@ export class XppSession {
       if (p.canvas.width !== w || p.canvas.height !== h) {
         p.canvas.width = w;
         p.canvas.height = h;
+        p.canvas.style.width = w + 'px';
+        p.canvas.style.height = h + 'px';
       }
       const data = new ImageData(new Uint8ClampedArray(m.HEAPU8.buffer, ptr, w * h * 4).slice(), w, h);
       p.ctx.putImageData(data, 0, 0);
@@ -155,8 +175,9 @@ export class XppSession {
       let [x, y] = [m.HEAP32[b], m.HEAP32[b + 1]];
       const [w, h, mapped] = [m.HEAP32[b + 2], m.HEAP32[b + 3], m.HEAP32[b + 4]];
       let p = this.panels.get(id);
+      const isNew = !p;
       if (!p) p = this.makePanel(id);
-      p.el.style.display = mapped ? '' : 'none';
+      p.mapped = !!mapped;
       if (mapped && !p.placed) {
         // first time shown: keep the title bar on screen, cascade windows
         // that all asked for the same corner
@@ -168,17 +189,26 @@ export class XppSession {
         }
         y = Math.max(y, TITLE_H);
         x = Math.max(x, 0);
-        this.queue(() => m._xw_input_configure(id, x, y, 0, 0));
+        const [cx, cy] = [x, y];
+        this.queue(() => m._xw_input_configure(id, cx, cy, 0, 0));
         this.raise(p);
+        if (this.popOutNew && this.panels.size > 1 && isNew !== undefined) this.popOut(p, true);
       }
+      if (!mapped && p.popup) p.popup.close(); // XPP closed it: close the browser window
+      p.x = x;
+      p.y = y;
+      p.el.style.display = mapped && !p.popup ? '' : 'none';
       p.el.style.left = x + 'px';
       p.el.style.top = y - TITLE_H + 'px';
       p.canvas.style.width = w + 'px';
       p.canvas.style.height = h + 'px';
-      p.title.textContent = m.UTF8ToString(m._xw_title(id)) || 'XPP';
+      const title = m.UTF8ToString(m._xw_title(id)) || 'XPP';
+      p.title.textContent = title;
+      if (p.popup && p.popup.document.title !== title) p.popup.document.title = title;
     }
     for (const [id, p] of this.panels)
       if (!seen.has(id)) {
+        p.popup?.close();
         p.el.remove();
         this.panels.delete(id);
       }
@@ -193,11 +223,15 @@ export class XppSession {
     bar.className = 'xwin-bar';
     const title = document.createElement('span');
     title.className = 'xwin-title';
+    const pop = document.createElement('button');
+    pop.className = 'xwin-btn';
+    pop.title = 'Open in a separate browser window';
+    pop.textContent = '⧉';
     const close = document.createElement('button');
-    close.className = 'xwin-close';
+    close.className = 'xwin-btn';
     close.title = 'Close';
     close.textContent = '×';
-    bar.append(title, close);
+    bar.append(title, pop, close);
     const canvas = document.createElement('canvas');
     canvas.className = 'xwin-canvas';
     canvas.width = canvas.height = 1;
@@ -205,10 +239,14 @@ export class XppSession {
     grip.className = 'xwin-grip';
     el.append(bar, canvas, grip);
     this.desktop.append(el);
-    const p: Panel = { id, el, title, canvas, ctx: canvas.getContext('2d')!, placed: false };
+    const p: Panel = {
+      id, el, title, canvas, grip, ctx: canvas.getContext('2d')!,
+      placed: false, mapped: false, x: 0, y: 0, popup: null,
+    };
     this.panels.set(id, p);
 
     el.addEventListener('pointerdown', () => this.raise(p), true);
+    pop.addEventListener('click', () => this.popOut(p, false));
     close.addEventListener('click', () => this.queue(() => this.mod._xw_input_close(id)));
     this.dragMove(p, bar);
     this.dragResize(p, grip);
@@ -219,6 +257,52 @@ export class XppSession {
   private raise(p: Panel): void {
     p.el.style.zIndex = String(++this.zTop);
     this.queue(() => this.mod._xw_input_raise(p.id));
+  }
+
+  /** Move a panel's canvas into its own browser window. Browsers only allow
+      this from a click (or shortly after one); returns false if blocked. */
+  private popOut(p: Panel, automatic: boolean): boolean {
+    if (p.popup) {
+      p.popup.focus();
+      return true;
+    }
+    const w = p.canvas.width;
+    const h = p.canvas.height;
+    const left = (window.screenX || 0) + p.x;
+    const top = (window.screenY || 0) + p.y + 60;
+    const win = window.open('', 'xpp-' + p.id, `popup,width=${w},height=${h},left=${left},top=${top}`);
+    if (!win) {
+      if (!automatic) this.cb.onNotice?.('The browser blocked the new window. Allow pop-ups for this site to use separate windows.');
+      return false;
+    }
+    const doc = win.document;
+    doc.title = p.title.textContent || 'XPP';
+    doc.body.style.cssText = 'margin:0;background:#808080;overflow:hidden';
+    doc.body.append(p.canvas); // the canvas keeps its context and listeners
+    p.popup = win;
+    p.el.style.display = 'none';
+    this.installKeyboard(win);
+    win.addEventListener('pointerdown', () => this.queue(() => this.mod._xw_input_raise(p.id)), true);
+    const opened = performance.now();
+    win.addEventListener('resize', () => {
+      // browsers settle a new window's size themselves; only follow the user
+      if (performance.now() - opened < 1000) return;
+      const nw = win.innerWidth;
+      const nh = win.innerHeight;
+      if (nw > 0 && nh > 0 && (nw !== p.canvas.width || nh !== p.canvas.height))
+        this.queue(() => this.mod._xw_input_configure(p.id, p.x, p.y, nw, nh));
+    });
+    win.addEventListener('pagehide', () => this.dock(p));
+    return true;
+  }
+
+  /** The browser window was closed: put the canvas back in its panel. */
+  private dock(p: Panel): void {
+    if (!p.popup) return;
+    p.popup = null;
+    p.el.insertBefore(p.canvas, p.grip);
+    p.el.style.display = p.mapped && this.panels.has(p.id) ? '' : 'none';
+    this.raise(p);
   }
 
   private dragMove(p: Panel, bar: HTMLElement): void {
@@ -237,6 +321,8 @@ export class XppSession {
         bar.removeEventListener('pointerup', up);
         const x = p.el.offsetLeft;
         const y = p.el.offsetTop + TITLE_H;
+        p.x = x;
+        p.y = y;
         this.queue(() => this.mod._xw_input_configure(p.id, x, y, 0, 0));
       };
       bar.addEventListener('pointermove', move);
@@ -263,9 +349,7 @@ export class XppSession {
       const up = () => {
         grip.removeEventListener('pointermove', move);
         grip.removeEventListener('pointerup', up);
-        const x = p.el.offsetLeft;
-        const y = p.el.offsetTop + TITLE_H;
-        this.queue(() => this.mod._xw_input_configure(p.id, x, y, w, h));
+        this.queue(() => this.mod._xw_input_configure(p.id, p.x, p.y, w, h));
       };
       grip.addEventListener('pointermove', move);
       grip.addEventListener('pointerup', up);
@@ -287,38 +371,55 @@ export class XppSession {
     return s;
   }
 
-  /** root (desktop) coordinates; panels have no border, so a canvas pixel
-      sits exactly where XPP believes its window is */
-  private rootXY(e: MouseEvent): [number, number] {
-    const r = this.desktop.getBoundingClientRect();
-    return [Math.round(e.clientX - r.left), Math.round(e.clientY - r.top)];
+  /** root coordinates: the window's position plus the offset in its canvas
+      (works docked or popped out) */
+  private rootXY(p: Panel, e: MouseEvent): [number, number] {
+    const c = p.canvas;
+    const sx = c.clientWidth ? c.width / c.clientWidth : 1;
+    const sy = c.clientHeight ? c.height / c.clientHeight : 1;
+    return [p.x + Math.floor(e.offsetX * sx), p.y + Math.floor(e.offsetY * sy)];
   }
 
   private pointerInput(p: Panel): void {
     const c = p.canvas;
     c.addEventListener('contextmenu', (e) => e.preventDefault());
-    c.addEventListener('mousemove', (e) => {
-      if (this.buttons) return; // the global handler tracks drags
-      const [x, y] = this.rootXY(e);
-      const s = this.modState(e);
-      this.queue(() => this.mod._xw_input_motion(x, y, s));
-    });
-    c.addEventListener('mousedown', (e) => {
+    // pointer capture keeps drags (rubber bands, sliders) going outside the
+    // canvas; button changes are diffed from e.buttons so chords work too
+    const handle = (e: PointerEvent) => {
+      const [x, y] = this.rootXY(p, e);
+      const before = this.buttons;
+      let after = 0;
+      for (const [bit, xb] of BUTTON_BITS) if (e.buttons & bit) after |= Button1Mask << (xb - 1);
+      for (const [, xb] of BUTTON_BITS) {
+        const m = Button1Mask << (xb - 1);
+        if ((before ^ after) & m) {
+          const press = after & m ? 1 : 0;
+          const s = this.modState(e);
+          this.buttons = press ? this.buttons | m : this.buttons & ~m;
+          this.queue(() => this.mod._xw_input_button(x, y, xb, press, s));
+        }
+      }
+      if (e.type === 'pointermove') {
+        const s = this.modState(e);
+        this.queue(() => this.mod._xw_input_motion(x, y, s));
+      }
+    };
+    c.addEventListener('pointerdown', (e) => {
       e.preventDefault();
-      const [x, y] = this.rootXY(e);
-      const b = e.button + 1;
-      const s = this.modState(e);
-      this.buttons |= Button1Mask << (b - 1);
-      this.queue(() => this.mod._xw_input_button(x, y, b, 1, s));
+      c.setPointerCapture(e.pointerId);
+      handle(e);
     });
-    c.addEventListener('mouseleave', () => {
+    c.addEventListener('pointermove', handle);
+    c.addEventListener('pointerup', handle);
+    c.addEventListener('pointercancel', handle);
+    c.addEventListener('pointerleave', () => {
       if (!this.buttons) this.queue(() => this.mod._xw_input_motion(-100000, -100000, 0));
     });
     c.addEventListener(
       'wheel',
       (e) => {
         e.preventDefault();
-        const [x, y] = this.rootXY(e);
+        const [x, y] = this.rootXY(p, e);
         const b = e.deltaY < 0 ? 4 : 5;
         const s = this.modState(e);
         this.queue(() => {
@@ -330,52 +431,35 @@ export class XppSession {
     );
   }
 
-  /** drags and releases may leave the canvas, so track them on the window */
-  private installPointer(): void {
-    window.addEventListener('mousemove', (e) => {
-      if (!this.buttons) return;
-      const [x, y] = this.rootXY(e);
-      const s = this.modState(e);
-      this.queue(() => this.mod._xw_input_motion(x, y, s));
-    });
-    window.addEventListener('mouseup', (e) => {
-      const b = e.button + 1;
-      if (!(this.buttons & (Button1Mask << (b - 1)))) return;
-      const [x, y] = this.rootXY(e);
-      const s = this.modState(e);
-      this.buttons &= ~(Button1Mask << (b - 1));
-      this.queue(() => this.mod._xw_input_button(x, y, b, 0, s));
-    });
-  }
-
-  private installKeyboard(): void {
-    const handler = (e: KeyboardEvent) => {
-      if (!this.running) return;
-      const t = e.target as HTMLElement;
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
-      if (e.metaKey || (e.ctrlKey && e.shiftKey)) return; // leave browser shortcuts alone
-      let ks: number;
-      let text: string;
-      if (SPECIAL_KEYS[e.key]) [ks, text] = SPECIAL_KEYS[e.key];
-      else if ([...e.key].length === 1) {
-        const cp = e.key.codePointAt(0)!;
-        ks = cp < 0x100 ? cp : 0x01000000 + cp;
-        text = e.key;
-      } else return; // modifiers, dead keys, ...
-      e.preventDefault();
-      const s = this.modState(e);
-      const press = e.type === 'keydown' ? 1 : 0;
-      const m = this.mod;
-      this.queue(() => {
-        const len = text.length * 4 + 1;
-        const buf = m._malloc(len);
-        m.stringToUTF8(text, buf, len);
-        m._xw_input_key(ks, buf, press, s);
-        m._free(buf);
-      });
-    };
-    window.addEventListener('keydown', handler);
-    window.addEventListener('keyup', handler);
+  private installKeyboard(target: Window): void {
+    if (!this.keyHandler)
+      this.keyHandler = (e: KeyboardEvent) => {
+        if (!this.running) return;
+        const t = e.target as HTMLElement;
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+        if (e.metaKey || (e.ctrlKey && e.shiftKey)) return; // leave browser shortcuts alone
+        let ks: number;
+        let text: string;
+        if (SPECIAL_KEYS[e.key]) [ks, text] = SPECIAL_KEYS[e.key];
+        else if ([...e.key].length === 1) {
+          const cp = e.key.codePointAt(0)!;
+          ks = cp < 0x100 ? cp : 0x01000000 + cp;
+          text = e.key;
+        } else return; // modifiers, dead keys, ...
+        e.preventDefault();
+        const s = this.modState(e);
+        const press = e.type === 'keydown' ? 1 : 0;
+        const m = this.mod;
+        this.queue(() => {
+          const len = text.length * 4 + 1;
+          const buf = m._malloc(len);
+          m.stringToUTF8(text, buf, len);
+          m._xw_input_key(ks, buf, press, s);
+          m._free(buf);
+        });
+      };
+    target.addEventListener('keydown', this.keyHandler);
+    target.addEventListener('keyup', this.keyHandler);
   }
 
   private setCursor(w: number, shape: number): void {
@@ -391,7 +475,10 @@ export class XppSession {
 
   private exited(status: number): void {
     this.running = false;
-    for (const p of this.panels.values()) p.el.remove();
+    for (const p of this.panels.values()) {
+      p.popup?.close();
+      p.el.remove();
+    }
     this.panels.clear();
     this.cb.onExit?.(status);
   }

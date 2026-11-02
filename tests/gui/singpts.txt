@@ -1,0 +1,11 @@
+# Sing pts / Go: eigenvalue question, then the equilibrium window
+window "XPP Ver"
+move 400 200
+key i
+key g
+sleep 500
+key s
+key g
+sleep 800
+window "!!!!"
+shot singq.ppm
