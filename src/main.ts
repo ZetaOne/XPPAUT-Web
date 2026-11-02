@@ -1,5 +1,5 @@
 import './style.css'
-import { XppSession } from './xpp'
+import { XppSession, xppBuild } from './xpp'
 import { Terminal, type TerminalMode } from './terminal'
 import { download, makeZip } from './zip'
 
@@ -17,6 +17,9 @@ app.innerHTML = `
       <label class="file" title="Pick an .ode file, plus any files it uses (.ani, .tab, .dat, .set)">Open .ode file…<input type="file" id="upload" multiple hidden></label>
     </div>
     <div class="session" id="session" hidden>
+      <label title="Switch to another example (restarts XPP)">Model
+        <select id="switch"></select>
+      </label>
       <span id="status"></span>
       <button id="edit" title="Edit the .ode file, then download it or restart XPP with it">Edit .ode</button>
       <details class="files" id="files">
@@ -46,7 +49,11 @@ app.innerHTML = `
   </header>
   <div class="layout">
     <main class="desktop" id="desktop">
-      <p class="hint" id="hint">Pick an example or open your own <code>.ode</code> file to start XPP.</p>
+      <div class="hint" id="hint">
+        <p>Pick an example or open your own <code>.ode</code> file to start XPP.</p>
+        <div class="loadbar" id="loadbar" role="progressbar" aria-label="Loading XPP"><div id="loadfill"></div></div>
+        <p class="loadtext" id="loadtext">Loading XPP…</p>
+      </div>
     </main>
     <aside class="term" id="term" hidden>
       <div class="term-head">
@@ -79,6 +86,8 @@ const separate = $<HTMLInputElement>('separate')
 
 let session: XppSession | null = null
 let odeName = ''
+let odeId = ''
+let statusText = ''
 
 const store = {
   get(k: string): string | null {
@@ -125,18 +134,22 @@ $('termsave').addEventListener('click', () =>
 function notice(msg: string) {
   $('status').textContent = msg
   $('status').title = msg
-  setTimeout(() => ($('status').textContent = odeName), 7000)
+  setTimeout(() => ($('status').textContent = statusText), 7000)
 }
 
 // ---- starting XPP -----------------------------------------------------------
-async function launch(name: string, text: string, extras: Array<{ name: string; data: Uint8Array }> = []) {
+async function launch(name: string, text: string, extras: Array<{ name: string; data: Uint8Array }> = [], id = name) {
   odeName = name
+  odeId = id
   $('start').hidden = true
   $('session').hidden = false
-  $('hint')?.remove()
-  $('status').textContent = name
+  const sw = $('switch') as HTMLSelectElement
+  sw.value = id
+  if (sw.value !== id) sw.value = '' // not an example: "(your file)"
+  statusText = sw.value ? '' : name // the switcher already names examples
+  $('status').textContent = statusText
   const q = new URLSearchParams(location.search)
-  q.set('ode', name) // keep other parameters (e.g. engine=asyncify for testing)
+  q.set('ode', id) // keep other parameters (e.g. engine=asyncify for testing)
   history.replaceState(null, '', '?' + q.toString())
   // the user's click that started XPP can open the output window
   if (store.get('xpp-terminal') === 'window') termMode.value = terminal.setMode('window')
@@ -150,12 +163,82 @@ async function launch(name: string, text: string, extras: Array<{ name: string; 
   session.popOutNew = separate.checked
   ;(window as unknown as { xpp: XppSession }).xpp = session // for tests and debugging
   setInterval(updateFileCount, 2000)
-  await session.start(name, text, extras)
+  // XPP's WebAssembly started downloading when the page opened; wait for it
+  let wasm: ArrayBuffer | undefined
+  try {
+    wasm = await wasmReady
+  } catch {
+    wasm = undefined // fall back to a plain download inside start()
+  }
+  $('loadtext').textContent = 'Starting XPP…'
+  await session.start(name, text, extras, wasm)
+  $('hint')?.remove()
 }
 
-async function loadExample(name: string) {
-  const res = await fetch('odes/' + encodeURIComponent(name))
-  if (!res.ok) throw new Error(`cannot load ${name}`)
+// ---- download XPP as soon as the page opens, with a progress bar -------------
+const build = xppBuild()
+const wasmReady: Promise<ArrayBuffer> = (async () => {
+  const fill = $('loadfill')
+  const label = $('loadtext')
+  const mb = (n: number) => (n / 1048576).toFixed(n < 1048576 ? 2 : 1) + ' MB'
+  void fetch(build.dir + 'xppaut.mjs') // warm the cache for the loader script
+  let total = 0
+  try {
+    total = (await (await fetch('wasm/sizes.json')).json())[build.engine] || 0
+  } catch {
+    /* no size: indeterminate */
+  }
+  const res = await fetch(build.dir + 'xppaut.wasm')
+  if (!res.ok || !res.body) throw new Error('cannot download XPP')
+  const reader = res.body.getReader()
+  const chunks: Uint8Array[] = []
+  let got = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    chunks.push(value)
+    got += value.length
+    const f = total ? Math.min(1, got / total) : 0
+    fill.style.width = (total ? f * 100 : 30 + ((got / 50000) % 60)) + '%'
+    if (total) $('loadbar').setAttribute('aria-valuenow', String(Math.round(f * 100)))
+    label.textContent = total ? `Loading XPP… ${mb(got)} of ${mb(total)}` : `Loading XPP… ${mb(got)}`
+  }
+  const buf = new Uint8Array(got)
+  let off = 0
+  for (const c of chunks) {
+    buf.set(c, off)
+    off += c.length
+  }
+  fill.style.width = '100%'
+  label.textContent = 'XPP is ready.'
+  setTimeout(() => $('loadbar').classList.add('done'), 300)
+  return buf.buffer
+})()
+wasmReady.catch(() => {
+  $('loadtext').textContent = 'Could not download XPP. Check your connection and reload.'
+})
+
+interface ExampleGroup {
+  id: string
+  label: string
+  odes: string[]
+  data: string[]
+}
+let groups: ExampleGroup[] = []
+
+/** "ode/lecar.ode" -> group and file name; a bare name means the main folder */
+function splitId(id: string): [ExampleGroup | undefined, string] {
+  const [g, n] = id.includes('/') ? [id.slice(0, id.indexOf('/')), id.slice(id.indexOf('/') + 1)] : ['ode', id]
+  const group = groups.find((x) => x.id === g)
+  return [group?.odes.includes(n) ? group : undefined, n]
+}
+
+async function loadExample(id: string) {
+  const [group, name] = splitId(id)
+  if (!group) throw new Error(`no example ${id}`)
+  const dir = 'odes/' + group.id + '/'
+  const res = await fetch(dir + encodeURIComponent(name))
+  if (!res.ok) throw new Error(`cannot load ${id}`)
   const text = await res.text()
   // bring along the data files the example uses: any bundled .ani/.tab/.dat
   // named in it, and the .ani of the same name (pend.ode + pend.ani)
@@ -163,25 +246,40 @@ async function loadExample(name: string) {
   for (const m of text.matchAll(/[\w.+-]+\.(?:ani|tab|dat)\b/gi)) wanted.add(m[0])
   const extras: Array<{ name: string; data: Uint8Array }> = []
   for (const f of wanted) {
-    if (!dataFiles.has(f)) continue
-    const r = await fetch('odes/' + encodeURIComponent(f))
+    if (!group.data.includes(f)) continue
+    const r = await fetch(dir + encodeURIComponent(f))
     if (r.ok) extras.push({ name: f, data: new Uint8Array(await r.arrayBuffer()) })
   }
-  await launch(name, text, extras)
+  await launch(name, text, extras, group.id + '/' + name)
 }
 
-let dataFiles = new Set<string>()
+function exampleOptions(): string {
+  const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+  return groups
+    .map(
+      (g) =>
+        `<optgroup label="${esc(g.label)} (${g.odes.length})">` +
+        g.odes.map((n) => `<option value="${esc(g.id + '/' + n)}">${esc(n)}</option>`).join('') +
+        '</optgroup>',
+    )
+    .join('')
+}
+
 fetch('odes/index.json')
   .then((r) => r.json())
-  .then((names: string[]) => {
-    dataFiles = new Set(names.filter((n) => !n.endsWith('.ode')))
-    const odes = names.filter((n) => n.endsWith('.ode'))
-    example.innerHTML = odes.map((n) => `<option>${n}</option>`).join('')
-    example.value = odes.includes('lecar.ode') ? 'lecar.ode' : odes[0]
+  .then((index: ExampleGroup[]) => {
+    groups = index
+    example.innerHTML = exampleOptions()
+    ;($('switch') as HTMLSelectElement).innerHTML = '<option value="">(your file)</option>' + exampleOptions()
+    example.value = 'ode/lecar.ode'
     const q = new URLSearchParams(location.search)
-    const edited = restoreEdited(q.get('ode'))
-    if (edited) launch(edited.name, edited.text, edited.extras)
-    else if (q.get('ode') && odes.includes(q.get('ode')!)) loadExample(q.get('ode')!)
+    const want = q.get('ode')
+    const edited = restoreEdited(want)
+    if (edited) launch(edited.name, edited.text, edited.extras, edited.id)
+    else if (want && splitId(want)[0]) {
+      example.value = splitId(want)[0]!.id + '/' + splitId(want)[1]
+      loadExample(want)
+    }
   })
 
 $('run').addEventListener('click', () => loadExample(example.value))
@@ -195,6 +293,13 @@ $<HTMLInputElement>('upload').addEventListener('change', async (e) => {
   await launch(ode.name, await ode.text(), extras)
 })
 $('restart').addEventListener('click', () => location.reload())
+$('switch').addEventListener('change', () => {
+  const v = ($('switch') as HTMLSelectElement).value
+  if (!v) return
+  const q = new URLSearchParams(location.search)
+  q.set('ode', v)
+  location.search = '?' + q.toString() // XPP restarts with the new model
+})
 
 separate.checked = store.get('xpp-separate') === '1'
 separate.addEventListener('change', () => {
@@ -273,9 +378,9 @@ $('edrestart').addEventListener('click', () => {
     .filter((f) => f.name !== odeName && f.size < 2_000_000)
     .map((f) => ({ name: f.name, data: toBase64(session!.readFile(f.name)) }))
   try {
-    sessionStorage.setItem('xpp-edited', JSON.stringify({ name: odeName, text: $<HTMLTextAreaElement>('edtext').value, extras }))
+    sessionStorage.setItem('xpp-edited', JSON.stringify({ id: odeId, name: odeName, text: $<HTMLTextAreaElement>('edtext').value, extras }))
   } catch {
-    sessionStorage.setItem('xpp-edited', JSON.stringify({ name: odeName, text: $<HTMLTextAreaElement>('edtext').value, extras: [] }))
+    sessionStorage.setItem('xpp-edited', JSON.stringify({ id: odeId, name: odeName, text: $<HTMLTextAreaElement>('edtext').value, extras: [] }))
   }
   location.reload()
 })
@@ -292,12 +397,12 @@ function restoreEdited(name: string | null) {
     if (!raw) return null
     sessionStorage.removeItem('xpp-edited')
     const d = JSON.parse(raw)
-    if (!name || d.name !== name) return null
+    if (!name || (d.id || d.name) !== name) return null
     const extras = (d.extras || []).map((f: { name: string; data: string }) => ({
       name: f.name,
       data: Uint8Array.from(atob(f.data), (c) => c.charCodeAt(0)),
     }))
-    return { name: d.name as string, text: d.text as string, extras }
+    return { id: (d.id || d.name) as string, name: d.name as string, text: d.text as string, extras }
   } catch {
     return null
   }

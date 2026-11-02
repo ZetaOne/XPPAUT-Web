@@ -12,9 +12,43 @@ rm -rf "$root/public/help"
 cp -r "$root/xppaut/help" "$root/public/help"
 mkdir -p "$root/public/wasm/jspi"
 cp "$root/build/wasm-jspi/xppaut.mjs" "$root/build/wasm-jspi/xppaut.wasm" "$root/public/wasm/jspi/"
-rm -f "$root/public/odes/"*
-# examples, plus the animation/table/data files they use (data files only if small)
-find "$root/xppaut/ode" -maxdepth 1 \( -name '*.ode' -o -name '*.ani' -o -name '*.tab' -o \( -name '*.dat' -size -200k \) \) \
-  ! -name '*conflicted*' ! -name 'output.dat' -exec cp {} "$root/public/odes/" \;
-(cd "$root/public/odes" && ls | grep -v '^index.json$' | python3 -c 'import json,sys; print(json.dumps(sorted(l.strip() for l in sys.stdin)))' > index.json)
-echo "public/wasm and public/odes updated ($(ls "$root/public/odes" | wc -l) files)"
+# example models from every folder of the XPP release, with the animation,
+# table and (small) data files they use, plus a grouped index for the page
+rm -rf "$root/public/odes"
+python3 - "$root" <<'EOF'
+import json, os, shutil, sys
+root = sys.argv[1]
+groups = [
+    ("ode", "XPP examples", "ode"),
+    ("tstauto", "AUTO test models", "tstauto"),
+    ("canonical", "Canonical models", "canonical"),
+    ("help", "Examples from the help pages", "help/odes"),
+]
+index = []
+for gid, label, src in groups:
+    src = os.path.join(root, "xppaut", src)
+    dst = os.path.join(root, "public", "odes", gid)
+    os.makedirs(dst, exist_ok=True)
+    odes, data = [], []
+    for name in sorted(os.listdir(src), key=str.lower):
+        path = os.path.join(src, name)
+        if not os.path.isfile(path) or "conflicted" in name or name == "output.dat":
+            continue
+        ext = os.path.splitext(name)[1].lower()
+        if ext == ".ode":
+            odes.append(name)
+        elif ext in (".ani", ".tab") or (ext == ".dat" and os.path.getsize(path) < 200_000):
+            data.append(name)
+        else:
+            continue
+        shutil.copy(path, dst)
+    index.append({"id": gid, "label": label, "odes": odes, "data": data})
+with open(os.path.join(root, "public", "odes", "index.json"), "w") as f:
+    json.dump(index, f)
+print("examples:", ", ".join("%s %d" % (g["id"], len(g["odes"])) for g in index))
+EOF
+# uncompressed sizes, for the loading bar (hosts may send the files compressed)
+printf '{"asyncify": %d, "jspi": %d}\n' \
+  "$(stat -c%s "$root/public/wasm/xppaut.wasm")" "$(stat -c%s "$root/public/wasm/jspi/xppaut.wasm")" \
+  > "$root/public/wasm/sizes.json"
+echo "public/wasm, public/odes and public/help updated"

@@ -17,6 +17,8 @@
 //   popclose TITLE     close another browser window by title prefix
 //   popclick TITLE X Y click in another browser window
 //   downloads DIR      save downloads into DIR
+//   throttle KBPS MS   emulate a slow network (download kbit/s, latency ms)
+//   netlog             print every network response with its size (after load)
 //   wclick TITLE X Y   click at X,Y inside the XPP window (panel) whose title
 //                      starts with TITLE (use _ for spaces in TITLE)
 //   upload SEL FILE..  set the files of the <input type=file> matching SEL
@@ -165,6 +167,14 @@ try {
       await mouse('mouseMoved', x, y);
       await mouse('mousePressed', x, y, 1);
       await mouse('mouseReleased', x, y);
+    } else if (cmd === 'throttle') {
+      await send('Network.enable');
+      await send('Network.emulateNetworkConditions', { offline: false, latency: +a[1],
+        downloadThroughput: (+a[0] * 1000) / 8, uploadThroughput: (+a[0] * 1000) / 8 });
+    } else if (cmd === 'netlog') {
+      const r = await send('Runtime.evaluate', { returnByValue: true, expression:
+        `performance.getEntriesByType('resource').map(e => [e.name.replace(location.origin, ''), e.transferSize, e.decodedBodySize, Math.round(e.responseEnd)])` });
+      for (const [n, t, d, end] of r.result.value) console.log(`  ${String(t).padStart(8)} B sent ${String(d).padStart(8)} B  done ${end} ms  ${n}`);
     } else if (cmd === 'downloads') {
       await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: a[0], eventsEnabled: true });
     } else if (cmd === 'upload') {

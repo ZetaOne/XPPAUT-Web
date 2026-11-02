@@ -146,6 +146,19 @@ original).
     output (.b/.d/.s) and data written by XPP appear in Files, and a
     .xpprc added via Files is read at startup.
 
+13. **All 212 example models** in a grouped dropdown (XPP examples 149,
+    AUTO test models 28, canonical 16, help-page examples 19; cuda/ left
+    out: needs a GPU plug-in), each with its .ani/.tab/.dat files. URLs are
+    `?ode=<group>/<file>` (bare names mean the main folder). A "Model"
+    switcher in the toolbar restarts XPP with another example.
+14. **Loading**: first visit downloads ~11 KB of page + 22 KB loader + the
+    WebAssembly (JSPI 1.1 MB, 435 KB gzipped; Asyncify 1.6 MB, 570 KB).
+    Measured: 0.3 s to XPP window on a fast connection, ~6.5-7 s on
+    1.6 Mbit/s uncompressed (hosts that gzip: ~3 s). The page starts the
+    download immediately with a progress bar ("Loading XPP… x of 1.1 MB",
+    sizes from public/wasm/sizes.json) and hands the bytes to Emscripten
+    via instantiateWasm, so the file is fetched exactly once.
+
 ## Next
 
 - Browser overhead (~1.3x with JSPI) is mostly yielding ~30 times a second

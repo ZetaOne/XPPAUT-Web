@@ -218,12 +218,52 @@ button.small,
 .hint {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   margin: 0;
   padding: 16px;
   color: #e8ebee;
   text-align: center;
+}
+
+.hint p {
+  margin: 0;
+}
+
+.loadtext {
+  font-size: 13px;
+  color: #c3cad1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* progress bar while XPP's WebAssembly downloads */
+.loadbar {
+  width: min(320px, 70vw);
+  height: 8px;
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 0.15);
+  transition: opacity 0.4s;
+}
+
+.loadbar.done {
+  opacity: 0;
+}
+
+#loadfill {
+  width: 0;
+  height: 100%;
+  border-radius: 4px;
+  background: #8cc0f0;
+  transition: width 0.15s;
+}
+
+#switch {
+  max-width: 16ch;
 }
 
 .xwin {

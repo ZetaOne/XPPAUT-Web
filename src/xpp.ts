@@ -53,6 +53,14 @@ interface Panel {
   popup: Window | null; // separate browser window, when popped out
 }
 
+/** Which WebAssembly build this browser should run: JSPI where the engine
+    supports it (native speed), else Asyncify. ?engine=asyncify forces one. */
+export function xppBuild(): { engine: 'jspi' | 'asyncify'; dir: string } {
+  const forced = new URLSearchParams(location.search).get('engine');
+  const jspi = forced ? forced === 'jspi' : 'Suspending' in WebAssembly;
+  return jspi ? { engine: 'jspi', dir: 'wasm/jspi/' } : { engine: 'asyncify', dir: 'wasm/' };
+}
+
 export interface XppCallbacks {
   onOutput?: (line: string) => void;
   onExit?: (status: number) => void;
@@ -91,12 +99,15 @@ export class XppSession {
 
   /** Start XPP on an .ode file (plus extra files, e.g. .ani or .tab, put
       next to it). Resolves once XPP is running. */
-  async start(fileName: string, contents: string, extras: Array<{ name: string; data: Uint8Array }> = []): Promise<void> {
+  async start(
+    fileName: string,
+    contents: string,
+    extras: Array<{ name: string; data: Uint8Array }> = [],
+    wasmBinary?: ArrayBuffer, // already downloaded (with progress) by the page
+  ): Promise<void> {
     // JSPI build where the engine supports it (native speed), else Asyncify
-    const forced = new URLSearchParams(location.search).get('engine'); // testing
-    const jspi = forced ? forced === 'jspi' : 'Suspending' in WebAssembly;
-    const dir = jspi ? 'wasm/jspi/' : 'wasm/';
-    this.engine = dir === 'wasm/' ? 'asyncify' : 'jspi';
+    const { engine, dir } = xppBuild();
+    this.engine = engine;
     const url = new URL(dir + 'xppaut.mjs', document.baseURI).href;
     const { default: createXpp } = await import(/* @vite-ignore */ url);
     const out = (s: string) => this.cb.onOutput?.(s);
@@ -108,6 +119,15 @@ export class XppSession {
         mod.ENV.HOME = '/work';
       }],
       locateFile: (p: string) => new URL(dir + p, document.baseURI).href,
+      // use the bytes the page already downloaded instead of fetching again
+      ...(wasmBinary
+        ? {
+            instantiateWasm: (imports: WebAssembly.Imports, done: (i: WebAssembly.Instance, m: WebAssembly.Module) => void) => {
+              WebAssembly.instantiate(wasmBinary, imports).then((r) => done(r.instance, r.module));
+              return {};
+            },
+          }
+        : {}),
       print: out,
       printErr: out,
       onExit: (status: number) => this.exited(status),
