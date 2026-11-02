@@ -183,8 +183,10 @@ original).
     area was removed before its fade-out timer.
     AUTO appends to its <model>.b/.d/.s on every run after the first
     (close_auto -> appendf), which triggered downloads; those names are now
-    skipped too (user report). Start page shows the graph cropped from the
-    XPPAUT homepage banner (public/xpp-graph.png, credited).
+    skipped too (user report). The site icon (browser tab, 16/32 px, and a
+    180 px home-screen icon) is the middle envelope of the plot in the
+    XPPAUT homepage banner (sites.pitt.edu/~phase/bard/bardware/xpp/xppaut.gif).
+    Start-page text enlarged.
 
 ## Next
 

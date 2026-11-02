@@ -57,10 +57,6 @@ app.innerHTML = `
   <div class="layout">
     <main class="desktop" id="desktop">
       <div class="hint" id="hint">
-        <figure class="hero">
-          <img src="xpp-graph.png" width="332" height="232" alt="A colour-coded time plot drawn by XPPAUT">
-          <figcaption>From the XPPAUT homepage banner</figcaption>
-        </figure>
         <p>Pick an example or open your own <code>.ode</code> file to start XPP.</p>
         <div class="loadbar" id="loadbar" role="progressbar" aria-label="Loading XPP"><div id="loadfill"></div></div>
         <p class="loadtext" id="loadtext">Loading XPP…</p>
