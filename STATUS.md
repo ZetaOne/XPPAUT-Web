@@ -135,17 +135,23 @@ original).
     All verified in headless Chrome (scripts/browser-test.mjs has wclick,
     upload, downloads, popclick, popshot, popclose, targets).
 
+11. **More of step 3 verified against the real XPP** (all identical, now
+    37 shots in 25 scenarios): AUTO periodic orbits from the Hopf point
+    (`autoper.txt`), Kinescope capture/playback (`kinescope.txt`), data
+    browser Replace column via its dialogs (`datareplace.txt`; keys reach
+    an XPP dialog while the pointer is over its text line, as on the
+    desktop). File/Help opens the bundled HTML help in a browser tab
+    (patched `xpp_hlp`, WebAssembly build only).
+12. **Step 4 done**: $HOME is the working folder in the browser, so AUTO's
+    output (.b/.d/.s) and data written by XPP appear in Files, and a
+    .xpprc added via Files is read at startup.
+
 ## Next
 
-- **Finish step 3:** more scenarios (AUTO periodic orbits and two-
-  parameter runs, kinescope capture/playback, editing in the data browser,
-  help, more .ode examples).
-- **Step 4 leftovers:** check AUTO's saved output (.auto / diagram files)
-  appears in Files; data export (Graphic stuff / exp(O)rt data).
 - Browser overhead (~1.3x with JSPI) is mostly yielding ~30 times a second
   during runs; could be tuned.
-- **Step 4:** fuller downloads (plots as PNG/SVG/PS, .set files, AUTO
-  output), saving an edited .ode, uploading data files.
+- More coverage: two-parameter AUTO, more example models, mobile/touch
+  input, hosting (static site: `npm run build` output in dist/).
 
 ## Open decisions
 

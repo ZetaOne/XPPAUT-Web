@@ -139,6 +139,14 @@ void xpp_hlp()
 {
 
   char cmd[256];
+#ifdef __EMSCRIPTEN__
+  /* XPPAUT-Web: open the bundled HTML help in a browser tab */
+  {
+    extern void xppweb_open_help(void);
+    xppweb_open_help();
+    return;
+  }
+#endif
 
   if(getenv("XPPHELP")==NULL)
   {

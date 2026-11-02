@@ -33,4 +33,6 @@ Changes to upstream files are marked with `XPPAUT-Web:` comments.
 
 | `main.c`, `many_pops.c` | Handle `WM_DELETE_WINDOW` for graph windows made with Makewindow: `close_graph_window()` destroys that graph | The handler was commented out, so the window manager's close button did nothing; the web page's close button now works on every window (other windows are closed by pressing their own Close button) |
 
+| `menudrive.c` | WebAssembly build only: `xpp_hlp` opens the bundled HTML help (`help/xpphelp.html`) in a browser tab | The desktop version needs XPPHELP/XPPBROWSER and fork/exec, which a browser cannot do |
+
 The AUTO fix and the close handling are deliberate behaviour differences from the unpatched desktop build.

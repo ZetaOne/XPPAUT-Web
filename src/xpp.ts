@@ -102,6 +102,11 @@ export class XppSession {
     const out = (s: string) => this.cb.onOutput?.(s);
     this.mod = await createXpp({
       noInitialRun: true,
+      // XPP keeps AUTO's output (.b/.d/.s) and reads .xpprc in $HOME: make
+      // that the working folder so they show up in (and come from) Files
+      preRun: [(mod: XppModule) => {
+        mod.ENV.HOME = '/work';
+      }],
       locateFile: (p: string) => new URL(dir + p, document.baseURI).href,
       print: out,
       printErr: out,
@@ -113,6 +118,10 @@ export class XppSession {
       },
       xppCursor: (w: number, shape: number) => this.setCursor(w, shape),
       xppBell: () => this.bell(),
+      xppOpenHelp: () => {
+        const w = window.open(new URL('help/xpphelp.html', document.baseURI).href, 'xpp-help');
+        if (!w) this.cb.onNotice?.('Pop-up blocked: XPP help is at help/xpphelp.html');
+      },
       xppBusy: (b: number) => {
         this.busy = !!b;
       },
@@ -123,7 +132,11 @@ export class XppSession {
     this.infoPtr = m._malloc(5 * 4);
     this.listPtr = m._malloc(256 * 4);
     this.sizePtr = m._malloc(2 * 4);
-    m.FS.mkdir('/work');
+    try {
+      m.FS.mkdir('/work');
+    } catch {
+      /* exists */
+    }
     m.FS.chdir('/work');
     for (const f of extras) m.FS.writeFile('/work/' + f.name, f.data);
     m.FS.writeFile('/work/' + fileName, contents);

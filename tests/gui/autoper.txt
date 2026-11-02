@@ -1,0 +1,36 @@
+# AUTO: steady states, grab the Hopf point (Lab 4), continue periodic orbits
+window "XPP Ver"
+move 400 200
+key i
+key g
+sleep 500
+key i
+key l
+sleep 500
+key i
+key l
+sleep 500
+key f
+key a
+sleep 800
+window "It's AUTO"
+click 47 87
+sleep 500
+key s
+sleep 3000
+click 47 105
+sleep 500
+key Tab
+sleep 300
+key Tab
+sleep 300
+key Tab
+sleep 300
+shot autograb.ppm
+key Return
+sleep 500
+click 47 87
+sleep 500
+key p
+sleep 10000
+shot autoper.ppm

@@ -26,3 +26,4 @@ build/
 .emsdk/
 public/wasm/
 public/odes/
+public/help/

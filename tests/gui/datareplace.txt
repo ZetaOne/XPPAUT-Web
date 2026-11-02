@@ -1,0 +1,30 @@
+# Data browser: Replace column W with the formula v*2 (two dialogs;
+# keys reach a dialog while the pointer is over its text line)
+window "XPP Ver"
+move 400 200
+key i
+key g
+sleep 500
+click 257 8
+sleep 500
+window "Data Viewer"
+click 30 48
+sleep 500
+window "Replace"
+move 90 10
+key BackSpace
+type w
+sleep 300
+shot repvar.ppm
+key Return
+sleep 500
+window "Replace"
+move 90 10
+key BackSpace
+type v*2
+sleep 300
+shot repform.ppm
+key Return
+sleep 800
+window "Data Viewer"
+shot datareplace.ppm

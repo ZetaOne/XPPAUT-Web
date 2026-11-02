@@ -51,7 +51,7 @@ XW_EXPORTS := _xw_render,_xw_toplevels,_xw_toplevel_dirty,_xw_title,_xw_toplevel
 WASM_LDFLAGS := -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createXpp \
                 -sENVIRONMENT=web,node -sALLOW_MEMORY_GROWTH=1 \
                 -sINVOKE_RUN=0 -sEXIT_RUNTIME=1 -sFORCE_FILESYSTEM=1 \
-                -sEXPORTED_RUNTIME_METHODS=callMain,FS,NODEFS,HEAPU8,HEAP32,UTF8ToString,stringToUTF8 \
+                -sEXPORTED_RUNTIME_METHODS=callMain,FS,NODEFS,ENV,HEAPU8,HEAP32,UTF8ToString,stringToUTF8 \
                 -sEXPORTED_FUNCTIONS=_main,_malloc,_free,$(XW_EXPORTS) \
                 -sSTACK_SIZE=4MB -lnodefs.js
 WJ := $(ROOT)/build/wasm-jspi

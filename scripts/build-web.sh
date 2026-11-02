@@ -8,6 +8,8 @@ source "$root/.emsdk/emsdk_env.sh" > /dev/null 2>&1
 make -C "$root/web" -j"$(nproc)" wasm
 mkdir -p "$root/public/wasm" "$root/public/odes"
 cp "$root/build/wasm/xppaut.mjs" "$root/build/wasm/xppaut.wasm" "$root/public/wasm/"
+rm -rf "$root/public/help"
+cp -r "$root/xppaut/help" "$root/public/help"
 mkdir -p "$root/public/wasm/jspi"
 cp "$root/build/wasm-jspi/xppaut.mjs" "$root/build/wasm-jspi/xppaut.wasm" "$root/public/wasm/jspi/"
 rm -f "$root/public/odes/"*

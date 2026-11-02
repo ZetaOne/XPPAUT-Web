@@ -1,0 +1,16 @@
+# Kinescope: capture a frame, erase, play it back
+window "XPP Ver"
+move 400 200
+key i
+key g
+sleep 500
+key k
+key c
+sleep 500
+key e
+sleep 500
+shot kinerase.ppm
+key k
+key p
+sleep 1000
+shot kineplay.ppm

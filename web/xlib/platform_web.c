@@ -18,6 +18,10 @@ EM_JS(void, js_present, (void), { if (Module.xppPresent) Module.xppPresent(); })
 EM_JS(void, js_drain_input, (void), { if (Module.xppDrainInput) Module.xppDrainInput(); });
 EM_JS(void, js_bell, (void), { if (Module.xppBell) Module.xppBell(); });
 EM_JS(void, js_busy, (int busy), { if (Module.xppBusy) Module.xppBusy(busy); });
+EM_JS(void, js_open_help, (void), { if (Module.xppOpenHelp) Module.xppOpenHelp(); });
+
+/* called by XPP's File/Help (patched xpp_hlp in menudrive.c) */
+void xppweb_open_help(void) { js_open_help(); }
 EM_JS(void, js_toplevel_changed, (Window w), { if (Module.xppToplevelChanged) Module.xppToplevelChanged(w); });
 EM_JS(void, js_cursor, (Window w, int shape), { if (Module.xppCursor) Module.xppCursor(w, shape); });
 EM_JS(int, js_screen_width, (void), { return Module.xppScreenWidth ? Module.xppScreenWidth() : 1280; });
