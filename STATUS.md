@@ -2,6 +2,11 @@
 
 Last updated: 2026-11-02 (project lives at /data/hdrive/XPPAUT-Web)
 
+**Live site:** https://zetaone.github.io/XPPAUT-Web/ (repo
+https://github.com/ZetaOne/XPPAUT-Web, public, GPL-2.0-or-later). Every push
+to `master` rebuilds and redeploys via `.github/workflows/pages.yml`
+(~1.5 min). Commit/push only when the user asks.
+
 ## Goal
 
 Port XPPAUT to run as a web application in the user's browser, keeping the
@@ -158,6 +163,12 @@ original).
     download immediately with a progress bar ("Loading XPP… x of 1.1 MB",
     sizes from public/wasm/sizes.json) and hands the bytes to Emscripten
     via instantiateWasm, so the file is fetched exactly once.
+
+15. **Published on GitHub Pages** (2026-11-03): repo ZetaOne/XPPAUT-Web;
+    first deploy passed in 1m28s; live site verified in headless Chrome
+    (load, integrate, nullclines). GitHub serves the wasm gzipped (437 KB).
+    Actions annotations: actions/* v4/v5 run on deprecated Node 20 (forced
+    to Node 24) - bump action versions when convenient.
 
 ## Next
 
