@@ -443,6 +443,7 @@ void xw_input_configure(Window top, int x, int y, int w, int h)
   xw_drawable *t = xw_lookup(top);
   if (!t || t->parent != root) return;
   int resized = (w > 0 && h > 0) && (w != t->width || h != t->height);
+  if (!resized && x == t->x && y == t->y) return;
   t->x = x;
   t->y = y;
   if (resized) {
@@ -856,6 +857,10 @@ Status XIconifyWindow(Display *d, Window win, int screen)
 static void configure(xw_drawable *w, int x, int y, int width, int height, int move, int size)
 {
   int resized = size && (width != w->width || height != w->height);
+  int moved = move && (x != w->x || y != w->y);
+  /* like the X server: a request that changes nothing generates no events
+     (XPP re-resizes windows from its ConfigureNotify handler) */
+  if (!resized && !moved) return;
   if (move) { w->x = x; w->y = y; }
   if (resized) {
     resize_buffer(w, width, height);

@@ -48,7 +48,30 @@ int xw_platform_screen_width(void) { screen_size(); return sw; }
 int xw_platform_screen_height(void) { screen_size(); return sh; }
 void xw_platform_poll(void) {}
 void xw_platform_bell(void) {}
-void xw_platform_toplevel_changed(Window w) { (void)w; }
+
+/* A minimal window manager: windows first mapped at (0,0) after the main
+   window are tiled to its right, so tests can see and click them all. */
+#define MAX_PLACED 1024
+static Window placed[MAX_PLACED];
+static int nplaced, next_x = -1, next_y, row_h;
+
+void xw_platform_toplevel_changed(Window w)
+{
+  xw_drawable *t = xw_lookup(w);
+  if (!t || !t->mapped) return;
+  for (int i = 0; i < nplaced; i++)
+    if (placed[i] == w) return;
+  if (nplaced < MAX_PLACED) placed[nplaced++] = w;
+  if (nplaced == 1 || t->x || t->y) {
+    if (next_x < 0) { next_x = t->x + t->width + 8; next_y = 0; }
+    return;
+  }
+  screen_size();
+  if (next_x + t->width > sw) { next_x = 650; next_y += row_h + 8; row_h = 0; }
+  xw_input_configure(w, next_x, next_y, 0, 0);
+  next_x += t->width + 8;
+  if (t->height > row_h) row_h = t->height;
+}
 void xw_platform_cursor(Window w, int shape) { (void)w; (void)shape; }
 
 static void fail(const char *msg, const char *arg)

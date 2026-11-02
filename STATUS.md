@@ -62,17 +62,25 @@ original).
      menu to download anything XPP wrote, XPP's text output log.
    - Verified in headless Chrome (`scripts/browser-test.mjs`): main window,
      keyboard (I G), menus by mouse, Initial Data window, editing a value
-     and re-running.
+     and re-running, AUTO window with a steady-state continuation (Morris-
+     Lecar S-curve with labelled special points).
+   - Verified natively: Parameters, Equations, Data Viewer windows,
+     nullclines, direction field, AUTO continuation.
+   - Like the X server, a configure request that changes nothing sends no
+     ConfigureNotify (XPP re-resizes windows from that handler; sending it
+     looped forever when the Equations window opened).
+   - Keys typed during an integration are discarded by XPP itself (its
+     abort check reads them), as on the desktop.
    - Batch output still byte-identical on all 144 examples (wasm vs musl
      baseline) with Asyncify.
 
 ## Next
 
 - **Finish step 3:** compare against the real desktop XPP pixel by pixel
-  (needs `sudo apt install xvfb`), then exercise every window type: AUTO,
-  data browser, parameter/eqn boxes, nullclines, direction fields,
-  animation (kinescope/aniparse), array plots, file browser, help. Check
-  the top-button gradients. Speed of long integrations in the browser.
+  (needs `sudo apt install xvfb`), then exercise the remaining window
+  types: animation (kinescope/aniparse), array plots, file browser, help,
+  extra graph windows (Makewindow), 3D, sliders. Check the top-button
+  gradients. Speed of long integrations in the browser.
 - **Step 4:** fuller downloads (plots as PNG/SVG/PS, .set files, AUTO
   output), saving an edited .ode, uploading data files.
 
