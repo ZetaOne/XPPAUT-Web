@@ -10,7 +10,7 @@
 ROOT    := $(abspath ..)
 XPP     := $(ROOT)/xppaut
 OBJECTS := $(shell cat $(CURDIR)/objects.txt)
-XLIB    := xstub.o
+XLIB    := xlib.o draw.o fonts_data.o colors_data.o
 
 # Same feature set as the upstream Makefile, minus HAVEDLL (no dlopen in the
 # browser).
@@ -21,7 +21,7 @@ INCLUDES := -I$(CURDIR)/include
 CFLAGS  ?= -O2
 # 30-year-old C: silence warnings from upstream code, keep the build quiet.
 XPP_CFLAGS := -MMD -MP -std=gnu99 -D_XOPEN_SOURCE=600 -fcommon -w $(DEFINES) $(INCLUDES)
-OWN_CFLAGS := -MMD -MP -std=c99 -Wall -Wextra $(INCLUDES)
+OWN_CFLAGS := -MMD -MP -std=gnu99 -Wall -Wextra $(INCLUDES)
 
 .PHONY: headless wasm clean
 
@@ -29,7 +29,7 @@ OWN_CFLAGS := -MMD -MP -std=c99 -Wall -Wextra $(INCLUDES)
 HL := $(ROOT)/build/headless-$(notdir $(CC))
 headless: $(HL)/xppaut
 
-$(HL)/xppaut: $(addprefix $(HL)/,$(OBJECTS) $(XLIB))
+$(HL)/xppaut: $(addprefix $(HL)/,$(OBJECTS) $(XLIB) platform_native.o)
 	$(CC) -fcommon -o $@ $^ -lm
 
 $(HL)/%.o: $(XPP)/%.c | $(HL)
@@ -41,15 +41,19 @@ $(HL)/%.o: xlib/%.c | $(HL)
 # ---- WebAssembly ------------------------------------------------------------
 WA := $(ROOT)/build/wasm
 EMCC ?= emcc
+# called by the page (src/xpp.ts)
+XW_EXPORTS := _xw_render,_xw_toplevels,_xw_toplevel_dirty,_xw_title,_xw_toplevel_info,_xw_input_motion,_xw_input_button,_xw_input_key,_xw_input_configure,_xw_input_close,_xw_input_raise
 WASM_LDFLAGS := -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createXpp \
                 -sENVIRONMENT=web,node -sALLOW_MEMORY_GROWTH=1 \
                 -sINVOKE_RUN=0 -sEXIT_RUNTIME=1 -sFORCE_FILESYSTEM=1 \
-                -sEXPORTED_RUNTIME_METHODS=callMain,FS,NODEFS \
+                -sEXPORTED_RUNTIME_METHODS=callMain,FS,NODEFS,HEAPU8,HEAP32,UTF8ToString,stringToUTF8 \
+                -sEXPORTED_FUNCTIONS=_main,_malloc,_free,$(XW_EXPORTS) \
+                -sASYNCIFY=1 -sASYNCIFY_STACK_SIZE=1MB \
                 -sSTACK_SIZE=4MB -lnodefs.js
 
 wasm: $(WA)/xppaut.mjs
 
-$(WA)/xppaut.mjs: $(addprefix $(WA)/,$(OBJECTS) $(XLIB))
+$(WA)/xppaut.mjs: $(addprefix $(WA)/,$(OBJECTS) $(XLIB) platform_web.o)
 	$(EMCC) -O2 -o $@ $^ $(WASM_LDFLAGS)
 
 $(WA)/%.o: $(XPP)/%.c | $(WA)

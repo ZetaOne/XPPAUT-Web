@@ -47,6 +47,9 @@ for f in "$musl"/src/math/*.c; do
 done
 
 mkdir -p "$root/build/headless-muslm"
-gcc -fcommon -o "$root/build/headless-muslm/xppaut" \
-  "$root"/build/headless-cc/*.o "$out"/*.o -lm
+objs=()
+for o in $(cat "$root/web/objects.txt") xlib.o draw.o fonts_data.o colors_data.o platform_native.o; do
+  objs+=("$root/build/headless-cc/$o")
+done
+gcc -fcommon -o "$root/build/headless-muslm/xppaut" "${objs[@]}" "$out"/*.o -lm
 echo "Built $root/build/headless-muslm/xppaut"

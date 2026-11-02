@@ -1,15 +1,28 @@
 :root {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.4;
   color-scheme: light dark;
-  --bg: #ffffff;
-  --fg: #1a1a1a;
+  --bg: #f4f4f2;
+  --fg: #1d1d1b;
+  --muted: #6b6b66;
+  --bar: #ffffff;
+  --line: #d8d8d2;
+  --desk: #5c6670;
+  --panel-bar: #e6e6e1;
+  --panel-bar-active: #d5dbe3;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #121212;
-    --fg: #e8e8e8;
+    --bg: #18191b;
+    --fg: #e6e6e3;
+    --muted: #9a9a95;
+    --bar: #222326;
+    --line: #34363a;
+    --desk: #2a3038;
+    --panel-bar: #34363a;
+    --panel-bar-active: #3d4652;
   }
 }
 
@@ -17,14 +30,219 @@
   box-sizing: border-box;
 }
 
+html,
 body {
+  height: 100%;
   margin: 0;
+}
+
+body {
   background: var(--bg);
   color: var(--fg);
 }
 
-main {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ---- top bar ---------------------------------------------------------- */
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 12px;
+  background: var(--bar);
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.brand {
+  font-weight: 600;
+}
+
+.start,
+.session {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.start[hidden],
+.session[hidden] {
+  display: none;
+}
+
+.sep {
+  color: var(--muted);
+}
+
+select,
+button,
+.file {
+  font: inherit;
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+label select {
+  margin-left: 6px;
+}
+
+#status {
+  color: var(--muted);
+}
+
+.files {
+  position: relative;
+}
+
+.files summary {
+  cursor: pointer;
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  list-style: none;
+}
+
+.files ul {
+  position: absolute;
+  z-index: 100000;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 200px;
+  max-height: 60vh;
+  overflow: auto;
+  margin: 0;
+  padding: 6px 0;
+  list-style: none;
+  background: var(--bar);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.2);
+}
+
+.files li a,
+.files li.empty {
+  display: block;
+  padding: 3px 12px;
+  color: var(--fg);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.files li a:hover {
+  background: var(--panel-bar-active);
+}
+
+.files li.empty {
+  color: var(--muted);
+}
+
+/* ---- desktop and XPP windows ------------------------------------------ */
+.desktop {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  background: var(--desk);
+}
+
+.desktop.bell {
+  animation: bell 0.15s;
+}
+
+@keyframes bell {
+  50% {
+    filter: brightness(1.4);
+  }
+}
+
+.hint {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 16px;
+  color: #e8ebee;
+  text-align: center;
+}
+
+.xwin {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  /* no border: the canvas must sit exactly at the window's X position */
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.45), 0 6px 20px rgb(0 0 0 / 0.35);
+  background: var(--panel-bar);
+}
+
+.xwin-bar {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 4px 0 8px;
+  background: var(--panel-bar);
+  font-size: 12px;
+  cursor: move;
+  user-select: none;
+}
+
+.xwin:hover .xwin-bar {
+  background: var(--panel-bar-active);
+}
+
+.xwin-title {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.xwin-close {
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.xwin-canvas {
+  display: block;
+  image-rendering: pixelated;
+}
+
+.xwin-grip {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 12px;
+  height: 12px;
+  cursor: nwse-resize;
+}
+
+/* ---- output log ------------------------------------------------------- */
+.log {
+  background: var(--bar);
+  border-top: 1px solid var(--line);
+}
+
+.log summary {
+  padding: 4px 12px;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.log pre {
+  max-height: 160px;
+  margin: 0;
+  padding: 6px 12px;
+  overflow: auto;
+  font-size: 12px;
 }

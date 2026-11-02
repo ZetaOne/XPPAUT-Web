@@ -36,25 +36,33 @@ batch run against the stored reference output:
 ./scripts/test-native.sh
 ```
 
-## Web port build
+## Running the web app
 
-`web/xlib/xstub.c` currently provides placeholder versions of the 69 Xlib
-functions XPP links against. That is enough for batch mode (`-silent`), not
-yet for the graphical interface.
+```bash
+source .emsdk/emsdk_env.sh   # Emscripten (install once: scripts/setup-emsdk.sh)
+npm run build:wasm            # compile XPP, copy it and the example .odes into public/
+npm run dev                   # open http://localhost:5173/  (or ?ode=lecar.ode)
+```
+
+## How it is built
+
+`web/xlib/` is a small X11 implementation inside the program: the 69 Xlib
+functions XPP calls, drawing into in-memory pixel buffers.
+
+- `web/xlib/platform_web.c` + `src/xpp.ts`: in the browser, each X window
+  becomes a panel with a canvas; mouse and keyboard become X events.
+- `web/xlib/platform_native.c`: a native, scriptable headless build for
+  tests, e.g.
+  `XPPWEB_SCRIPT=script.txt build/headless-cc/xppaut lecar.ode`
+  with commands like `key i`, `click X Y`, `screenshot out.ppm`.
 
 ```bash
 make -C web headless                 # native, gcc   -> build/headless-cc/xppaut
 make -C web CC=clang-18 headless     # native, clang -> build/headless-clang-18/xppaut
 scripts/compare-batch.sh build/headless-cc/xppaut   # compare all ode/*.ode with the desktop build
-```
-
-WebAssembly (needs Emscripten; `scripts/setup-emsdk.sh` installs it into `.emsdk/`):
-
-```bash
-source .emsdk/emsdk_env.sh
-make -C web wasm                              # -> build/wasm/xppaut.mjs + xppaut.wasm
 scripts/build-muslm-baseline.sh               # native build with Emscripten's libm (musl)
 BASELINE=build/headless-muslm/xppaut scripts/compare-batch.sh scripts/xpp-wasm-node.mjs
+node scripts/browser-test.mjs "http://localhost:4173/?ode=lecar.ode" "wait 3000" "key i" "key g" "shot out.png"
 ```
 
 The WebAssembly build matches the musl baseline byte for byte. Against the
