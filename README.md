@@ -1,6 +1,13 @@
 # XPPAUT-Web
 
-A browser-based tool for simulating and analyzing dynamical systems, inspired by XPPAUT.
+XPPAUT running in the web browser: the original XPPAUT 8 program by Bard
+Ermentrout, compiled to WebAssembly, with its X11 interface reproduced on an
+HTML canvas so it looks and works like the desktop version.
+
+**Use it:** https://zetaone.github.io/XPPAUT-Web/
+
+Everything runs in the visitor's browser; the site is static, so any number of
+people can use it at once.
 
 ## Getting started
 
@@ -75,3 +82,15 @@ tests/xdraw/run.sh                       # rasterisation test, libX11 vs ours
 The WebAssembly build matches the musl baseline byte for byte. Against the
 glibc desktop build a few chaotic examples differ in the last digits, purely
 from libm rounding.
+
+## Publishing
+
+Every push to `master` rebuilds and redeploys the site with GitHub Actions
+(`.github/workflows/pages.yml`: Emscripten 6.0.13, `scripts/build-web.sh`,
+`npm run build`, then GitHub Pages).
+
+## Licence
+
+GNU General Public License, version 2 or (at your option) any later version,
+the same as XPPAUT (see `LICENSE`). XPPAUT is by Bard Ermentrout; this port's
+changes to its source are listed in `xppaut/UPSTREAM.md`.
