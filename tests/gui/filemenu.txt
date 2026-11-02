@@ -1,0 +1,5 @@
+# File submenu drawn over the main menu
+window "XPP Ver"
+move 400 200
+key f
+shot filemenu.ppm

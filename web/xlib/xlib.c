@@ -231,12 +231,99 @@ static void send_structure(xw_drawable *w, int type)
   enqueue(&ev);
 }
 
-/* Expose w and every mapped descendant (they just became viewable). */
+/* w and its mapped descendants just became viewable: like the X server,
+   paint their backgrounds (colour or tiled pixmap) and send Expose. */
 static void expose_tree(xw_drawable *w)
 {
   if (!w->mapped) return;
+  xw_clear_area(w, 0, 0, 0, 0);
   send_expose(w, 0, 0, w->width, w->height);
   for (int i = 0; i < w->nchildren; i++) expose_tree(w->children[i]);
+}
+
+/* ---- exposure of revealed areas ------------------------------------------
+   An X server keeps no contents for covered parts of a window: when they
+   are revealed (a sibling is unmapped, moved, lowered, or the window is
+   raised) it paints the background there and sends Expose, and programs
+   redraw. XPP relies on this, e.g. it switches menus with XRaiseWindow.
+   Top-level windows are composited (each is its own canvas), so this only
+   applies inside a top-level. */
+
+typedef struct { int x, y, w, h; } xw_rect;
+
+static int intersect(xw_rect a, xw_rect b, xw_rect *out)
+{
+  int x0 = a.x > b.x ? a.x : b.x, y0 = a.y > b.y ? a.y : b.y;
+  int x1 = a.x + a.w < b.x + b.w ? a.x + a.w : b.x + b.w;
+  int y1 = a.y + a.h < b.y + b.h ? a.y + a.h : b.y + b.h;
+  if (x0 >= x1 || y0 >= y1) return 0;
+  *out = (xw_rect){x0, y0, x1 - x0, y1 - y0};
+  return 1;
+}
+
+/* outer rectangle (including border) of a child, in its parent's coordinates */
+static xw_rect outer_rect(xw_drawable *c)
+{
+  int bw = c->parent == root ? 0 : c->border_width;
+  return (xw_rect){c->x, c->y, c->width + 2 * bw, c->height + 2 * bw};
+}
+
+/* r is in w's content coordinates */
+static void expose_rect(xw_drawable *w, xw_rect r, int recurse)
+{
+  xw_rect clip;
+  if (!w->mapped || !xw_viewable(w)) return;
+  if (!intersect(r, (xw_rect){0, 0, w->width, w->height}, &clip)) return;
+  xw_clear_area(w, clip.x, clip.y, clip.w, clip.h);
+  send_expose(w, clip.x, clip.y, clip.w, clip.h);
+  if (!recurse) return;
+  for (int i = 0; i < w->nchildren; i++) {
+    xw_drawable *c = w->children[i];
+    xw_rect o, part;
+    if (!c->mapped) continue;
+    o = outer_rect(c);
+    if (!intersect(clip, o, &part)) continue;
+    int bw = c->border_width;
+    expose_rect(c, (xw_rect){part.x - c->x - bw, part.y - c->y - bw, part.w, part.h}, 1);
+  }
+}
+
+static int child_index(xw_drawable *p, xw_drawable *c)
+{
+  for (int i = 0; i < p->nchildren; i++)
+    if (p->children[i] == c) return i;
+  return -1;
+}
+
+/* area r (parent coordinates) of parent p, previously covered by the child
+   at stacking index idx, is now uncovered */
+static void reveal(xw_drawable *p, xw_rect r, int idx)
+{
+  if (!p || p == root || !xw_viewable(p)) return;
+  expose_rect(p, r, 0);
+  for (int i = 0; i < idx && i < p->nchildren; i++) {
+    xw_drawable *s = p->children[i];
+    xw_rect part;
+    if (!s->mapped || !intersect(r, outer_rect(s), &part)) continue;
+    int bw = s->border_width;
+    expose_rect(s, (xw_rect){part.x - s->x - bw, part.y - s->y - bw, part.w, part.h}, 1);
+  }
+}
+
+/* w is about to move from stacking index `from` to the top: expose the
+   parts of w that siblings above it were covering */
+static void expose_raised(xw_drawable *w, int from)
+{
+  xw_drawable *p = w->parent;
+  if (!p || p == root || !w->mapped) return;
+  xw_rect me = outer_rect(w);
+  int bw = w->border_width;
+  for (int i = from + 1; i < p->nchildren; i++) {
+    xw_drawable *s = p->children[i];
+    xw_rect part;
+    if (!s->mapped || !intersect(me, outer_rect(s), &part)) continue;
+    expose_rect(w, (xw_rect){part.x - w->x - bw, part.y - w->y - bw, part.w, part.h}, 1);
+  }
 }
 
 /* ------------------------------------------------------------------------ */
@@ -732,6 +819,7 @@ int XDestroyWindow(Display *d, Window win)
   if (!w || !w->is_window || w == root) return 0;
   xw_drawable *p = w->parent;
   int was_top = p == root;
+  if (w->mapped) reveal(p, outer_rect(w), child_index(p, w));
   remove_child(p, w);
   xw_mark_dirty(p);
   destroy_tree(w);
@@ -774,6 +862,7 @@ static void raise_window(xw_drawable *w)
 {
   xw_drawable *p = w->parent;
   if (!p) return;
+  expose_raised(w, child_index(p, w));
   remove_child(p, w);
   add_child(p, w);
   xw_mark_dirty(p);
@@ -795,6 +884,16 @@ int XLowerWindow(Display *d, Window win)
   xw_drawable *w = xw_lookup(win);
   if (!w || !w->is_window || w == root) return 1;
   xw_drawable *p = w->parent;
+  int from = child_index(p, w);
+  if (w->mapped && p != root) { /* siblings below w lose its cover */
+    xw_rect me = outer_rect(w), part;
+    for (int i = 0; i < from; i++) {
+      xw_drawable *s = p->children[i];
+      if (!s->mapped || !intersect(me, outer_rect(s), &part)) continue;
+      int bw = s->border_width;
+      expose_rect(s, (xw_rect){part.x - s->x - bw, part.y - s->y - bw, part.w, part.h}, 1);
+    }
+  }
   remove_child(p, w);
   add_child(p, w);
   memmove(p->children + 1, p->children, (p->nchildren - 1) * sizeof *p->children);
@@ -823,7 +922,9 @@ int XMapSubwindows(Display *d, Window win)
 static void unmap_window(xw_drawable *w)
 {
   if (!w->mapped) return;
+  int was_viewable = xw_viewable(w);
   w->mapped = 0;
+  if (was_viewable) reveal(w->parent, outer_rect(w), child_index(w->parent, w));
   send_structure(w, UnmapNotify);
   if (w->parent) xw_mark_dirty(w->parent);
   if (w->parent == root) xw_platform_toplevel_changed(w->id);
@@ -861,6 +962,8 @@ static void configure(xw_drawable *w, int x, int y, int width, int height, int m
   /* like the X server: a request that changes nothing generates no events
      (XPP re-resizes windows from its ConfigureNotify handler) */
   if (!resized && !moved) return;
+  xw_rect old = outer_rect(w);
+  int viewable = w->parent != root && xw_viewable(w);
   if (move) { w->x = x; w->y = y; }
   if (resized) {
     resize_buffer(w, width, height);
@@ -868,6 +971,11 @@ static void configure(xw_drawable *w, int x, int y, int width, int height, int m
   }
   send_structure(w, ConfigureNotify);
   if (resized) send_expose(w, 0, 0, w->width, w->height);
+  if (viewable) { /* the uncovered part of the old area */
+    xw_rect now = outer_rect(w), keep;
+    if (!intersect(old, now, &keep) || keep.w != old.w || keep.h != old.h)
+      reveal(w->parent, old, child_index(w->parent, w));
+  }
   if (w->parent) xw_mark_dirty(w->parent);
   xw_mark_dirty(w);
   if (w->parent == root) xw_platform_toplevel_changed(w->id);
@@ -894,8 +1002,12 @@ int XSetWindowBorderWidth(Display *d, Window win, unsigned int width)
 {
   (void)d;
   xw_drawable *w = xw_lookup(win);
-  if (w && w->is_window) {
+  if (w && w->is_window && (int)width != w->border_width) {
+    xw_rect old = outer_rect(w);
+    int shrink = (int)width < w->border_width;
     w->border_width = width;
+    if (shrink && w->mapped && w->parent != root && xw_viewable(w))
+      reveal(w->parent, old, child_index(w->parent, w));
     if (w->parent) xw_mark_dirty(w->parent);
   }
   return 1;
@@ -1104,6 +1216,13 @@ Status XStringListToTextProperty(char **list, int count, XTextProperty *tp)
 }
 
 int XFree(void *p) { free(p); return 1; }
+
+int XStoreName(Display *d, Window w, const char *name)
+{
+  (void)d;
+  set_title(w, name);
+  return 1;
+}
 
 void XSetWMName(Display *d, Window w, XTextProperty *tp)
 {
@@ -1423,9 +1542,9 @@ static int hexval(const char *s, int n, unsigned *out)
     if (!isxdigit((unsigned char)s[i])) return 0;
     v = v * 16 + (isdigit((unsigned char)s[i]) ? s[i] - '0' : tolower((unsigned char)s[i]) - 'a' + 10);
   }
-  /* scale n hex digits to 16 bits */
-  unsigned max = (1u << (4 * n)) - 1;
-  *out = (unsigned)((v * 65535ul + max / 2) / max);
+  /* Xlib shifts n hex digits into the high bits ("#ED" -> 0xED00); it
+     does not scale them */
+  *out = (v << (16 - 4 * n)) & 0xffff;
   return 1;
 }
 

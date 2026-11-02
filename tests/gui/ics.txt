@@ -1,0 +1,5 @@
+window "XPP Ver"
+click 22 8
+sleep 500
+window "Initial Data"
+shot ics.ppm

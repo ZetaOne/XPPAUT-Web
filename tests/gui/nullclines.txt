@@ -1,0 +1,15 @@
+# trajectory, nullclines and direction field
+window "XPP Ver"
+move 400 200
+key i
+key g
+sleep 500
+key n
+key n
+sleep 500
+key d
+key d
+sleep 300
+key Return
+sleep 800
+shot nullclines.ppm

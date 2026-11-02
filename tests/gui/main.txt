@@ -1,0 +1,3 @@
+# main window right after start
+window "XPP Ver"
+shot main.ppm

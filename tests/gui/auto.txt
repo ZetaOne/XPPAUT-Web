@@ -1,0 +1,22 @@
+# AUTO window, then a steady-state continuation
+window "XPP Ver"
+move 400 200
+key i
+key g
+sleep 500
+key i
+key l
+sleep 500
+key i
+key l
+sleep 500
+key f
+key a
+sleep 800
+window "It's AUTO"
+shot auto.ppm
+click 47 87
+sleep 500
+key s
+sleep 3000
+shot autorun.ppm

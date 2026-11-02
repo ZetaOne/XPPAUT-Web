@@ -1,0 +1,5 @@
+window "XPP Ver"
+click 210 8
+sleep 500
+window "Equations"
+shot eqns.ppm

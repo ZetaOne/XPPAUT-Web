@@ -65,6 +65,13 @@ BASELINE=build/headless-muslm/xppaut scripts/compare-batch.sh scripts/xpp-wasm-n
 node scripts/browser-test.mjs "http://localhost:4173/?ode=lecar.ode" "wait 3000" "key i" "key g" "shot out.png"
 ```
 
+Pixel comparison with the real desktop XPP (needs Xvfb, xdotool):
+
+```bash
+scripts/compare-gui.sh tests/gui/*.txt   # each scenario: real XPP vs ours
+tests/xdraw/run.sh                       # rasterisation test, libX11 vs ours
+```
+
 The WebAssembly build matches the musl baseline byte for byte. Against the
 glibc desktop build a few chaotic examples differ in the last digits, purely
 from libm rounding.

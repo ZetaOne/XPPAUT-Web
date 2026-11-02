@@ -1,0 +1,7 @@
+# Initialconds / Go
+window "XPP Ver"
+move 400 200
+key i
+key g
+sleep 500
+shot integrate.ppm

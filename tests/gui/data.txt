@@ -1,0 +1,10 @@
+# Data viewer after a run
+window "XPP Ver"
+move 400 200
+key i
+key g
+sleep 500
+click 257 8
+sleep 500
+window "Data Viewer"
+shot data.ppm

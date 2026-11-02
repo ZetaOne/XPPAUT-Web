@@ -71,16 +71,31 @@ original).
      looped forever when the Equations window opened).
    - Keys typed during an integration are discarded by XPP itself (its
      abort check reads them), as on the desktop.
+5. **Pixel-identical to the desktop XPP** on the scenarios tested so far.
+   `scripts/compare-gui.sh tests/gui/*.txt` runs each script on the real
+   XPP (Xvfb + xdotool, `scripts/xref.py`) and on our Xlib (headless
+   harness, `XPPWEB_NOWM=1`), and compares every shot. All 10 identical:
+   main window, integrate, nullclines + direction field, File menu,
+   Parameters, Equations, Data Viewer, Initial Data, AUTO window, AUTO run.
+   `tests/xdraw/run.sh` draws a rasterisation test with real libX11 and
+   ours: lines of every width/angle, polylines, dashes, XOR, text, filled
+   and wide circles match exactly; only thin odd-size circles and partial
+   thin arcs differ (XPP draws neither).
+   X behaviours this needed: backgrounds (incl. tiled pixmaps) painted on
+   map; Expose for areas revealed by raise/lower/unmap/move/border shrink
+   (XPP switches menus with XRaiseWindow); XParseColor shifts hex digits;
+   wide lines/arcs use the X polygon rule with pixel-centre coordinates;
+   width 1 is a wide line.
    - Batch output still byte-identical on all 144 examples (wasm vs musl
      baseline) with Asyncify.
 
 ## Next
 
-- **Finish step 3:** compare against the real desktop XPP pixel by pixel
-  (needs `sudo apt install xvfb`), then exercise the remaining window
-  types: animation (kinescope/aniparse), array plots, file browser, help,
-  extra graph windows (Makewindow), 3D, sliders. Check the top-button
-  gradients. Speed of long integrations in the browser.
+- **Finish step 3:** add comparison scenarios (tests/gui/) for the
+  remaining window types: animation (kinescope/aniparse), array plots, file
+  browser, help, extra graph windows (Makewindow), 3D, sliders, browser
+  editing, AUTO periodic orbits, other .ode examples. Speed of long
+  integrations in the browser.
 - **Step 4:** fuller downloads (plots as PNG/SVG/PS, .set files, AUTO
   output), saving an edited .ode, uploading data files.
 

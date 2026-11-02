@@ -1,0 +1,6 @@
+# Param button opens the Parameters window
+window "XPP Ver"
+click 163 8
+sleep 500
+window "Parameters"
+shot params.ppm

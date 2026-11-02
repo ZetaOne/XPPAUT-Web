@@ -17,10 +17,14 @@
  *   shot FILE.ppm             current window only
  *   list                      print top-level windows to stderr
  *   probe X Y                 print the window chain under a point
+ *   sleep MS                  no-op here (the reference driver needs it)
  *   quit                      exit(0)
  *
  * At the end of the script XPP exits. Lines starting with # are comments.
  * XPPWEB_SCREEN=WxH sets the screen size (default 1280x1024).
+ * XPPWEB_NOWM=1 turns off the built-in window manager (no placement, no
+ * ConfigureNotify), to match the real XPP on a bare Xvfb in
+ * scripts/compare-gui.sh. Windows are then raised before being used.
  */
 #include <ctype.h>
 #include <stdio.h>
@@ -58,7 +62,7 @@ static int nplaced, next_x = -1, next_y, row_h;
 void xw_platform_toplevel_changed(Window w)
 {
   xw_drawable *t = xw_lookup(w);
-  if (!t || !t->mapped) return;
+  if (!t || !t->mapped || getenv("XPPWEB_NOWM")) return;
   for (int i = 0; i < nplaced; i++)
     if (placed[i] == w) return;
   if (nplaced < MAX_PLACED) placed[nplaced++] = w;
@@ -222,11 +226,12 @@ void xw_platform_wait(void)
       else if ((cur_win = find_window(q)) == None) {
         list_windows();
         fail("no mapped window titled", q);
-      }
+      } else xw_input_raise(cur_win);
     } else if (!strcmp(cmd, "move") || !strcmp(cmd, "click") || !strcmp(cmd, "press") ||
                !strcmp(cmd, "release")) {
       if (sscanf(rest, "%d %d %d", &x, &y, &b) < 2) fail("expected X Y", NULL);
       to_root(&x, &y);
+      if (cur_win != None) xw_input_raise(cur_win);
       unsigned bmask = Button1Mask << (b - 1);
       if (!strcmp(cmd, "move")) xw_input_motion(x, y, 0);
       if (!strcmp(cmd, "click") || !strcmp(cmd, "press")) xw_input_button(x, y, b, 1, 0);
@@ -259,6 +264,8 @@ void xw_platform_wait(void)
                 w->height, w->x, w->y, w->border_width, w->bg_kind, w->bg_pixel, w->event_mask);
     } else if (!strcmp(cmd, "list")) {
       list_windows();
+    } else if (!strcmp(cmd, "sleep")) {
+      /* we always run at idle; only scripts/xref.py needs to wait */
     } else if (!strcmp(cmd, "quit")) {
       exit(0);
     } else {
