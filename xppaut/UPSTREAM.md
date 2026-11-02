@@ -35,4 +35,6 @@ Changes to upstream files are marked with `XPPAUT-Web:` comments.
 
 | `menudrive.c` | WebAssembly build only: `xpp_hlp` opens the bundled HTML help (`help/xpphelp.html`) in a browser tab | The desktop version needs XPPHELP/XPPBROWSER and fork/exec, which a browser cannot do |
 
+| `init_conds.c` | WebAssembly build only: the file dialog keeps the file name when you change folder (`fs_keep_name`) | Upstream replaces the File field with just the folder, so Ok after navigating writes nothing |
+
 The AUTO fix and the close handling are deliberate behaviour differences from the unpatched desktop build.

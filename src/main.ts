@@ -353,25 +353,33 @@ exportSelect.addEventListener('change', async () => {
 })
 
 const pendingExports = new Map<string, ReturnType<typeof setTimeout>>()
-function exported(name: string) {
+function exported(path: string) {
+  const name = path.slice(path.lastIndexOf('/') + 1)
   // AUTO's scratch files (fort.3, fort.7, ...) and its working results
   // (<model>.b/.d/.s, appended to on every run) are not exports
   if (/^fort\.\d+$/.test(name) || [odeName + '.b', odeName + '.d', odeName + '.s'].includes(name)) return
   // XPP sometimes reopens a file to append; deliver once it settles
-  clearTimeout(pendingExports.get(name))
-  pendingExports.set(name, setTimeout(() => deliverExport(name), 250))
+  clearTimeout(pendingExports.get(path))
+  pendingExports.set(path, setTimeout(() => deliverExport(path), 250))
 }
 
-async function deliverExport(name: string) {
-  pendingExports.delete(name)
+/** where XPP saved it, if not its working folder (shown in the notice) */
+function folderNote(path: string): string {
+  const dir = path.slice(0, path.lastIndexOf('/')) || '/'
+  return dir === '/work' ? '' : ` (XPP saved it in ${dir})`
+}
+
+async function deliverExport(path: string) {
+  pendingExports.delete(path)
   updateFileCount()
+  const name = path.slice(path.lastIndexOf('/') + 1)
   if (!session || exportMode === 'files') {
-    notice(`Saved ${name} (see Files)`)
+    notice(folderNote(path) ? `Saved ${name} in XPP's ${path.slice(0, path.lastIndexOf('/'))}` : `Saved ${name} (see Files)`)
     return
   }
   let data: Uint8Array
   try {
-    data = session.readFile(name)
+    data = session.readFile(path)
   } catch {
     return // removed again (temporary file)
   }
@@ -381,14 +389,14 @@ async function deliverExport(name: string) {
       const w = await fh.createWritable()
       await w.write(data as BlobPart)
       await w.close()
-      notice(`Saved ${name} in "${exportDir.name}"`)
+      notice(`Saved ${name} in "${exportDir.name}"${folderNote(path)}`)
       return
     } catch {
       notice(`Could not write to "${exportDir.name}"; downloading ${name} instead`)
     }
   }
   download(name, data)
-  notice(`Downloaded ${name}`)
+  notice(`Downloaded ${name}${folderNote(path)}`)
 }
 
 // ---- files ------------------------------------------------------------------

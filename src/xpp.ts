@@ -65,8 +65,9 @@ export interface XppCallbacks {
   onOutput?: (line: string) => void;
   onExit?: (status: number) => void;
   onNotice?: (message: string) => void;
-  /** XPP finished writing a file in its working folder (an export) */
-  onFileWritten?: (name: string) => void;
+  /** XPP finished writing a file (an export). `path` is where it lives in
+      XPP's virtual file system: its dialog can browse to other folders. */
+  onFileWritten?: (path: string) => void;
 }
 
 export class XppSession {
@@ -141,7 +142,7 @@ export class XppSession {
       xppCursor: (w: number, shape: number) => this.setCursor(w, shape),
       xppBell: () => this.bell(),
       xppFileWritten: (path: string) => {
-        if (path.startsWith('/work/') && !path.slice(6).includes('/')) this.cb.onFileWritten?.(path.slice(6));
+        this.cb.onFileWritten?.(path.replace(/\/{2,}/g, '/'));
       },
       xppOpenHelp: () => {
         const w = window.open(new URL('help/xpphelp.html', document.baseURI).href, 'xpp-help');
@@ -196,7 +197,7 @@ export class XppSession {
   }
 
   readFile(name: string): Uint8Array {
-    return this.mod.FS.readFile('/work/' + name);
+    return this.mod.FS.readFile(name.startsWith('/') ? name : '/work/' + name);
   }
 
   /** Put a file in XPP's working directory (uploads). */

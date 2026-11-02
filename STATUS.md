@@ -187,6 +187,11 @@ original).
     180 px home-screen icon) is the middle envelope of the plot in the
     XPPAUT homepage banner (sites.pitt.edu/~phase/bard/bardware/xpp/xppaut.gif).
     Start-page text enlarged.
+    Changing folder in XPP's file dialog (user report): exports are now
+    delivered from any folder of XPP's virtual file system (notice says
+    where XPP put it), and in the web build the dialog keeps the file name
+    when you change folder (upstream leaves just the folder in the File
+    field, so Ok wrote nothing). Patch in init_conds.c, see UPSTREAM.md.
 
 ## Next
 

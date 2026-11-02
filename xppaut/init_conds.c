@@ -109,6 +109,12 @@ extern int noicon;
 
 extern char cur_dir[];
 
+/* XPPAUT-Web: when the file dialog changes folder it replaces the File
+   field with just the folder, so pressing Ok after navigating tries to
+   write to a directory and silently fails. In the web build, keep the
+   file name: step 0 remembers it, step 1 appends it to the new folder. */
+static void fs_keep_name(int step);
+
 
 FILESEL filesel;
 
@@ -636,6 +642,7 @@ Window w;
       get_fileinfo(filesel.wildtxt,cur_dir,&my_ff);
       filesel.n=my_ff.ndirs+my_ff.nfiles;
 
+      fs_keep_name(0); /* XPPAUT-Web */
       strcpy(filesel.filetxt,cur_dir);
       
       int m = strlen(filesel.filetxt);
@@ -643,6 +650,7 @@ Window w;
       {
 	      strcat(filesel.filetxt,"/");
       }
+      fs_keep_name(1); /* XPPAUT-Web */
       
       
       
@@ -672,6 +680,7 @@ Window w;
       get_fileinfo(filesel.wildtxt,cur_dir,&my_ff);
       filesel.n=my_ff.ndirs+my_ff.nfiles;
 
+      fs_keep_name(0); /* XPPAUT-Web */
       strcpy(filesel.filetxt,cur_dir);
       
       int m = strlen(filesel.filetxt);
@@ -679,6 +688,7 @@ Window w;
       {
 	      strcat(filesel.filetxt,"/");
       }
+      fs_keep_name(1); /* XPPAUT-Web */
       
       
       
@@ -717,6 +727,7 @@ Window w;
       get_fileinfo(filesel.wildtxt,cur_dir,&my_ff);
       filesel.n=my_ff.ndirs+my_ff.nfiles;
 
+      fs_keep_name(0); /* XPPAUT-Web */
       strcpy(filesel.filetxt,cur_dir);
       
       int m = strlen(filesel.filetxt);
@@ -724,6 +735,7 @@ Window w;
       {
 	      strcat(filesel.filetxt,"/");
       }
+      fs_keep_name(1); /* XPPAUT-Web */
       
       
       
@@ -2799,3 +2811,19 @@ void load_entire_box(b)
 
 
 
+
+static void fs_keep_name(int step)
+{
+#ifdef __EMSCRIPTEN__
+  static char kept[256];
+  if (step == 0) {
+    char *slash = strrchr(filesel.filetxt, '/');
+    const char *base = slash ? slash + 1 : filesel.filetxt;
+    snprintf(kept, sizeof kept, "%s", base);
+  } else if (kept[0] && strlen(filesel.filetxt) + strlen(kept) < sizeof filesel.filetxt) {
+    strcat(filesel.filetxt, kept);
+  }
+#else
+  (void)step;
+#endif
+}
