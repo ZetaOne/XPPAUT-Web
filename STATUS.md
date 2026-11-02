@@ -181,6 +181,10 @@ original).
     Files-only does not. The folder mode needs a real browser dialog and
     was not tested headlessly. Also fixed a page error when the loading
     area was removed before its fade-out timer.
+    AUTO appends to its <model>.b/.d/.s on every run after the first
+    (close_auto -> appendf), which triggered downloads; those names are now
+    skipped too (user report). Start page shows the graph cropped from the
+    XPPAUT homepage banner (public/xpp-graph.png, credited).
 
 ## Next
 

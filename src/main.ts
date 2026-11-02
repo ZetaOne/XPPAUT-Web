@@ -57,6 +57,10 @@ app.innerHTML = `
   <div class="layout">
     <main class="desktop" id="desktop">
       <div class="hint" id="hint">
+        <figure class="hero">
+          <img src="xpp-graph.png" width="332" height="232" alt="A colour-coded time plot drawn by XPPAUT">
+          <figcaption>From the XPPAUT homepage banner</figcaption>
+        </figure>
         <p>Pick an example or open your own <code>.ode</code> file to start XPP.</p>
         <div class="loadbar" id="loadbar" role="progressbar" aria-label="Loading XPP"><div id="loadfill"></div></div>
         <p class="loadtext" id="loadtext">Loading XPP…</p>
@@ -354,7 +358,9 @@ exportSelect.addEventListener('change', async () => {
 
 const pendingExports = new Map<string, ReturnType<typeof setTimeout>>()
 function exported(name: string) {
-  if (/^fort\.\d+$/.test(name)) return // AUTO's scratch files
+  // AUTO's scratch files (fort.3, fort.7, ...) and its working results
+  // (<model>.b/.d/.s, appended to on every run) are not exports
+  if (/^fort\.\d+$/.test(name) || [odeName + '.b', odeName + '.d', odeName + '.s'].includes(name)) return
   // XPP sometimes reopens a file to append; deliver once it settles
   clearTimeout(pendingExports.get(name))
   pendingExports.set(name, setTimeout(() => deliverExport(name), 250))

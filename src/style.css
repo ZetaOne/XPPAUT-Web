@@ -233,6 +233,25 @@ button.small,
   margin: 0;
 }
 
+.hero {
+  margin: 0 0 18px;
+}
+
+.hero img {
+  display: block;
+  max-width: min(332px, 80vw);
+  height: auto;
+  image-rendering: pixelated; /* keep the original XPP pixels sharp */
+  border: 1px solid rgb(0 0 0 / 0.4);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.3);
+}
+
+.hero figcaption {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #aab3bc;
+}
+
 .loadtext {
   font-size: 13px;
   color: #c3cad1;
