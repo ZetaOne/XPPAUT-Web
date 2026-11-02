@@ -79,6 +79,7 @@ export class XppSession {
   private cascade = 0;
   private running = false;
   private keyHandler: ((e: KeyboardEvent) => void) | null = null;
+  private mainId = 0;
 
   private desktop: HTMLElement;
   private cb: XppCallbacks;
@@ -88,8 +89,9 @@ export class XppSession {
     this.cb = cb;
   }
 
-  /** Start XPP on an .ode file. Resolves once XPP is running. */
-  async start(fileName: string, contents: string): Promise<void> {
+  /** Start XPP on an .ode file (plus extra files, e.g. .ani or .tab, put
+      next to it). Resolves once XPP is running. */
+  async start(fileName: string, contents: string, extras: Array<{ name: string; data: Uint8Array }> = []): Promise<void> {
     // JSPI build where the engine supports it (native speed), else Asyncify
     const forced = new URLSearchParams(location.search).get('engine'); // testing
     const jspi = forced ? forced === 'jspi' : 'Suspending' in WebAssembly;
@@ -123,7 +125,9 @@ export class XppSession {
     this.sizePtr = m._malloc(2 * 4);
     m.FS.mkdir('/work');
     m.FS.chdir('/work');
+    for (const f of extras) m.FS.writeFile('/work/' + f.name, f.data);
     m.FS.writeFile('/work/' + fileName, contents);
+    this.odeName = fileName;
     this.installKeyboard(window);
     window.addEventListener('pagehide', () => {
       for (const p of this.panels.values()) p.popup?.close();
@@ -141,15 +145,29 @@ export class XppSession {
     }
   }
 
-  /** Files XPP has written in its working directory. */
-  listFiles(): string[] {
+  /** Files in XPP's working directory (what it reads and writes). */
+  listFiles(): Array<{ name: string; size: number; mtime: number }> {
     if (!this.mod) return [];
-    return this.mod.FS.readdir('/work').filter((n: string) => n !== '.' && n !== '..');
+    const FS = this.mod.FS;
+    return FS.readdir('/work')
+      .filter((n: string) => n !== '.' && n !== '..')
+      .map((n: string) => ({ n, st: FS.stat('/work/' + n) }))
+      .filter((f: any) => FS.isFile(f.st.mode))
+      .map((f: any) => ({ name: f.n, size: f.st.size, mtime: +new Date(f.st.mtime) }))
+      .sort((a: any, b: any) => a.name.localeCompare(b.name));
   }
 
   readFile(name: string): Uint8Array {
     return this.mod.FS.readFile('/work/' + name);
   }
+
+  /** Put a file in XPP's working directory (uploads). */
+  writeFile(name: string, data: Uint8Array): void {
+    this.mod.FS.writeFile('/work/' + name.replace(/[/\\]/g, '_'), data);
+  }
+
+  /** The .ode file XPP was started with. */
+  odeName = '';
 
   // ---- called from C while XPP waits ----------------------------------
 
@@ -211,7 +229,12 @@ export class XppSession {
         this.raise(p);
         if (this.popOutNew && this.panels.size > 1 && isNew !== undefined) this.popOut(p, true);
       }
-      if (!mapped && p.popup) p.popup.close(); // XPP closed it: close the browser window
+      if (!mapped && p.popup) { // XPP closed it: close the browser window
+        const w = p.popup;
+        p.popup = null;
+        w.close();
+        p.el.insertBefore(p.canvas, p.grip);
+      }
       p.x = x;
       p.y = y;
       p.el.style.display = mapped && !p.popup ? '' : 'none';
@@ -225,7 +248,9 @@ export class XppSession {
     }
     for (const [id, p] of this.panels)
       if (!seen.has(id)) {
-        p.popup?.close();
+        const w = p.popup;
+        p.popup = null;
+        w?.close();
         p.el.remove();
         this.panels.delete(id);
       }
@@ -240,6 +265,10 @@ export class XppSession {
     bar.className = 'xwin-bar';
     const title = document.createElement('span');
     title.className = 'xwin-title';
+    const save = document.createElement('button');
+    save.className = 'xwin-btn';
+    save.title = 'Save this window as a PNG image';
+    save.textContent = '⤓';
     const pop = document.createElement('button');
     pop.className = 'xwin-btn';
     pop.title = 'Open in a separate browser window';
@@ -248,7 +277,7 @@ export class XppSession {
     close.className = 'xwin-btn';
     close.title = 'Close';
     close.textContent = '×';
-    bar.append(title, pop, close);
+    bar.append(title, save, pop, close);
     const canvas = document.createElement('canvas');
     canvas.className = 'xwin-canvas';
     canvas.width = canvas.height = 1;
@@ -264,11 +293,51 @@ export class XppSession {
 
     el.addEventListener('pointerdown', () => this.raise(p), true);
     pop.addEventListener('click', () => this.popOut(p, false));
-    close.addEventListener('click', () => this.queue(() => this.mod._xw_input_close(id)));
+    save.addEventListener('click', () => this.savePng(p));
+    close.addEventListener('click', () => this.closeWindow(p));
+    if (this.mainId === 0) this.mainId = id;
     this.dragMove(p, bar);
     this.dragResize(p, grip);
     this.pointerInput(p);
     return p;
+  }
+
+  /** The window manager's close button. XPP windows close through their own
+      Close button (the C side presses it); the main window asks XPP to quit
+      through its File / Quit menu, which confirms. */
+  private closeWindow(p: Panel): void {
+    if (p.id === this.mainId) {
+      for (const k of ['Escape', 'f', 'q']) this.sendKey(k);
+      return;
+    }
+    this.queue(() => this.mod._xw_input_close(p.id));
+  }
+
+  private sendKey(key: string): void {
+    const [ks, text] = SPECIAL_KEYS[key] ?? [key.codePointAt(0)!, key];
+    const m = this.mod;
+    for (const press of [1, 0])
+      this.queue(() => {
+        const buf = m._malloc(8);
+        m.stringToUTF8(text, buf, 8);
+        m._xw_input_key(ks, buf, press, 0);
+        m._free(buf);
+      });
+  }
+
+  private savePng(p: Panel): void {
+    const name = (p.title.textContent || 'xpp').replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '');
+    p.canvas.toBlob((b) => {
+      if (!b) return;
+      const url = URL.createObjectURL(b);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = (name || 'xpp') + '.png';
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }, 'image/png');
   }
 
   private raise(p: Panel): void {
@@ -289,7 +358,7 @@ export class XppSession {
     const top = (window.screenY || 0) + p.y + 60;
     const win = window.open('', 'xpp-' + p.id, `popup,width=${w},height=${h},left=${left},top=${top}`);
     if (!win) {
-      if (!automatic) this.cb.onNotice?.('The browser blocked the new window. Allow pop-ups for this site to use separate windows.');
+      if (!automatic) this.cb.onNotice?.('Pop-up blocked: allow pop-ups for this site to use separate windows');
       return false;
     }
     const doc = win.document;
@@ -309,7 +378,17 @@ export class XppSession {
       if (nw > 0 && nh > 0 && (nw !== p.canvas.width || nh !== p.canvas.height))
         this.queue(() => this.mod._xw_input_configure(p.id, p.x, p.y, nw, nh));
     });
-    win.addEventListener('pagehide', () => this.dock(p));
+    win.addEventListener('pagehide', () => {
+      if (p.popup !== win) return; // closed by us (XPP closed the window)
+      // the user closed the browser window: close the XPP window too; if it
+      // has no way to close (the main window), put it back in the page
+      if (p.id !== this.mainId) this.queue(() => this.mod._xw_input_close(p.id));
+      this.dock(p);
+      if (p.id !== this.mainId) p.el.style.display = 'none';
+      setTimeout(() => {
+        if (this.panels.has(p.id) && p.mapped && !p.popup) p.el.style.display = '';
+      }, 800);
+    });
     return true;
   }
 

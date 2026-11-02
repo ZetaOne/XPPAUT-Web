@@ -116,11 +116,32 @@ original).
    8.8 s, browser Asyncify 10.5 s. `window.xpp.busy` tells tests when XPP
    is computing.
 
+8. **Closable windows** (user's request): × on any window presses that
+   window's own Close/Cancel/Quit/Done button (the Xlib layer remembers the
+   text drawn in each window), so XPP runs its own close code; Makewindow
+   graphs close via a small XPP patch handling WM_DELETE_WINDOW; × on the
+   main window opens XPP's File/Quit "Are you sure?". Closing a popped-out
+   browser window closes that XPP window (the main window docks back).
+9. **Terminal output** (user's request): toolbar "Output" = Hidden / Side
+   panel (resizable, Save, Clear) / Separate window; remembered; full
+   history kept across modes (`src/terminal.ts`).
+10. **Step 4, files**: Files panel lists XPP's working folder with sizes and
+    times; click to download, "Download all (.zip)" (`src/zip.ts`), "Add
+    files…" uploads into it; "Open .ode file…" accepts the model plus its
+    data files; examples bring the .ani/.tab/.dat files they mention;
+    ⤓ on each window saves a PNG; XPP's own PostScript and SVG export land
+    in Files (verified: both render correctly); "Edit .ode" edits the model
+    and restarts XPP with it (other files carried over).
+    All verified in headless Chrome (scripts/browser-test.mjs has wclick,
+    upload, downloads, popclick, popshot, popclose, targets).
+
 ## Next
 
 - **Finish step 3:** more scenarios (AUTO periodic orbits and two-
   parameter runs, kinescope capture/playback, editing in the data browser,
   help, more .ode examples).
+- **Step 4 leftovers:** check AUTO's saved output (.auto / diagram files)
+  appears in Files; data export (Graphic stuff / exp(O)rt data).
 - Browser overhead (~1.3x with JSPI) is mostly yielding ~30 times a second
   during runs; could be tuned.
 - **Step 4:** fuller downloads (plots as PNG/SVG/PS, .set files, AUTO

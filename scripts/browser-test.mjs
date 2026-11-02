@@ -16,6 +16,10 @@
 //   popshot TITLE F    screenshot of another browser window by title prefix
 //   popclose TITLE     close another browser window by title prefix
 //   popclick TITLE X Y click in another browser window
+//   downloads DIR      save downloads into DIR
+//   wclick TITLE X Y   click at X,Y inside the XPP window (panel) whose title
+//                      starts with TITLE (use _ for spaces in TITLE)
+//   upload SEL FILE..  set the files of the <input type=file> matching SEL
 //
 // Console output from the page is printed with a "page:" prefix.
 import { spawn } from 'node:child_process';
@@ -147,6 +151,26 @@ try {
       await call('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', buttons: 1, clickCount: 1 });
       await call('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', buttons: 0, clickCount: 1 });
       pws.close();
+    } else if (cmd === 'wclick') {
+      const t = a[0].replace(/_/g, ' ');
+      const r = await send('Runtime.evaluate', { returnByValue: true, expression: `(() => {
+        const p = [...document.querySelectorAll('.xwin')].find((e) => e.style.display !== 'none' &&
+          e.querySelector('.xwin-title').textContent.startsWith(${JSON.stringify(t)}));
+        if (!p) return null;
+        const c = p.querySelector('canvas').getBoundingClientRect();
+        return [c.left, c.top];
+      })()` });
+      if (!r.result.value) throw new Error('no XPP window titled ' + t);
+      const [x, y] = [r.result.value[0] + +a[1], r.result.value[1] + +a[2]];
+      await mouse('mouseMoved', x, y);
+      await mouse('mousePressed', x, y, 1);
+      await mouse('mouseReleased', x, y);
+    } else if (cmd === 'downloads') {
+      await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: a[0], eventsEnabled: true });
+    } else if (cmd === 'upload') {
+      const doc = await send('DOM.getDocument', { depth: -1, pierce: true });
+      const q = await send('DOM.querySelector', { nodeId: doc.root.nodeId, selector: a[0] });
+      await send('DOM.setFileInputFiles', { nodeId: q.nodeId, files: a.slice(1) });
     } else if (cmd === 'popclose') {
       const list = await (await fetch(`http://127.0.0.1:${port}/json`)).json();
       const t = list.find((x) => x.type === 'page' && x.title.startsWith(rest));

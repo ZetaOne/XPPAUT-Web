@@ -560,8 +560,39 @@ void xw_input_raise(Window top)
   update_pointer_window(0);
 }
 
-void xw_input_close(Window top)
+/* depth-first search for a mapped button labelled `name` */
+static xw_drawable *find_button(xw_drawable *w, const char *name)
 {
+  for (int i = w->nchildren - 1; i >= 0; i--) {
+    xw_drawable *c = w->children[i];
+    if (!c->mapped) continue;
+    if (!strcasecmp(c->label, name)) return c;
+    xw_drawable *f = find_button(c, name);
+    if (f) return f;
+  }
+  return NULL;
+}
+
+/* The window manager's close button. XPP ignores WM_DELETE_WINDOW for most
+   windows but gives them its own Close (or Cancel/Quit/Done) button, so
+   press that: it does exactly what the user would. Otherwise send
+   WM_DELETE_WINDOW (XPPAUT-Web handles it for Makewindow graphs). */
+int xw_input_close(Window top)
+{
+  static const char *names[] = {"Close", "Cancel", "Quit", "Done"};
+  xw_drawable *t = xw_lookup(top);
+  if (t && t->mapped)
+    for (unsigned k = 0; k < sizeof names / sizeof *names; k++) {
+      xw_drawable *b = find_button(t, names[k]);
+      if (!b || !xw_viewable(b)) continue;
+      int ox, oy, px = ptr_x, py = ptr_y;
+      xw_root_origin(b, &ox, &oy);
+      int cx = ox + b->width / 2, cy = oy + b->height / 2;
+      xw_input_button(cx, cy, 1, 1, 0);
+      xw_input_button(cx, cy, 1, 0, Button1Mask);
+      xw_input_motion(px, py, 0);
+      return 1;
+    }
   XEvent ev;
   memset(&ev, 0, sizeof ev);
   ev.type = ClientMessage;
@@ -571,6 +602,7 @@ void xw_input_close(Window top)
   ev.xclient.data.l[0] = atom_wm_delete;
   ev.xclient.data.l[1] = (long)now_ms();
   enqueue(&ev);
+  return 2;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -1758,6 +1790,15 @@ int XDrawString(Display *d, Drawable dr, GC gc, int x, int y, const char *s, int
 {
   (void)d;
   DRAWABLE(dr);
+  if (dd->is_window) { /* remember button labels, trimmed */
+    while (n > 0 && *s == ' ') { s++; n--; x += xw_font_for(gc->v.font)->width; }
+    int m = n;
+    while (m > 0 && s[m - 1] == ' ') m--;
+    if (m > 0 && m < (int)sizeof dd->label) {
+      memcpy(dd->label, s, m);
+      dd->label[m] = 0;
+    }
+  }
   if (tracing())
     fprintf(stderr, "xlib: XDrawString 0x%lx (%d,%d) fn=%d \"%.*s\"\n", dr, x, y, gc->v.function, n, s);
   xw_text(dd, gc, x, y, s, n);

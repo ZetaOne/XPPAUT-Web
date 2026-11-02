@@ -62,6 +62,7 @@ struct xw_drawable {
   char *title;
   int min_width, min_height;
   int pos_hint; /* program supplied a position */
+  char label[24]; /* last text drawn into the window (finds Close buttons) */
 };
 
 /* ---- GC ------------------------------------------------------------------ */
@@ -96,7 +97,7 @@ void xw_input_motion(int x, int y, unsigned state);
 void xw_input_button(int x, int y, int button, int press, unsigned state);
 void xw_input_key(KeySym keysym, const char *text, int press, unsigned state);
 void xw_input_configure(Window top, int x, int y, int w, int h);
-void xw_input_close(Window top);
+int xw_input_close(Window top); /* 1: pressed its Close button, 2: sent WM_DELETE_WINDOW */
 void xw_input_raise(Window top);
 int xw_queue_length(void);
 

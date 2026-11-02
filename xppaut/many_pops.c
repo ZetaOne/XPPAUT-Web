@@ -910,6 +910,21 @@ void destroy_a_pop()
   }
 
 
+/* XPPAUT-Web: the window manager asked to close graph window w (made with
+   Makewindow); destroy it as Makewindow/Destroy would. The main graph is
+   not a top-level window, so it never gets here. */
+void close_graph_window(Window w)
+{
+  int i;
+  for(i=1;i<MAXPOP;i++)
+    if(graph[i].Use&&graph[i].w==w){
+      select_window(w);
+      destroy_a_pop();
+      return;
+    }
+}
+
+
 void init_grafs(x,y,w,h)
 int x,y,w,h;
 {

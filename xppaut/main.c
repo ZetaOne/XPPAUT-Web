@@ -203,6 +203,7 @@ OptionsSet notAlreadySet;
 
 XFontStruct *big_font,*small_font;
 void draw_many_lines();
+void close_graph_window(Window w); /* XPPAUT-Web */
 void set_colorization_stuff();
 void silent_equilibria();
 void silent_dfields();
@@ -992,6 +993,10 @@ void xpp_events(XEvent report,int min_wid,int min_hgt)
    do_ani_events(report);
    top_button_events(report);
  switch(report.type){
+ case ClientMessage: /* XPPAUT-Web: window manager close on a graph window */
+   if((Atom)report.xclient.data.l[0]==deleteWindowAtom)
+     close_graph_window(report.xany.window);
+   break;
  /* case ClientMessage:
 	  if(report.xclient.data.l[0]==deleteWindowAtom){
         

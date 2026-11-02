@@ -31,4 +31,6 @@ Changes to upstream files are marked with `XPPAUT-Web:` comments.
 | `eispack.c` | `get_qp`: `iv1`/`ier` declared `integer` (long) instead of `int` | Passed to `rg()`, which writes `long`s: a real overflow on 64-bit. Unused debug code (only caller is commented out), but newer clang refuses to compile it |
 | `nullcline.c`, `diagram.c`, `auto_nox.c`, `auto_x11.c`, `auto.h`, `parserslow2.c`, `load_eqn.c` | Corrected return types in local declarations of `user_set_color_par`, `refresh_browser`, `go_go_auto`, `sleep`, `do_auto_win`, `nsrand48` | They disagreed with the definitions. Harmless natively, but in WebAssembly a call through a mismatched signature traps |
 
-The last AUTO fix is a deliberate behaviour difference from the unpatched desktop build.
+| `main.c`, `many_pops.c` | Handle `WM_DELETE_WINDOW` for graph windows made with Makewindow: `close_graph_window()` destroys that graph | The handler was commented out, so the window manager's close button did nothing; the web page's close button now works on every window (other windows are closed by pressing their own Close button) |
+
+The AUTO fix and the close handling are deliberate behaviour differences from the unpatched desktop build.

@@ -11,6 +11,8 @@ cp "$root/build/wasm/xppaut.mjs" "$root/build/wasm/xppaut.wasm" "$root/public/wa
 mkdir -p "$root/public/wasm/jspi"
 cp "$root/build/wasm-jspi/xppaut.mjs" "$root/build/wasm-jspi/xppaut.wasm" "$root/public/wasm/jspi/"
 rm -f "$root/public/odes/"*
-find "$root/xppaut/ode" -maxdepth 1 -name '*.ode' ! -name '*conflicted*' -exec cp {} "$root/public/odes/" \;
-(cd "$root/public/odes" && ls *.ode | python3 -c 'import json,sys; print(json.dumps(sorted(l.strip() for l in sys.stdin)))' > index.json)
+# examples, plus the animation/table/data files they use (data files only if small)
+find "$root/xppaut/ode" -maxdepth 1 \( -name '*.ode' -o -name '*.ani' -o -name '*.tab' -o \( -name '*.dat' -size -200k \) \) \
+  ! -name '*conflicted*' ! -name 'output.dat' -exec cp {} "$root/public/odes/" \;
+(cd "$root/public/odes" && ls | grep -v '^index.json$' | python3 -c 'import json,sys; print(json.dumps(sorted(l.strip() for l in sys.stdin)))' > index.json)
 echo "public/wasm and public/odes updated ($(ls "$root/public/odes" | wc -l) files)"
