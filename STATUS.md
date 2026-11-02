@@ -193,6 +193,20 @@ original).
     when you change folder (upstream leaves just the folder in the File
     field, so Ok wrote nothing). Patch in init_conds.c, see UPSTREAM.md.
 
+17. **Save session** (user request): toolbar button downloads
+    `<model>-session-<local date_time>.zip` with files/ (working folder;
+    other-folders/ for exports saved elsewhere), SS/ (screenshot of each
+    open XPP window + 00-all-windows.png as arranged on screen), output.txt
+    and README.txt. Leaving through the app (Restart, Model switch, Edit
+    .ode restart) with unsaved work asks "Save your session first?"
+    (Cancel / Continue without saving / Save and continue); when XPP quits
+    it offers "Save session" with the windows captured at quit time (minus
+    XPP's own "Are you sure?" box). Closing the tab or reloading shows the
+    browser's generic "Leave site?" prompt only: browsers do not allow a
+    custom dialog or a download there. "Unsaved" = a click or key press
+    since the last save. Exports/Output/Separate-windows moved into a
+    Settings menu so the toolbar fits on one line.
+
 ## Next
 
 - Browser overhead (~1.3x with JSPI) is mostly yielding ~30 times a second

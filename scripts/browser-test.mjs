@@ -82,6 +82,10 @@ try {
       msg.error ? p.rej(new Error(msg.error.message)) : p.res(msg.result);
     } else if (msg.method === 'Runtime.consoleAPICalled') {
       console.log('page:', msg.params.args.map((a) => a.value ?? a.description).join(' '));
+    } else if (msg.method === 'Page.javascriptDialogOpening') {
+      // browser-level prompts (e.g. "Leave site?"): report and accept
+      console.log('browser dialog:', msg.params.type, JSON.stringify(msg.params.message));
+      send('Page.handleJavaScriptDialog', { accept: true });
     } else if (msg.method === 'Runtime.exceptionThrown') {
       console.log('page exception:', msg.params.exceptionDetails.exception?.description ?? msg.params.exceptionDetails.text);
     }

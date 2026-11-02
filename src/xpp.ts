@@ -61,6 +61,13 @@ export function xppBuild(): { engine: 'jspi' | 'asyncify'; dir: string } {
   return jspi ? { engine: 'jspi', dir: 'wasm/jspi/' } : { engine: 'asyncify', dir: 'wasm/' };
 }
 
+export interface WindowImage {
+  title: string;
+  x: number;
+  y: number;
+  canvas: HTMLCanvasElement;
+}
+
 export interface XppCallbacks {
   onOutput?: (line: string) => void;
   onExit?: (status: number) => void;
@@ -88,7 +95,8 @@ export class XppSession {
   private buttons = 0; // X button state mask
   private needSync = true;
   private cascade = 0;
-  private running = false;
+  /** XPP is running (has not quit) */
+  running = false;
   private keyHandler: ((e: KeyboardEvent) => void) | null = null;
   private mainId = 0;
 
@@ -608,7 +616,29 @@ export class XppSession {
     this.desktop.classList.add('bell');
   }
 
+  /** XPP's windows as currently shown (docked or popped out), stacking
+      order bottom first, with their positions. */
+  windowImages(): WindowImage[] {
+    if (!this.running) return this.lastImages;
+    return [...this.panels.values()]
+      .filter((p) => p.mapped && p.canvas.width > 1)
+      .sort((a, b) => +(a.el.style.zIndex || 0) - +(b.el.style.zIndex || 0))
+      .map((p) => ({ title: p.title.textContent || 'XPP', x: p.x, y: p.y, canvas: p.canvas }));
+  }
+
+  /** pictures of the windows at the moment XPP quit */
+  private lastImages: WindowImage[] = [];
+
   private exited(status: number): void {
+    // keep copies of what was on screen, for "Save session" after quitting
+    // (not XPP's own "Are you sure?" box, titled "!!" or "!!!!")
+    this.lastImages = this.windowImages().filter((w) => /[A-Za-z0-9]/.test(w.title)).map((w) => {
+      const c = document.createElement('canvas');
+      c.width = w.canvas.width;
+      c.height = w.canvas.height;
+      c.getContext('2d')!.drawImage(w.canvas, 0, 0);
+      return { ...w, canvas: c };
+    });
     this.running = false;
     for (const p of this.panels.values()) {
       p.popup?.close();

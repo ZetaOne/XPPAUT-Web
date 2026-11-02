@@ -1,5 +1,5 @@
 import './style.css'
-import { XppSession, xppBuild } from './xpp'
+import { XppSession, xppBuild, type WindowImage } from './xpp'
 import { Terminal, type TerminalMode } from './terminal'
 import { download, makeZip } from './zip'
 
@@ -34,23 +34,29 @@ app.innerHTML = `
           <p class="files-note">Everything XPP saves (Graphic stuff → Postscript/SVG, data, .set files, AUTO diagrams) is also downloaded or saved to your folder, as chosen under <b>Exports</b>. ⤓ on any window's title bar saves it as PNG.</p>
         </div>
       </details>
-      <label title="What happens when XPP saves a file (plots, data, .set, AUTO diagrams)">Exports
-        <select id="exportmode">
-          <option value="download">Download</option>
-          <option value="folder">Save to a folder…</option>
-          <option value="files">Keep in Files only</option>
-        </select>
-      </label>
-      <label title="XPP's terminal output (messages, errors, printed values)">Output
-        <select id="termmode">
-          <option value="hidden">Hidden</option>
-          <option value="side">Side panel</option>
-          <option value="window">Separate window</option>
-        </select>
-      </label>
-      <label class="check" title="Open XPP's new windows as separate browser windows (allow pop-ups for this site). Any window can also be popped out with ⧉ in its title bar.">
-        <input type="checkbox" id="separate"> Separate windows
-      </label>
+      <details class="settings" id="settings">
+        <summary title="Exports, output and window options">Settings</summary>
+        <div class="settings-panel">
+          <label title="What happens when XPP saves a file (plots, data, .set, AUTO diagrams)">Exports
+            <select id="exportmode">
+              <option value="download">Download</option>
+              <option value="folder">Save to a folder…</option>
+              <option value="files">Keep in Files only</option>
+            </select>
+          </label>
+          <label title="XPP's terminal output (messages, errors, printed values)">Output
+            <select id="termmode">
+              <option value="hidden">Hidden</option>
+              <option value="side">Side panel</option>
+              <option value="window">Separate window</option>
+            </select>
+          </label>
+          <label class="check" title="Open XPP's new windows as separate browser windows (allow pop-ups for this site). Any window can also be popped out with ⧉ in its title bar.">
+            <input type="checkbox" id="separate"> Separate windows
+          </label>
+        </div>
+      </details>
+      <button id="savesession" title="Download a .zip with everything XPP saved, screenshots of the open windows (SS folder) and XPP's output">Save session</button>
       <button id="restart">Restart</button>
     </div>
   </header>
@@ -80,6 +86,17 @@ app.innerHTML = `
         <button type="button" id="eddownload">Download</button>
         <button type="button" id="edrestart">Restart XPP with this file</button>
         <button value="cancel">Close</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="leave">
+    <form method="dialog" class="leave">
+      <h3 id="leavetitle">Save your session first?</h3>
+      <p id="leavetext"></p>
+      <div class="editor-foot">
+        <button value="cancel" id="leavecancel">Cancel</button>
+        <button value="discard" id="leavediscard">Continue without saving</button>
+        <button value="save" id="leavesave" class="primary">Save and continue</button>
       </div>
     </form>
   </dialog>
@@ -164,8 +181,11 @@ async function launch(name: string, text: string, extras: Array<{ name: string; 
     onOutput: (line) => terminal.write(line),
     onNotice: notice,
     onFileWritten: exported,
-    onExit: (status) => {
-      $('status').textContent = `${name} — XPP exited (${status})`
+    onExit: async (status) => {
+      statusText = `${name}: XPP has quit`
+      $('status').textContent = statusText
+      if (unsaved && (await askToSave('quit')) === 'save') await saveSession()
+      void status
     },
   })
   session.popOutNew = separate.checked
@@ -300,13 +320,19 @@ $<HTMLInputElement>('upload').addEventListener('change', async (e) => {
   )
   await launch(ode.name, await ode.text(), extras)
 })
-$('restart').addEventListener('click', () => location.reload())
+$('restart').addEventListener('click', () => leaveThen(() => location.reload()))
 $('switch').addEventListener('change', () => {
-  const v = ($('switch') as HTMLSelectElement).value
+  const sw = $('switch') as HTMLSelectElement
+  const v = sw.value
   if (!v) return
-  const q = new URLSearchParams(location.search)
-  q.set('ode', v)
-  location.search = '?' + q.toString() // XPP restarts with the new model
+  leaveThen(
+    () => {
+      const q = new URLSearchParams(location.search)
+      q.set('ode', v)
+      location.search = '?' + q.toString() // XPP restarts with the new model
+    },
+    () => (sw.value = odeId), // cancelled
+  )
 })
 
 separate.checked = store.get('xpp-separate') === '1'
@@ -361,6 +387,7 @@ function exported(path: string) {
   // XPP sometimes reopens a file to append; deliver once it settles
   clearTimeout(pendingExports.get(path))
   pendingExports.set(path, setTimeout(() => deliverExport(path), 250))
+  if (!path.startsWith('/work/')) savedElsewhere.add(path)
 }
 
 /** where XPP saved it, if not its working folder (shown in the notice) */
@@ -464,6 +491,11 @@ $('eddownload').addEventListener('click', () =>
   download(odeName, new Blob([$<HTMLTextAreaElement>('edtext').value], { type: 'text/plain' })),
 )
 $('edrestart').addEventListener('click', () => {
+  editor.close()
+  leaveThen(restartEdited)
+})
+
+function restartEdited() {
   // XPP cannot reload in place; restart the page with the edited file and the
   // other files in the working folder
   const extras = (session?.listFiles() ?? [])
@@ -475,7 +507,7 @@ $('edrestart').addEventListener('click', () => {
     sessionStorage.setItem('xpp-edited', JSON.stringify({ id: odeId, name: odeName, text: $<HTMLTextAreaElement>('edtext').value, extras: [] }))
   }
   location.reload()
-})
+}
 
 function toBase64(data: Uint8Array): string {
   let s = ''
@@ -501,3 +533,119 @@ function restoreEdited(name: string | null) {
 }
 
 window.addEventListener('pagehide', () => terminal.closeAll())
+
+// ---- session: save everything as one .zip; warn before leaving --------------
+let unsaved = false // the user did something since the last "Save session"
+let leaving = false // we are leaving on purpose (already asked)
+const savedElsewhere = new Set<string>() // exports XPP wrote outside /work
+
+for (const ev of ['pointerdown', 'keydown'])
+  window.addEventListener(ev, () => {
+    if (session?.running) unsaved = true
+  }, true)
+
+// closing the tab or reloading: browsers only allow their own generic prompt
+window.addEventListener('beforeunload', (e) => {
+  if (unsaved && !leaving) {
+    e.preventDefault()
+    e.returnValue = ''
+  }
+})
+
+const leaveDialog = $<HTMLDialogElement>('leave')
+function askToSave(kind: 'leave' | 'quit'): Promise<'save' | 'discard' | 'cancel'> {
+  const quit = kind === 'quit'
+  $('leavetitle').textContent = quit ? 'XPP has quit. Save this session?' : 'Save your session first?'
+  $('leavetext').textContent =
+    (quit ? '' : 'This session has work that has not been saved. ') +
+    "Saving downloads a .zip file with everything XPP saved, screenshots of the open windows (in a folder named SS), and XPP's output."
+  $('leavecancel').hidden = quit
+  $('leavediscard').textContent = quit ? "Don't save" : 'Continue without saving'
+  $('leavesave').textContent = quit ? 'Save session' : 'Save and continue'
+  leaveDialog.returnValue = ''
+  leaveDialog.showModal()
+  return new Promise((resolve) =>
+    leaveDialog.addEventListener(
+      'close',
+      () => resolve((leaveDialog.returnValue || 'cancel') as 'save' | 'discard' | 'cancel'),
+      { once: true },
+    ),
+  )
+}
+
+/** Leave (restart, switch model, ...) after offering to save the session. */
+async function leaveThen(go: () => void, cancelled: () => void = () => {}) {
+  if (unsaved && session) {
+    const answer = await askToSave('leave')
+    if (answer === 'cancel') return cancelled()
+    if (answer === 'save') await saveSession()
+  }
+  leaving = true
+  go()
+}
+
+function canvasPng(c: HTMLCanvasElement): Promise<Uint8Array> {
+  return new Promise((resolve, reject) =>
+    c.toBlob(async (b) => (b ? resolve(new Uint8Array(await b.arrayBuffer())) : reject(new Error('no image'))), 'image/png'),
+  )
+}
+
+/** one picture of all windows, placed as they were on screen */
+function composite(imgs: WindowImage[]): HTMLCanvasElement | null {
+  if (!imgs.length) return null
+  const x0 = Math.min(...imgs.map((i) => i.x))
+  const y0 = Math.min(...imgs.map((i) => i.y))
+  const x1 = Math.max(...imgs.map((i) => i.x + i.canvas.width))
+  const y1 = Math.max(...imgs.map((i) => i.y + i.canvas.height))
+  const c = document.createElement('canvas')
+  c.width = x1 - x0 + 16
+  c.height = y1 - y0 + 16
+  const g = c.getContext('2d')!
+  g.fillStyle = '#5c6670'
+  g.fillRect(0, 0, c.width, c.height)
+  for (const i of imgs) {
+    g.fillStyle = 'rgba(0,0,0,0.45)'
+    g.fillRect(i.x - x0 + 7, i.y - y0 + 7, i.canvas.width + 2, i.canvas.height + 2)
+    g.drawImage(i.canvas, i.x - x0 + 8, i.y - y0 + 8)
+  }
+  return c
+}
+
+async function saveSession() {
+  if (!session) return
+  const safe = (t: string) => t.replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '') || 'window'
+  const files: Array<{ name: string; data: Uint8Array }> = []
+  for (const f of session.listFiles()) files.push({ name: 'files/' + f.name, data: session.readFile(f.name) })
+  for (const p of savedElsewhere) {
+    try {
+      files.push({ name: 'files/other-folders' + p, data: session.readFile(p) })
+    } catch {
+      /* gone */
+    }
+  }
+  const imgs = session.windowImages()
+  let n = 1
+  // SS/: screenshots of the windows as they are now (or were when XPP quit)
+  for (const i of imgs) files.push({ name: `SS/${String(n++).padStart(2, '0')}-${safe(i.title)}.png`, data: await canvasPng(i.canvas) })
+  const screen = composite(imgs)
+  if (screen) files.push({ name: 'SS/00-all-windows.png', data: await canvasPng(screen) })
+  files.push({ name: 'output.txt', data: new TextEncoder().encode(terminal.text()) })
+  const when = new Date()
+  files.push({
+    name: 'README.txt',
+    data: new TextEncoder().encode(
+      `XPPAUT-Web session\n\nModel: ${odeName}\nSaved: ${when.toString()}\nSite: ${location.origin + location.pathname}\n\n` +
+        `files/    everything in XPP's working folder (the model, data, plots, .set files, AUTO results)\n` +
+        `SS/       screenshots of the XPP windows at the time of saving: one per window,\n` +
+        `          and 00-all-windows.png with all of them as arranged on screen\n` +
+        `output.txt XPP's terminal output\n`,
+    ),
+  })
+  const p2 = (n: number) => String(n).padStart(2, '0')
+  const stamp = `${when.getFullYear()}-${p2(when.getMonth() + 1)}-${p2(when.getDate())}_${p2(when.getHours())}-${p2(when.getMinutes())}`
+  download(`${odeName.replace(/\.ode$/, '')}-session-${stamp}.zip`, makeZip(files))
+  unsaved = false
+  notice('Session saved')
+}
+
+$('savesession').addEventListener('click', () => void saveSession())

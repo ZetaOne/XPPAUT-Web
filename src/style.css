@@ -421,3 +421,75 @@ dialog#editor::backdrop {
   color: var(--fg);
   font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace;
 }
+
+/* ---- leave / save-session dialog --------------------------------------- */
+dialog#leave {
+  width: min(520px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bar);
+  color: var(--fg);
+}
+
+dialog#leave::backdrop {
+  background: rgb(0 0 0 / 0.35);
+}
+
+.leave h3 {
+  margin: 0;
+  padding: 16px 18px 6px;
+  font-size: 17px;
+}
+
+.leave p {
+  margin: 0;
+  padding: 0 18px 14px;
+  color: var(--muted);
+}
+
+button.primary {
+  background: #2f5d8a;
+  border-color: #2f5d8a;
+  color: #fff;
+}
+
+/* ---- settings popover ---------------------------------------------------- */
+.settings {
+  position: relative;
+}
+
+.settings summary {
+  cursor: pointer;
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  list-style: none;
+}
+
+.settings-panel {
+  position: absolute;
+  z-index: 100000;
+  top: calc(100% + 4px);
+  right: 0;
+  display: grid;
+  gap: 10px;
+  min-width: 280px;
+  padding: 12px 14px;
+  background: var(--bar);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.2);
+}
+
+.settings-panel label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.settings-panel .check {
+  justify-content: flex-start;
+}
