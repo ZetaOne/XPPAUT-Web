@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-02
+Last updated: 2026-11-02 (moved from ~/Downloads/XPPAUT-Web to /data/hdrive/XPPAUT-Web)
 
 ## Goal
 
