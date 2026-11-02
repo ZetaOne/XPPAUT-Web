@@ -105,11 +105,24 @@ original).
    Input uses pointer events with capture and per-window coordinates, so
    everything works the same docked or popped out.
 
+7. **Two WebAssembly builds**: `make -C web wasm` links the same objects
+   twice. JSPI (`build/wasm-jspi`, 1.1 MB) runs at native speed in batch
+   mode; Asyncify (`build/wasm`, 1.6 MB) works in every browser but is
+   1.5-2.3x slower in batch. The page loads JSPI when
+   `WebAssembly.Suspending` exists (`?engine=asyncify` forces the other).
+   Both are byte-identical on all 144 batch examples
+   (`XPPWEB_WASM=jspi` selects the build in `scripts/xpp-wasm-node.mjs`).
+   Interactive run of kuramot100.ode (I G): native 6.9 s, browser JSPI
+   8.8 s, browser Asyncify 10.5 s. `window.xpp.busy` tells tests when XPP
+   is computing.
+
 ## Next
 
 - **Finish step 3:** more scenarios (AUTO periodic orbits and two-
   parameter runs, kinescope capture/playback, editing in the data browser,
-  help, more .ode examples); speed of long integrations in the browser.
+  help, more .ode examples).
+- Browser overhead (~1.3x with JSPI) is mostly yielding ~30 times a second
+  during runs; could be tuned.
 - **Step 4:** fuller downloads (plots as PNG/SVG/PS, .set files, AUTO
   output), saving an edited .ode, uploading data files.
 

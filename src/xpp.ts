@@ -62,6 +62,10 @@ export interface XppCallbacks {
 export class XppSession {
   /** Open XPP's new windows (other than the main one) as browser windows. */
   popOutNew = false;
+  /** Which build is running: 'jspi' (fast) or 'asyncify'. */
+  engine = '';
+  /** True while XPP computes (it polls for input); false while it waits. */
+  busy = false;
 
   private mod: XppModule;
   private panels = new Map<number, Panel>();
@@ -86,12 +90,17 @@ export class XppSession {
 
   /** Start XPP on an .ode file. Resolves once XPP is running. */
   async start(fileName: string, contents: string): Promise<void> {
-    const url = new URL('wasm/xppaut.mjs', document.baseURI).href;
+    // JSPI build where the engine supports it (native speed), else Asyncify
+    const forced = new URLSearchParams(location.search).get('engine'); // testing
+    const jspi = forced ? forced === 'jspi' : 'Suspending' in WebAssembly;
+    const dir = jspi ? 'wasm/jspi/' : 'wasm/';
+    this.engine = dir === 'wasm/' ? 'asyncify' : 'jspi';
+    const url = new URL(dir + 'xppaut.mjs', document.baseURI).href;
     const { default: createXpp } = await import(/* @vite-ignore */ url);
     const out = (s: string) => this.cb.onOutput?.(s);
     this.mod = await createXpp({
       noInitialRun: true,
-      locateFile: (p: string) => new URL('wasm/' + p, document.baseURI).href,
+      locateFile: (p: string) => new URL(dir + p, document.baseURI).href,
       print: out,
       printErr: out,
       onExit: (status: number) => this.exited(status),
@@ -102,6 +111,9 @@ export class XppSession {
       },
       xppCursor: (w: number, shape: number) => this.setCursor(w, shape),
       xppBell: () => this.bell(),
+      xppBusy: (b: number) => {
+        this.busy = !!b;
+      },
       xppScreenWidth: () => this.desktop.clientWidth,
       xppScreenHeight: () => this.desktop.clientHeight,
     });
@@ -117,10 +129,15 @@ export class XppSession {
       for (const p of this.panels.values()) p.popup?.close();
     });
     this.running = true;
+    const isExit = (e: unknown) => e && (e as any).name === 'ExitStatus';
     try {
-      m.callMain([fileName]);
+      const r = m.callMain([fileName]); // returns a Promise with JSPI
+      if (r && typeof r.then === 'function')
+        r.catch((e: unknown) => {
+          if (!isExit(e)) throw e;
+        });
     } catch (e) {
-      if (!(e && (e as any).name === 'ExitStatus')) throw e;
+      if (!isExit(e)) throw e;
     }
   }
 

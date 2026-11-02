@@ -8,8 +8,10 @@
 // Used by scripts/compare-batch.sh to check the wasm build.
 import process from 'node:process';
 
+// XPPWEB_WASM=jspi runs the JSPI build instead of the Asyncify one
+const dir = process.env.XPPWEB_WASM === 'jspi' ? 'wasm-jspi' : 'wasm';
 const { default: createXpp } = await import(
-  new URL('../build/wasm/xppaut.mjs', import.meta.url).href
+  new URL(`../build/${dir}/xppaut.mjs`, import.meta.url).href
 );
 
 const xpp = await createXpp({ noInitialRun: true });
@@ -19,5 +21,5 @@ xpp.FS.chdir('/work');
 
 // With EXIT_RUNTIME the module calls process.exit() itself when XPP exits;
 // this covers a normal return from main.
-const rc = xpp.callMain(process.argv.slice(2));
+const rc = await xpp.callMain(process.argv.slice(2)); // a Promise with JSPI
 process.exit(typeof rc === 'number' ? rc : 0);

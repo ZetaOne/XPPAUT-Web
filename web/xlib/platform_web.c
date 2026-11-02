@@ -17,6 +17,7 @@
 EM_JS(void, js_present, (void), { if (Module.xppPresent) Module.xppPresent(); });
 EM_JS(void, js_drain_input, (void), { if (Module.xppDrainInput) Module.xppDrainInput(); });
 EM_JS(void, js_bell, (void), { if (Module.xppBell) Module.xppBell(); });
+EM_JS(void, js_busy, (int busy), { if (Module.xppBusy) Module.xppBusy(busy); });
 EM_JS(void, js_toplevel_changed, (Window w), { if (Module.xppToplevelChanged) Module.xppToplevelChanged(w); });
 EM_JS(void, js_cursor, (Window w, int shape), { if (Module.xppCursor) Module.xppCursor(w, shape); });
 EM_JS(int, js_screen_width, (void), { return Module.xppScreenWidth ? Module.xppScreenWidth() : 1280; });
@@ -34,6 +35,7 @@ static void yield(int ms)
 
 void xw_platform_wait(void)
 {
+  js_busy(0); /* XPP is waiting for input */
   js_drain_input();
   if (xw_queue_length()) return;
   yield(10);
@@ -43,7 +45,10 @@ void xw_platform_poll(void)
 {
   /* XPending/XFlush are called constantly during long computations; let
      the browser paint and take input about 30 times a second */
-  if (emscripten_get_now() - last_yield > 33) yield(0);
+  if (emscripten_get_now() - last_yield > 33) {
+    js_busy(1); /* XPP is computing and only polling for input */
+    yield(0);
+  }
 }
 
 void xw_platform_bell(void) { js_bell(); }

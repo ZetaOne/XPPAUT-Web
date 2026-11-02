@@ -52,7 +52,9 @@ async function launch(name: string, text: string) {
   $('session').hidden = false
   $('hint').remove()
   $('status').textContent = name
-  history.replaceState(null, '', '?ode=' + encodeURIComponent(name))
+  const q = new URLSearchParams(location.search)
+  q.set('ode', name) // keep other parameters (e.g. engine=asyncify for testing)
+  history.replaceState(null, '', '?' + q.toString())
   session = new XppSession(desktop, {
     onOutput: output,
     onNotice: (msg) => {
@@ -64,6 +66,7 @@ async function launch(name: string, text: string) {
     },
   })
   session.popOutNew = $<HTMLInputElement>('separate').checked
+  ;(window as unknown as { xpp: XppSession }).xpp = session // for tests and debugging
   await session.start(name, text)
 }
 
