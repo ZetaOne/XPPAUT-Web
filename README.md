@@ -53,5 +53,10 @@ WebAssembly (needs Emscripten; `scripts/setup-emsdk.sh` installs it into `.emsdk
 ```bash
 source .emsdk/emsdk_env.sh
 make -C web wasm                              # -> build/wasm/xppaut.mjs + xppaut.wasm
-scripts/compare-batch.sh scripts/xpp-wasm-node.mjs
+scripts/build-muslm-baseline.sh               # native build with Emscripten's libm (musl)
+BASELINE=build/headless-muslm/xppaut scripts/compare-batch.sh scripts/xpp-wasm-node.mjs
 ```
+
+The WebAssembly build matches the musl baseline byte for byte. Against the
+glibc desktop build a few chaotic examples differ in the last digits, purely
+from libm rounding.

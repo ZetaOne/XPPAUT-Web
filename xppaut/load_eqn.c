@@ -54,7 +54,7 @@ extern int spec_col,spec_wid,spec_win,spec_col2,post_process;
 
 
 
-int nsrand48(int seed);
+void nsrand48(int seed); /* XPPAUT-Web: return type must match the definition (wasm traps on mismatch) */
 
 char *interopt[MAXOPT];
 int Nopts=0;

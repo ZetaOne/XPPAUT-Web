@@ -43,7 +43,7 @@ extern int XPPBatch;
 
 int NullStyle=0; /* 1 is with little vertical/horizontal lines */
 extern int (*rhs)();
-int user_set_color_par();
+void user_set_color_par(); /* XPPAUT-Web: return type must match the definition (wasm traps on mismatch) */
 double atof();
 extern int DRight,DLeft,DTop,DBottom;
 extern int STORFLAG;

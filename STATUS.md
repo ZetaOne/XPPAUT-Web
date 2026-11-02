@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-02 (moved from ~/Downloads/XPPAUT-Web to /data/hdrive/XPPAUT-Web)
+Last updated: 2026-11-02 (project lives at /data/hdrive/XPPAUT-Web)
 
 ## Goal
 
@@ -30,21 +30,24 @@ original).
    GitHub repo is from 2016 and outdated). Provenance and checksum in
    `xppaut/UPSTREAM.md`. Desktop reference build: `scripts/build-native.sh`,
    `scripts/test-native.sh`.
-2. **Builds without libX11** (mostly done). `web/Makefile` builds against bundled
+2. **Builds without libX11.** `web/Makefile` builds against bundled
    X11 headers and placeholder Xlib functions (`web/xlib/xstub.c`, 69
    functions). Batch-mode output is byte-identical to the desktop build on
    all 144 example .ode files that produce output (gcc and clang).
-   Four upstream bugs fixed; see the Patches table in `xppaut/UPSTREAM.md`.
+3. **Compiles to WebAssembly and runs.** Emscripten 6.0.13 in `.emsdk/`.
+   `make -C web wasm` gives `build/wasm/xppaut.wasm` (~1 MB) +
+   `xppaut.mjs`; `scripts/xpp-wasm-node.mjs` runs it under Node.
+   - vs a native build using musl's libm (`scripts/build-muslm-baseline.sh`):
+     **byte-identical on all 144** examples.
+   - vs the glibc desktop build: 129 identical, 15 differ only from last-digit
+     libm rounding (exp/sin/pow) amplified in chaotic/stiff/adaptive-step
+     runs. Accepted: desktop XPP on macOS differs from Linux the same way.
+
+   Source fixes needed so far (11 files) are listed in the Patches table
+   in `xppaut/UPSTREAM.md`.
 
 ## Next
 
-- **Finish step 2:** install Emscripten (`scripts/setup-emsdk.sh`, installs
-  into git-ignored `.emsdk/`), then `source .emsdk/emsdk_env.sh`,
-  `make -C web wasm`, and `scripts/compare-batch.sh scripts/xpp-wasm-node.mjs`.
-  The wasm build and Node runner are written but **never run yet**. Watch for:
-  function-pointer signature mismatches (trap in wasm), stack size
-  (`-sSTACK_SIZE` in `web/Makefile`), and last-digit libm differences
-  (reported as CLOSE by `scripts/compare-dat.py`).
 - **Step 3:** replace the stubs with a real Xlib on canvas, roughly in order
   of use: windows + text, lines/colours/input events, pixmaps/cursors.
   XPP's event loop blocks on `XNextEvent`, so it needs Asyncify or JSPI.
@@ -69,4 +72,9 @@ scripts/build-native.sh      # desktop reference build
 scripts/test-native.sh       # should print PASS
 make -C web headless
 scripts/compare-batch.sh build/headless-cc/xppaut   # 144 SAME, 9 NOOUT
+
+source .emsdk/emsdk_env.sh           # Emscripten (install: scripts/setup-emsdk.sh)
+make -C web wasm
+scripts/build-muslm-baseline.sh
+BASELINE=build/headless-muslm/xppaut scripts/compare-batch.sh scripts/xpp-wasm-node.mjs   # 144 SAME, 9 NOOUT
 ```

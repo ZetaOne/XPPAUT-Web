@@ -42,7 +42,7 @@ int info_header(int flag2, int icp1, int icp2);
 int new_info(int ibr, int pt, char *ty, int lab, double *par, double norm, double u0, double per, int flag2, int icp1, int icp2);
 int traverse_diagram(void);
 int clear_auto_plot(void);
-int do_auto_win(void);
+void do_auto_win(void); /* XPPAUT-Web: return type must match the definition (wasm traps on mismatch) */
 int load_last_plot(int flag);
 int keep_last_plot(int flag);
 int init_auto_win(void);

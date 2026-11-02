@@ -7435,7 +7435,8 @@ double dotp(double *p,double *q,int n)
 int get_qp(double *a1,int n, double *qr,double *qi, double *pr, double *pi)
 {
   double *at,*a,*z,*wr,*wi,*fv1;
-  int i,j,k,kt,*iv1,ier;
+  int i,j,k,kt;
+  integer *iv1,ier; /* XPPAUT-Web: was int; rg() takes integer (long) */
   double eps=1e-8;
   at=(double *)malloc(n*n*sizeof(double));
     a=(double *)malloc(n*n*sizeof(double));
@@ -7443,7 +7444,7 @@ int get_qp(double *a1,int n, double *qr,double *qi, double *pr, double *pi)
   wr=(double *)malloc(n*sizeof(double));
   wi=(double *)malloc(n*sizeof(double));
   fv1=(double *)malloc(n*sizeof(double));
-   iv1=(int *)malloc(n*sizeof(int));
+   iv1=(integer *)malloc(n*sizeof(integer));
    printf("I am here \n");
 
   for(i=0;i<n;i++){

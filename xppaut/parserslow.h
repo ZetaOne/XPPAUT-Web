@@ -185,8 +185,9 @@ double eval_rpn(int *equat);
 
 /*  STRING STUFF  */
 #ifndef STRUPR
-void strupr(char *s);
-void strlwr(char *s);
+/* XPPAUT-Web: return char* to match the libc declarations (Emscripten) */
+char *strupr(char *s);
+char *strlwr(char *s);
 #endif
 
 /*****************************************************/

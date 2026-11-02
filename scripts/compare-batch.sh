@@ -11,12 +11,15 @@
 # Result per file: SAME (byte-identical), CLOSE (numerically equal within
 # tolerance, see compare-dat.py), DIFF, RCDIFF (different exit code) or
 # NOOUT (the native build wrote no output.dat either).
+#
+# Set BASELINE=<binary> to compare against something other than the desktop
+# build (build/native/xppaut).
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 runner="$(realpath "$1")"
-native="$root/build/native/xppaut"
+native="$(realpath "${BASELINE:-$root/build/native/xppaut}")"
 [ -x "$native" ] || "$root/scripts/build-native.sh" > /dev/null
-work="$root/build/compare/$(basename "$(dirname "$runner")")-$(basename "$runner")"
+work="$root/build/compare/$(basename "$(dirname "$runner")")-$(basename "$runner")-vs-$(basename "$(dirname "$native")")"
 rm -rf "$work"
 mkdir -p "$work"
 

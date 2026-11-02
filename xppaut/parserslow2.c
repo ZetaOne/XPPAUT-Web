@@ -36,7 +36,7 @@ double lgamma();
 extern int NODE;
 
 
-int nsrand48(int seed);
+void nsrand48(int seed); /* XPPAUT-Web: return type must match the definition (wasm traps on mismatch) */
 
 #define DFNORMAL 1
 #define DFFP 2
@@ -2308,7 +2308,7 @@ double xx;
 
 /*  STRING STUFF  */
 #ifndef STRUPR
-void strupr(s)
+char *strupr(s) /* XPPAUT-Web: was void */
 char *s;
 {
  int i=0;
@@ -2317,10 +2317,11 @@ char *s;
   if(islower(s[i]))s[i]-=32;
   i++;
   }
+ return s;
 }
 
 
-void strlwr(s)
+char *strlwr(s) /* XPPAUT-Web: was void */
 char *s;
 {
  int i=0;
@@ -2329,5 +2330,6 @@ char *s;
   if(isupper(s[i]))s[i]+=32;
   i++;
   }
+ return s;
 }
 #endif

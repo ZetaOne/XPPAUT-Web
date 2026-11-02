@@ -13,7 +13,7 @@
 #include "autlim.h"
 #include "load_eqn.h"
 #define DALLOC(a) (double *)malloc((a)*sizeof(double))
-int refresh_browser();
+void refresh_browser(); /* XPPAUT-Web: return type must match the definition (wasm traps on mismatch) */
 extern int TypeOfCalc;
 extern ROTCHK blrtn;
 extern int PS_Color;  

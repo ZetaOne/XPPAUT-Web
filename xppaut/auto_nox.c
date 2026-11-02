@@ -177,7 +177,7 @@ ROTCHK blrtn;
 
 void evaluate_derived();
 void redo_all_fun_tables();
-void go_go_auto();
+int go_go_auto(); /* XPPAUT-Web: return type must match the definition (wasm traps on mismatch) */
 void extra();
 void load_browser_with_branch();
 

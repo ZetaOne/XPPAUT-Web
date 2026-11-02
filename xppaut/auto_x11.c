@@ -58,7 +58,7 @@
 #define SIMPMASK (ButtonPressMask | KeyPressMask|ExposureMask    |StructureNotifyMask)
 
 void set_ivar();
-void sleep();
+unsigned int sleep(); /* XPPAUT-Web: return type must match the definition (wasm traps on mismatch) */
 void storeautopoint();
 void redo_all_fun_tables();
 extern Display *display;
