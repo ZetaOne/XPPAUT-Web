@@ -37,4 +37,21 @@ Changes to upstream files are marked with `XPPAUT-Web:` comments.
 
 | `init_conds.c` | WebAssembly build only: the file dialog keeps the file name when you change folder (`fs_keep_name`) | Upstream replaces the File field with just the folder, so Ok after navigating writes nothing |
 
+### Fixes from Bard Ermentrout (2025)
+
+Bard sent an updated `xppaut8.0.tgz` (files dated January 2025, SHA-256
+597400ce825a8acd06670aa4301efba1430a8f89e86a4301208a66b2d98a1681). Taken from it:
+
+| File | Change | Why |
+|---|---|---|
+| `gogoauto.c` | Two-parameter **restart** cases use the fold/Hopf starting routines (`stpnlp`, `stpnhb`, `stpnhw`) instead of `stpnae` | Every point of a fold or Hopf curve is itself a fold or Hopf point, so the start is recomputed there; restarted curves agree with the old start to about 6 digits (tests/gui/auto2par.txt) |
+| `auto_nox.c` | `itp2=abs(itp/10)` (written as `itp2=itp/10; if(itp2<0)itp2=-itp2;`); run the homoclinic start only `if(flag>0)` | Point types can be negative (AUTO-07p also uses `ABS(ITP/10)`). Written out because GCC 13 at -O2 miscompiles `abs(itp/10)==3` with the `abs` macro from `auto_f2c.h`: on points of a two-parameter Hopf curve (type 34) XPP then skipped the Hopf menu, ran Extend and crashed |
+| `init_conds.c` | No `waitasec(ClickTime)` when the Parameters window is resized | Needless pause |
+
+Not taken from it: `#include <stdlib.h>` replaced by `#include "stdfix.h"` in
+about 70 files (that header is not in the archive; GCC's unrelated
+fixed-point `stdfix.h` hides this, other compilers fail), hand-written
+`malloc`/`free` declarations in `simplenet.c` and `delay_handle.c`, a debug
+`printf` in AUTO, and a moved `dump_params` (same as the fix above).
+
 The AUTO fix and the close handling are deliberate behaviour differences from the unpatched desktop build.

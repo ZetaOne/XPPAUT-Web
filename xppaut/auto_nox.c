@@ -1948,7 +1948,11 @@ void auto_run()
     
   itp=grabpt.itp;
   itp1=itp%10;
+  /* XPPAUT-Web: from Bard Ermentrout (2025): itp2=abs(itp/10). Written out
+     because GCC 13 -O2 miscompiles abs(itp/10)==3 with auto_f2c.h's abs macro
+     (false for itp 30..39, i.e. every point on a two-parameter Hopf curve) */
   itp2=itp/10;
+  if(itp2<0)itp2=-itp2;
   ips=Auto.ips;
   /*  printf(" ips=%d itp=%d itp1= %d itp2=%d\n",ips,itp,itp1,itp2); */
   if(itp1==3||itp2==3){  /* its a HOPF Point  */
@@ -2390,7 +2394,7 @@ void auto_start_at_homoclinic()
   if(HomoFlag==2)
     xAuto.iequib=-2;
   flag=get_homo_info(HomoFlag,&xAuto.nunstab,&xAuto.nstab,homo_l,homo_r);
-  if(flag)do_auto(opn,cls,Auto.itp); /* XPPAUT-Web: was "close" (libc function), a typo for cls */
+  if(flag>0)do_auto(opn,cls,Auto.itp); /* XPPAUT-Web: was "close" (libc function), a typo for cls */
 
   
 }

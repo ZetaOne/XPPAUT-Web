@@ -1,0 +1,57 @@
+# AUTO two-parameter: steady states, grab the Hopf point (Lab 4), Two Param;
+# then grab a point on that Hopf curve (Lab 7) and restart Two Param from it
+window "XPP Ver"
+move 400 200
+key i
+key g
+sleep 500
+key i
+key l
+sleep 500
+key i
+key l
+sleep 500
+key f
+key a
+sleep 800
+window "It's AUTO"
+click 47 87
+sleep 500
+key s
+sleep 3000
+click 47 105
+sleep 500
+key Tab
+sleep 300
+key Tab
+sleep 300
+key Tab
+sleep 300
+key Return
+sleep 500
+click 47 87
+sleep 500
+shot auto2par-menu.ppm
+key t
+sleep 5000
+click 47 105
+sleep 500
+key Tab
+sleep 300
+key Tab
+sleep 300
+key Tab
+sleep 300
+key Tab
+sleep 300
+key Tab
+sleep 300
+key Tab
+sleep 300
+key Return
+sleep 500
+click 47 87
+sleep 500
+key t
+sleep 10000
+shot auto2par.ppm

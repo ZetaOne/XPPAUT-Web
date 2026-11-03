@@ -264,6 +264,19 @@ original).
     stopped, a never-opened example loads, integrates, help opens; update
     banner, switch and old-cache cleanup work. DevTools "offline" does not
     affect the service worker's own fetches: stop the server to test.
+23. **Fixes from Bard's updated xppaut8.0.tgz** (Jan 2025 files; details in
+    `xppaut/UPSTREAM.md`): two-parameter restart start routines
+    (`gogoauto.c`), `abs(itp/10)` and `flag>0` (`auto_nox.c`), no pause on
+    Parameters-window resize (`init_conds.c`). Not taken: `stdfix.h`
+    include swap (header missing), hand-written malloc/free declarations,
+    debug printf. Found while testing: GCC 13 -O2 miscompiles
+    `abs(itp/10)==3` with auto_f2c.h's abs macro (false for 30..39), so
+    Bard's line is written out as `itp2=itp/10; if(itp2<0)itp2=-itp2;`
+    (clang/Emscripten unaffected). New GUI test `tests/gui/auto2par.txt`
+    (restart Two Param from a point on the Hopf curve). Known, older
+    bug (not fixed): Extend or Periodic from a point of a two-parameter
+    Hopf curve overflows a buffer in `readlb` (autlib1.c:4575, found with
+    AddressSanitizer); crashes natively, likely memory corruption in wasm.
 
 ## Next
 

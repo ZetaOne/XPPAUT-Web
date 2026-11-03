@@ -1617,7 +1617,7 @@ Window win;
   if(ParamBox.xuse==1&&win==ParamBox.base){
     ok=2;
     b=&ParamBox;
-    waitasec(ClickTime);
+    /* waitasec(ClickTime); XPPAUT-Web: removed by Bard Ermentrout (2025) */
     
     get_new_size(win,&w,&h);
     get_nrow_from_hgt(h,&nwin,(int*)&w);

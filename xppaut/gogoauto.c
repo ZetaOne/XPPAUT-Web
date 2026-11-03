@@ -389,7 +389,7 @@ int set_function_pointers(const iap_type iap,function_list *data) {
     /*	** Fold continuation (algebraic problems, restart). */
     data->type	   = AUTOAE;
     data->aelist.funi  = fnlp;
-    data->aelist.stpnt  = stpnae;
+    data->aelist.stpnt  = stpnlp; /* XPPAUT-Web: from Bard Ermentrout (2025), was stpnae */
     data->aelist.pvli    = pvlsae;
   } else if ((iap.ips == 0 || iap.ips == 1) && abs(iap.isw) == 2 && iap.itp == 3) {
     /*	** Hopf bifurcation continuation (ODE). */
@@ -401,7 +401,7 @@ int set_function_pointers(const iap_type iap,function_list *data) {
     /*	** Hopf bifurcation continuation (ODE, restart). */
     data->type	   = AUTOAE;
     data->aelist.funi  = fnhb;
-    data->aelist.stpnt  = stpnae;
+    data->aelist.stpnt  = stpnhb; /* XPPAUT-Web: from Bard Ermentrout (2025), was stpnae */
     data->aelist.pvli    = pvlsae;
   } else if (iap.ips == 11 && abs(iap.isw) == 2 && iap.itp == 3) {
     /*	** Hopf bifurcation continuation (Waves). */
@@ -413,7 +413,7 @@ int set_function_pointers(const iap_type iap,function_list *data) {
     /*	** Hopf bifurcation continuation (Waves, restart). */
     data->type	   = AUTOAE;
     data->aelist.funi  = fnhw;
-    data->aelist.stpnt  = stpnae;
+    data->aelist.stpnt  = stpnhw; /* XPPAUT-Web: from Bard Ermentrout (2025), was stpnae */
     data->aelist.pvli    = pvlsae;
   } else if (iap.ips == -1 && abs(iap.isw) == 2 && iap.itp == 3) {
     /*	** Hopf bifurcation continuation (Maps). */
