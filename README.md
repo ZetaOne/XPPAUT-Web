@@ -30,6 +30,8 @@ point (green stable, blue unstable).*
   or go to a folder you choose.
 - **Save session**: one `.zip` with all files, screenshots of every window and
   XPP's output, offered before you restart or quit.
+- **Phones and tablets**: detected automatically; tap, long-press (right
+  button) and drag, pinch to zoom, and keys phone keyboards lack.
 - **Model editor**, **XPP's terminal output**, **built-in help**, and
   **ten colour themes**.
 - **Fast and private**: about 0.5 MB, near-native speed, nothing leaves your

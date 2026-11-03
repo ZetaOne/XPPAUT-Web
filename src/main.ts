@@ -2,12 +2,14 @@ import './style.css'
 import { XppSession, xppBuild, type WindowImage } from './xpp'
 import { Terminal, type TerminalMode } from './terminal'
 import { download, makeZip } from './zip'
+import { MobileUI, detectDevice, watchDevice, type ViewMode } from './mobile'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 
 app.innerHTML = `
   <header class="bar">
     <strong class="brand">XPPAUT-Web</strong>
+    <button type="button" class="menubtn" id="menubtn" aria-label="Menu" aria-expanded="false">☰</button>
     <div class="start" id="start">
       <label>Example
         <select id="example"><option>loading…</option></select>
@@ -49,6 +51,13 @@ app.innerHTML = `
               <option value="hidden">Hidden</option>
               <option value="side">Side panel</option>
               <option value="window">Separate window</option>
+            </select>
+          </label>
+          <label title="Phone and tablet layout: detected automatically, or choose one">View
+            <select id="viewmode">
+              <option value="auto">Automatic</option>
+              <option value="mobile">Mobile (touch)</option>
+              <option value="desktop">Desktop</option>
             </select>
           </label>
           <label class="check" title="Open XPP's new windows as separate browser windows (allow pop-ups for this site). Any window can also be popped out with ⧉ in its title bar.">
@@ -198,6 +207,7 @@ async function launch(name: string, text: string, extras: Array<{ name: string; 
     },
   })
   session.popOutNew = separate.checked
+  mobile.attach(session)
   ;(window as unknown as { xpp: XppSession }).xpp = session // for tests and debugging
   setInterval(updateFileCount, 2000)
   // XPP's WebAssembly started downloading when the page opened; wait for it
@@ -542,6 +552,35 @@ function restoreEdited(name: string | null) {
 }
 
 window.addEventListener('pagehide', () => terminal.closeAll())
+
+// ---- phones and tablets ---------------------------------------------------------
+const viewSelect = $<HTMLSelectElement>('viewmode')
+let viewMode = (store.get('xpp-view') as ViewMode) || 'auto'
+viewSelect.value = viewMode
+const mobile = new MobileUI(app, desktop, (d) => {
+  if (d === 'phone' && window.innerHeight > window.innerWidth && session)
+    notice('Tip: turn the phone sideways for a larger view')
+})
+const updateDevice = () => mobile.apply(detectDevice(viewMode))
+updateDevice()
+watchDevice(updateDevice)
+viewSelect.addEventListener('change', () => {
+  viewMode = viewSelect.value as ViewMode
+  store.set('xpp-view', viewMode)
+  updateDevice()
+})
+// ☰ on phones: the toolbar folds into a menu
+$('menubtn').addEventListener('click', () => {
+  const open = document.querySelector('header')!.classList.toggle('menu-open')
+  $('menubtn').setAttribute('aria-expanded', String(open))
+})
+document.addEventListener('pointerdown', (e) => {
+  const h = document.querySelector('header')!
+  if (h.classList.contains('menu-open') && !h.contains(e.target as Node)) {
+    h.classList.remove('menu-open')
+    $('menubtn').setAttribute('aria-expanded', 'false')
+  }
+}, true)
 
 // ---- themes (colours of the page around XPP; XPP's windows keep their look) --
 const THEMES: Array<{ id: string; name: string; swatch: string[] }> = [

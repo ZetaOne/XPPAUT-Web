@@ -735,3 +735,222 @@ summary.round:focus-visible {
 .swatch i {
   flex: 1;
 }
+
+/* ---- zoomable layer of XPP windows --------------------------------------- */
+.world {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+
+.offstage {
+  display: none !important;
+}
+
+/* ---- phones and tablets (html[data-device]) -------------------------------- */
+.menubtn,
+.wintabs,
+.keystrip,
+.zoombar,
+.kbdsink {
+  display: none;
+}
+
+:root[data-device='phone'] .desktop,
+:root[data-device='tablet'] .desktop {
+  touch-action: none; /* we handle pinch and pan ourselves */
+}
+
+:root[data-device='phone'] .xwin-bar,
+:root[data-device='tablet'] .xwin-bar {
+  height: 32px;
+  font-size: 13px;
+}
+
+:root[data-device='phone'] .xwin-btn,
+:root[data-device='tablet'] .xwin-btn {
+  min-width: 34px;
+  height: 30px;
+  font-size: 18px;
+}
+
+:root[data-device='phone'] .xwin-grip,
+:root[data-device='tablet'] .xwin-grip {
+  width: 24px;
+  height: 24px;
+  right: -8px;
+  bottom: -8px;
+}
+
+/* zoom buttons over the desktop */
+:root[data-device='phone'] .zoombar,
+:root[data-device='tablet'] .zoombar {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 99999;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bar);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.3);
+}
+
+.zoombar button {
+  min-width: 44px;
+  height: 40px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 17px;
+}
+
+.zoombar button + button {
+  border-left: 1px solid var(--line);
+}
+
+/* on-screen key strip: shown with the keyboard (⌨) */
+:root[data-device='phone'].kbd-open .keystrip,
+:root[data-device='tablet'].kbd-open .keystrip {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  overflow-x: auto;
+  background: var(--bar);
+  border-top: 1px solid var(--line);
+}
+
+.keystrip button {
+  flex: 1 0 auto;
+  min-width: 44px;
+  height: 40px;
+  padding: 0 8px;
+  font-size: 15px;
+  touch-action: manipulation;
+}
+
+.zoombar button.on,
+.keystrip button.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+
+/* the hidden field that brings up the device keyboard (16px: no iOS zoom) */
+:root[data-device='phone'] .kbdsink,
+:root[data-device='tablet'] .kbdsink {
+  display: block;
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  font-size: 16px;
+  border: 0;
+  padding: 0;
+}
+
+/* phones: window tabs in the toolbar row, and a ☰ menu */
+:root[data-device='phone'] .wintabs:not(:empty) {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 4px;
+  overflow-x: auto;
+  order: 5;
+}
+
+:root[data-device='phone'] .brand {
+  font-size: 13px;
+}
+
+.wintabs button {
+  flex: 0 0 auto;
+  max-width: 40vw;
+  height: 34px;
+  padding: 0 12px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.wintabs button[aria-current='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+
+:root[data-device='phone'] .bar {
+  position: relative;
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: 4px 8px;
+}
+
+:root[data-device='phone'] .menubtn {
+  display: block;
+  order: 10;
+  margin-left: auto;
+  width: 40px;
+  height: 34px;
+  padding: 0;
+  font-size: 18px;
+}
+
+:root[data-device='phone'] .themes {
+  order: 11;
+  margin-left: 0;
+}
+
+:root[data-device='phone'] .session {
+  display: none;
+}
+
+:root[data-device='phone'] header.menu-open .session:not([hidden]) {
+  position: absolute;
+  z-index: 100001;
+  top: 100%;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bar);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.25);
+}
+
+:root[data-device='phone'] header.menu-open .session > * {
+  width: 100%;
+}
+
+:root[data-device='phone'] .settings-panel,
+:root[data-device='phone'] .files-panel {
+  position: static;
+  margin-top: 6px;
+  box-shadow: none;
+}
+
+:root[data-device='phone'] .start {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+:root[data-device='phone'] .start select {
+  max-width: 55vw;
+}
+
+:root[data-device='phone'] .term {
+  display: none !important; /* no room: use "Separate window" on phones */
+}
+
+:root[data-device='phone'] button,
+:root[data-device='phone'] select,
+:root[data-device='phone'] summary {
+  min-height: 36px;
+}

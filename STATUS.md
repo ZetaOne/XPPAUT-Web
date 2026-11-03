@@ -220,6 +220,24 @@ original).
     (GPL v2 like Ermentrout/xppaut; sources permit later versions; credits
     for Ermentrout & Dougherty, AUTO, CVODE).
 
+20. **Phones and tablets** (src/mobile.ts, touch code in src/xpp.ts):
+    detected by capability (`(hover: none) and (pointer: coarse)`, phone if
+    the short side < 600 px), re-checked on rotation/resize; Settings ->
+    View overrides (Automatic / Mobile / Desktop, remembered). Desktop is
+    unchanged. Touch: tap = click, long press (550 ms) = right button, drag
+    = button-1 drag (press held back until the gesture is known); pinch
+    zooms and two fingers (or one on the empty desktop) pan a "world" layer
+    holding the panels; zoom buttons ⌨ − Fit +; title-bar buttons enlarged.
+    Phones: one window at a time, fitted to the width, tabs in the toolbar
+    row when 2+ windows are open, toolbar folds into ☰, side output panel
+    disabled (use Separate window). ⌨ focuses a hidden input (device
+    keyboard; text taken from beforeinput) and shows a strip with Esc, Tab,
+    sticky Ctrl, arrows, Backspace, Enter.
+    Verified in Chrome device emulation (phone 844x390 and 390x844, tablet
+    1180x820): tap menus, Go, opening a window, tabs, typing "-0.3" into
+    Initial Data through the keyboard path, pinch zoom; desktop unchanged.
+    Not yet tried on real phones (iOS Safari has no JSPI: Asyncify build).
+
 ## Next
 
 - Browser overhead (~1.3x with JSPI) is mostly yielding ~30 times a second

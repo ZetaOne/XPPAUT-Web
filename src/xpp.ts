@@ -102,10 +102,90 @@ export class XppSession {
 
   private desktop: HTMLElement;
   private cb: XppCallbacks;
+  /** layer holding the panels; zoomed and panned on touch devices */
+  private world: HTMLDivElement;
+  private view = { s: 1, tx: 0, ty: 0 };
+  private activeId = 0;
+  private touches = new Map<number, { x: number; y: number }>();
+  private gesture: { d0: number; mx: number; my: number; s0: number; tx0: number; ty0: number } | null = null;
+  /** phone layout: only the active window is shown, fitted to the screen */
+  private phone = false;
+  /** touch input (tap / long-press / drag gestures) */
+  touch = false;
+  /** called when windows open, close, retitle or the active one changes */
+  onWindowsChanged: () => void = () => {};
 
   constructor(desktop: HTMLElement, cb: XppCallbacks = {}) {
     this.desktop = desktop;
     this.cb = cb;
+    this.world = document.createElement('div');
+    this.world.className = 'world';
+    desktop.append(this.world);
+    this.installGestures();
+  }
+
+  // ---- view: zoom and pan (touch devices) ---------------------------------
+
+  getView(): { s: number; tx: number; ty: number } {
+    return { ...this.view };
+  }
+
+  setView(s: number, tx: number, ty: number): void {
+    this.view = { s: Math.min(4, Math.max(0.25, s)), tx, ty };
+    this.world.style.transform =
+      this.view.s === 1 && !tx && !ty ? '' : `translate(${tx}px, ${ty}px) scale(${this.view.s})`;
+  }
+
+  /** zoom so that window id (default: the active one) fills the desktop */
+  fit(id = this.activeId): void {
+    const p = this.panels.get(id);
+    if (!p || p.popup) return;
+    const W = this.desktop.clientWidth;
+    const H = this.desktop.clientHeight;
+    const w = p.el.offsetWidth + 2; // panel size: title bar height varies (touch)
+    const h = p.el.offsetHeight + 2;
+    // phones: fit the width (readable; pan up/down with two fingers);
+    // otherwise fit the whole window
+    const s = Math.min(4, Math.max(0.25, this.phone ? (W - 4) / w : Math.min((W - 8) / w, (H - 8) / h)));
+    this.setView(s, Math.round((W - w * s) / 2 - (p.el.offsetLeft - 1) * s), Math.round(4 - (p.el.offsetTop - 1) * s));
+  }
+
+  /** open XPP windows (mapped), for the phone tab bar */
+  windows(): Array<{ id: number; title: string; active: boolean }> {
+    return [...this.panels.values()]
+      .filter((p) => p.mapped)
+      .map((p) => ({ id: p.id, title: p.title.textContent || 'XPP', active: p.id === this.activeId }));
+  }
+
+  /** bring a window to the front (and, on phones, to the screen) */
+  activate(id: number): void {
+    const p = this.panels.get(id);
+    if (p) this.raise(p);
+  }
+
+  setPhone(on: boolean): void {
+    this.phone = on;
+    this.applyPhone();
+    if (on) this.fit();
+  }
+
+  private applyPhone(): void {
+    for (const p of this.panels.values()) p.el.classList.toggle('offstage', this.phone && p.id !== this.activeId);
+  }
+
+  /** a key from the on-screen key strip or keyboard ('Escape', 'a', ...) */
+  pressKey(key: string, ctrl = false): void {
+    const [ks, text] = SPECIAL_KEYS[key] ?? [key.codePointAt(0)! < 0x100 ? key.codePointAt(0)! : 0x01000000 + key.codePointAt(0)!, key];
+    const m = this.mod;
+    if (!m) return;
+    const state = ctrl ? ControlMask : 0;
+    for (const press of [1, 0])
+      this.queue(() => {
+        const buf = m._malloc(16);
+        m.stringToUTF8(text, buf, 16);
+        m._xw_input_key(ks, buf, press, state);
+        m._free(buf);
+      });
   }
 
   /** Start XPP on an .ode file (plus extra files, e.g. .ani or .tab, put
@@ -232,6 +312,7 @@ export class XppSession {
         p.canvas.height = h;
         p.canvas.style.width = w + 'px';
         p.canvas.style.height = h + 'px';
+        if (this.phone && p.id === this.activeId) requestAnimationFrame(() => this.fit(p.id));
       }
       const data = new ImageData(new Uint8ClampedArray(m.HEAPU8.buffer, ptr, w * h * 4).slice(), w, h);
       p.ctx.putImageData(data, 0, 0);
@@ -244,9 +325,12 @@ export class XppSession {
     for (const f of q) f();
   }
 
+  private changedWindows = false;
+
   private syncPanels(): void {
     const m = this.mod;
     this.needSync = false;
+    const before = this.windows().map((w) => w.id + ':' + w.title).join('|');
     const n = m._xw_toplevels(this.listPtr, 256);
     const seen = new Set<number>();
     for (let i = 0; i < n; i++) {
@@ -298,9 +382,24 @@ export class XppSession {
         const w = p.popup;
         p.popup = null;
         w?.close();
+        this.changedWindows = true;
         p.el.remove();
         this.panels.delete(id);
       }
+    // the active window went away: activate the topmost remaining one
+    const act = this.panels.get(this.activeId);
+    if (!act || !act.mapped) {
+      const top = [...this.panels.values()]
+        .filter((q) => q.mapped)
+        .sort((a, b) => +(b.el.style.zIndex || 0) - +(a.el.style.zIndex || 0))[0];
+      if (top) this.raise(top);
+    }
+    if (this.phone) this.applyPhone();
+    const after = this.windows().map((w) => w.id + ':' + w.title).join('|');
+    if (after !== before || this.changedWindows) {
+      this.changedWindows = false;
+      this.onWindowsChanged();
+    }
   }
 
   // ---- window manager ---------------------------------------------------
@@ -331,7 +430,7 @@ export class XppSession {
     const grip = document.createElement('div');
     grip.className = 'xwin-grip';
     el.append(bar, canvas, grip);
-    this.desktop.append(el);
+    this.world.append(el);
     const p: Panel = {
       id, el, title, canvas, grip, ctx: canvas.getContext('2d')!,
       placed: false, mapped: false, x: 0, y: 0, popup: null,
@@ -390,6 +489,14 @@ export class XppSession {
   private raise(p: Panel): void {
     p.el.style.zIndex = String(++this.zTop);
     this.queue(() => this.mod._xw_input_raise(p.id));
+    if (this.activeId !== p.id) {
+      this.activeId = p.id;
+      if (this.phone) {
+        this.applyPhone();
+        this.fit(p.id);
+      }
+      this.onWindowsChanged();
+    }
   }
 
   /** Move a panel's canvas into its own browser window. Browsers only allow
@@ -452,12 +559,15 @@ export class XppSession {
     bar.addEventListener('pointerdown', (e) => {
       if ((e.target as HTMLElement).tagName === 'BUTTON') return;
       e.preventDefault();
-      const sx = e.clientX - p.el.offsetLeft;
-      const sy = e.clientY - p.el.offsetTop;
+      const s = this.view.s; // drag in world coordinates (the view may be zoomed)
+      const l0 = p.el.offsetLeft;
+      const t0 = p.el.offsetTop;
+      const cx = e.clientX;
+      const cy = e.clientY;
       bar.setPointerCapture(e.pointerId);
       const move = (ev: PointerEvent) => {
-        p.el.style.left = ev.clientX - sx + 'px';
-        p.el.style.top = Math.max(0, ev.clientY - sy) + 'px';
+        p.el.style.left = Math.round(l0 + (ev.clientX - cx) / s) + 'px';
+        p.el.style.top = Math.max(0, Math.round(t0 + (ev.clientY - cy) / s)) + 'px';
       };
       const up = () => {
         bar.removeEventListener('pointermove', move);
@@ -483,9 +593,10 @@ export class XppSession {
       grip.setPointerCapture(e.pointerId);
       let w = w0;
       let h = h0;
+      const sc = this.view.s;
       const move = (ev: PointerEvent) => {
-        w = Math.max(100, w0 + ev.clientX - sx);
-        h = Math.max(60, h0 + ev.clientY - sy);
+        w = Math.max(100, Math.round(w0 + (ev.clientX - sx) / sc));
+        h = Math.max(60, Math.round(h0 + (ev.clientY - sy) / sc));
         p.canvas.style.width = w + 'px';
         p.canvas.style.height = h + 'px';
       };
@@ -516,11 +627,12 @@ export class XppSession {
 
   /** root coordinates: the window's position plus the offset in its canvas
       (works docked or popped out) */
-  private rootXY(p: Panel, e: MouseEvent): [number, number] {
+  private rootXY(p: Panel, e: { clientX: number; clientY: number }): [number, number] {
     const c = p.canvas;
-    const sx = c.clientWidth ? c.width / c.clientWidth : 1;
-    const sy = c.clientHeight ? c.height / c.clientHeight : 1;
-    return [p.x + Math.floor(e.offsetX * sx), p.y + Math.floor(e.offsetY * sy)];
+    const r = c.getBoundingClientRect(); // on-screen box: includes zoom
+    const sx = r.width ? c.width / r.width : 1;
+    const sy = r.height ? c.height / r.height : 1;
+    return [p.x + Math.floor((e.clientX - r.left) * sx), p.y + Math.floor((e.clientY - r.top) * sy)];
   }
 
   private pointerInput(p: Panel): void {
@@ -547,14 +659,66 @@ export class XppSession {
         this.queue(() => this.mod._xw_input_motion(x, y, s));
       }
     };
+    // touch: hold the press back briefly to tell a tap, a long press (right
+    // button) and a drag apart; a second finger turns it into pinch/pan
+    let t: { id: number; x0: number; y0: number; cx: number; cy: number; timer: number; drag: boolean; done: boolean } | null = null;
+    const touchEnd = (e: PointerEvent, cancel: boolean) => {
+      if (!t || e.pointerId !== t.id) return;
+      clearTimeout(t.timer);
+      const [x, y] = this.rootXY(p, e);
+      if (t.drag) {
+        this.buttons &= ~Button1Mask;
+        this.queue(() => this.mod._xw_input_button(x, y, 1, 0, Button1Mask));
+      } else if (!t.done && !cancel) {
+        const [x0, y0] = [t.x0, t.y0];
+        this.queue(() => {
+          this.mod._xw_input_button(x0, y0, 1, 1, 0);
+          this.mod._xw_input_button(x0, y0, 1, 0, Button1Mask);
+        });
+      }
+      t = null;
+    };
     c.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       c.setPointerCapture(e.pointerId);
-      handle(e);
+      if (e.pointerType !== 'touch') return handle(e);
+      if (this.touches.size > 1 || t) return; // pinch / second finger
+      const [x0, y0] = this.rootXY(p, e);
+      const id = e.pointerId;
+      t = {
+        id, x0, y0, cx: e.clientX, cy: e.clientY, drag: false, done: false,
+        timer: window.setTimeout(() => {
+          if (!t || t.id !== id || t.drag || this.touches.size > 1) return;
+          t.done = true; // long press = right button
+          this.queue(() => {
+            this.mod._xw_input_button(x0, y0, 3, 1, 0);
+            this.mod._xw_input_button(x0, y0, 3, 0, Button1Mask << 2);
+          });
+          navigator.vibrate?.(15);
+        }, 550),
+      };
     });
-    c.addEventListener('pointermove', handle);
-    c.addEventListener('pointerup', handle);
-    c.addEventListener('pointercancel', handle);
+    c.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'touch') return handle(e);
+      if (!t || e.pointerId !== t.id || t.done) return;
+      if (this.touches.size > 1) { // became a pinch: abandon the XPP gesture
+        clearTimeout(t.timer);
+        if (t.drag) touchEnd(e, true);
+        else t.done = true;
+        return;
+      }
+      const [x, y] = this.rootXY(p, e);
+      if (!t.drag && Math.hypot(e.clientX - t.cx, e.clientY - t.cy) > 10) {
+        t.drag = true; // a drag: press where the finger went down
+        clearTimeout(t.timer);
+        const [x0, y0] = [t.x0, t.y0];
+        this.buttons |= Button1Mask;
+        this.queue(() => this.mod._xw_input_button(x0, y0, 1, 1, 0));
+      }
+      if (t.drag) this.queue(() => this.mod._xw_input_motion(x, y, Button1Mask));
+    });
+    c.addEventListener('pointerup', (e) => (e.pointerType === 'touch' ? touchEnd(e, false) : handle(e)));
+    c.addEventListener('pointercancel', (e) => (e.pointerType === 'touch' ? touchEnd(e, true) : handle(e)));
     c.addEventListener('pointerleave', () => {
       if (!this.buttons) this.queue(() => this.mod._xw_input_motion(-100000, -100000, 0));
     });
@@ -572,6 +736,52 @@ export class XppSession {
       },
       { passive: false },
     );
+  }
+
+  private installGestures(): void {
+    const d = this.desktop;
+    const midDist = () => {
+      const [a, b] = [...this.touches.values()];
+      return { mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, dist: Math.hypot(a.x - b.x, a.y - b.y) || 1 };
+    };
+    let pan: { id: number; x: number; y: number; tx0: number; ty0: number } | null = null;
+    d.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'touch') return;
+      const r = d.getBoundingClientRect();
+      this.touches.set(e.pointerId, { x: e.clientX - r.left, y: e.clientY - r.top });
+      if (this.touches.size === 2) {
+        pan = null;
+        const { mx, my, dist } = midDist();
+        this.gesture = { d0: dist, mx, my, s0: this.view.s, tx0: this.view.tx, ty0: this.view.ty };
+      } else if (this.touches.size === 1 && (e.target === d || e.target === this.world)) {
+        pan = { id: e.pointerId, x: e.clientX, y: e.clientY, tx0: this.view.tx, ty0: this.view.ty };
+        d.setPointerCapture(e.pointerId);
+      }
+    }, true);
+    d.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'touch' || !this.touches.has(e.pointerId)) return;
+      const r = d.getBoundingClientRect();
+      this.touches.set(e.pointerId, { x: e.clientX - r.left, y: e.clientY - r.top });
+      if (this.gesture && this.touches.size >= 2) {
+        const g = this.gesture;
+        const { mx, my, dist } = midDist();
+        const s = Math.min(4, Math.max(0.25, g.s0 * (dist / g.d0)));
+        // keep the world point under the fingers' midpoint fixed
+        const wx = (g.mx - g.tx0) / g.s0;
+        const wy = (g.my - g.ty0) / g.s0;
+        this.setView(s, mx - wx * s, my - wy * s);
+      } else if (pan && e.pointerId === pan.id) {
+        this.setView(this.view.s, pan.tx0 + e.clientX - pan.x, pan.ty0 + e.clientY - pan.y);
+      }
+    }, true);
+    const up = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return;
+      this.touches.delete(e.pointerId);
+      if (this.touches.size < 2) this.gesture = null;
+      if (pan && pan.id === e.pointerId) pan = null;
+    };
+    d.addEventListener('pointerup', up, true);
+    d.addEventListener('pointercancel', up, true);
   }
 
   private installKeyboard(target: Window): void {

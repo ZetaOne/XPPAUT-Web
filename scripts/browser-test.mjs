@@ -19,6 +19,11 @@
 //   downloads DIR      save downloads into DIR
 //   throttle KBPS MS   emulate a slow network (download kbit/s, latency ms)
 //   netlog             print every network response with its size (after load)
+//   device W H         emulate a touch device W x H (phone/tablet); navigate after
+//   tap X Y / longpress X Y / tdrag X1 Y1 X2 Y2   touch gestures
+//   pinch X Y F        two-finger pinch around X,Y by factor F (e.g. 1.5)
+//   inserttext TEXT    type TEXT the way a phone keyboard does (text input)
+//   tapsel SEL         tap the centre of the element matching SEL
 //   wclick TITLE X Y   click at X,Y inside the XPP window (panel) whose title
 //                      starts with TITLE (use _ for spaces in TITLE)
 //   upload SEL FILE..  set the files of the <input type=file> matching SEL
@@ -157,6 +162,41 @@ try {
       await call('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', buttons: 1, clickCount: 1 });
       await call('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', buttons: 0, clickCount: 1 });
       pws.close();
+    } else if (cmd === 'device') {
+      await send('Emulation.setDeviceMetricsOverride', { width: +a[0], height: +a[1], deviceScaleFactor: 2, mobile: true });
+      await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+      await send('Emulation.setEmulatedMedia', { features: [{ name: 'hover', value: 'none' }, { name: 'pointer', value: 'coarse' }, { name: 'any-hover', value: 'none' }, { name: 'any-pointer', value: 'coarse' }] }).catch(() => {});
+    } else if (cmd === 'tap' || cmd === 'longpress') {
+      const pt = [{ x: +a[0], y: +a[1], id: 1 }];
+      await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt });
+      await sleep(cmd === 'tap' ? 60 : 800);
+      await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    } else if (cmd === 'tdrag') {
+      const [x1, y1, x2, y2] = a.map(Number);
+      await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x1, y: y1, id: 1 }] });
+      for (let i = 1; i <= 10; i++) {
+        await send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x1 + ((x2 - x1) * i) / 10, y: y1 + ((y2 - y1) * i) / 10, id: 1 }] });
+        await sleep(20);
+      }
+      await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    } else if (cmd === 'inserttext') {
+      await send('Input.insertText', { text: rest });
+    } else if (cmd === 'tapsel') {
+      const r = await send('Runtime.evaluate', { returnByValue: true, expression: `(() => { const b = document.querySelector(${JSON.stringify(rest)}).getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; })()` });
+      const [x, y] = r.result.value;
+      await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }] });
+      await sleep(60);
+      await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    } else if (cmd === 'pinch') {
+      const [cx, cy, f] = a.map(Number);
+      const d0 = 60;
+      const pts = (d) => [{ x: cx - d, y: cy, id: 1 }, { x: cx + d, y: cy, id: 2 }];
+      await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pts(d0) });
+      for (let i = 1; i <= 10; i++) {
+        await send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: pts(d0 * (1 + ((f - 1) * i) / 10)) });
+        await sleep(20);
+      }
+      await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     } else if (cmd === 'wclick') {
       const t = a[0].replace(/_/g, ' ');
       const r = await send('Runtime.evaluate', { returnByValue: true, expression: `(() => {
