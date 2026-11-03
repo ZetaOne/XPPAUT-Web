@@ -150,6 +150,16 @@ export class XppSession {
     this.setView(s, Math.round((W - w * s) / 2 - (p.el.offsetLeft - 1) * s), Math.round(4 - (p.el.offsetTop - 1) * s));
   }
 
+  /** XPP's main window (where most keyboard commands go) */
+  get mainWindow(): number {
+    return this.mainId;
+  }
+
+  /** two fingers tapped (no pinch or pan): used as Esc on touch devices */
+  onTwoFingerTap: () => void = () => {};
+  /** bumped whenever a second finger touches, to cancel one-finger taps */
+  private multiTouchSeq = 0;
+
   /** open XPP windows (mapped), for the phone tab bar */
   windows(): Array<{ id: number; title: string; active: boolean }> {
     return [...this.panels.values()]
@@ -661,7 +671,7 @@ export class XppSession {
     };
     // touch: hold the press back briefly to tell a tap, a long press (right
     // button) and a drag apart; a second finger turns it into pinch/pan
-    let t: { id: number; x0: number; y0: number; cx: number; cy: number; timer: number; drag: boolean; done: boolean } | null = null;
+    let t: { id: number; x0: number; y0: number; cx: number; cy: number; timer: number; drag: boolean; done: boolean; seq: number } | null = null;
     const touchEnd = (e: PointerEvent, cancel: boolean) => {
       if (!t || e.pointerId !== t.id) return;
       clearTimeout(t.timer);
@@ -669,7 +679,7 @@ export class XppSession {
       if (t.drag) {
         this.buttons &= ~Button1Mask;
         this.queue(() => this.mod._xw_input_button(x, y, 1, 0, Button1Mask));
-      } else if (!t.done && !cancel) {
+      } else if (!t.done && !cancel && t.seq === this.multiTouchSeq) {
         const [x0, y0] = [t.x0, t.y0];
         this.queue(() => {
           this.mod._xw_input_button(x0, y0, 1, 1, 0);
@@ -686,9 +696,9 @@ export class XppSession {
       const [x0, y0] = this.rootXY(p, e);
       const id = e.pointerId;
       t = {
-        id, x0, y0, cx: e.clientX, cy: e.clientY, drag: false, done: false,
+        id, x0, y0, cx: e.clientX, cy: e.clientY, drag: false, done: false, seq: this.multiTouchSeq,
         timer: window.setTimeout(() => {
-          if (!t || t.id !== id || t.drag || this.touches.size > 1) return;
+          if (!t || t.id !== id || t.drag || this.touches.size > 1 || t.seq !== this.multiTouchSeq) return;
           t.done = true; // long press = right button
           this.queue(() => {
             this.mod._xw_input_button(x0, y0, 3, 1, 0);
@@ -745,14 +755,17 @@ export class XppSession {
       return { mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, dist: Math.hypot(a.x - b.x, a.y - b.y) || 1 };
     };
     let pan: { id: number; x: number; y: number; tx0: number; ty0: number } | null = null;
+    let twoTap: { t: number; moved: boolean } | null = null;
     d.addEventListener('pointerdown', (e) => {
       if (e.pointerType !== 'touch') return;
       const r = d.getBoundingClientRect();
       this.touches.set(e.pointerId, { x: e.clientX - r.left, y: e.clientY - r.top });
       if (this.touches.size === 2) {
         pan = null;
+        this.multiTouchSeq++;
         const { mx, my, dist } = midDist();
         this.gesture = { d0: dist, mx, my, s0: this.view.s, tx0: this.view.tx, ty0: this.view.ty };
+        twoTap = { t: performance.now(), moved: false };
       } else if (this.touches.size === 1 && (e.target === d || e.target === this.world)) {
         pan = { id: e.pointerId, x: e.clientX, y: e.clientY, tx0: this.view.tx, ty0: this.view.ty };
         d.setPointerCapture(e.pointerId);
@@ -765,6 +778,7 @@ export class XppSession {
       if (this.gesture && this.touches.size >= 2) {
         const g = this.gesture;
         const { mx, my, dist } = midDist();
+        if (twoTap && (Math.abs(dist / g.d0 - 1) > 0.06 || Math.hypot(mx - g.mx, my - g.my) > 12)) twoTap.moved = true;
         const s = Math.min(4, Math.max(0.25, g.s0 * (dist / g.d0)));
         // keep the world point under the fingers' midpoint fixed
         const wx = (g.mx - g.tx0) / g.s0;
@@ -778,6 +792,11 @@ export class XppSession {
       if (e.pointerType !== 'touch') return;
       this.touches.delete(e.pointerId);
       if (this.touches.size < 2) this.gesture = null;
+      if (this.touches.size === 0 && twoTap) {
+        // a quick two-finger tap without pinching or panning
+        if (!twoTap.moved && performance.now() - twoTap.t < 350) this.onTwoFingerTap();
+        twoTap = null;
+      }
       if (pan && pan.id === e.pointerId) pan = null;
     };
     d.addEventListener('pointerup', up, true);

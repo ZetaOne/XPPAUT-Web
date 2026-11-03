@@ -237,6 +237,17 @@ original).
     1180x820): tap menus, Go, opening a window, tabs, typing "-0.3" into
     Initial Data through the keyboard path, pinch zoom; desktop unchanged.
     Not yet tried on real phones (iOS Safari has no JSPI: Asyncify build).
+21. **Android keyboard follow-up** (user test with Gboard): the key strip
+    and zoom buttons were hidden behind the on-screen keyboard. Fixed with
+    `interactive-widget=resizes-content` in the viewport meta and, as a
+    fallback, the app height following visualViewport (`--app-h`). Esc
+    without a keyboard: Android Back = Esc while XPP runs on touch devices
+    (two Backs within 0.8 s leave the page), and a quick two-finger tap =
+    Esc (the first finger's tap is cancelled). A "Cmd" button opens a panel
+    of common commands (Integrate I G, Last I L, Continue, Nullclines N N,
+    Dir field D D, Erase, Fit W F, Restore, Sing pts S G, Xi vs t, AUTO F A,
+    Calculator F C, Esc, Enter, Keyboard), sent to the main window.
+    Verified in emulation; the keyboard overlap fix needs a real device.
 
 ## Next
 

@@ -24,6 +24,8 @@ export class MobileUI {
   private ctrl = false
   private tabs: HTMLElement
   private zoomBar: HTMLElement
+  private cmds: HTMLElement
+  private lastBack = 0
   private keys: HTMLElement
   private input: HTMLInputElement
   private onChange: (d: Device) => void
@@ -40,6 +42,7 @@ export class MobileUI {
     this.zoomBar = document.createElement('div')
     this.zoomBar.className = 'zoombar'
     this.zoomBar.innerHTML =
+      '<button type="button" data-z="cmd" aria-label="XPP commands">Cmd</button>' +
       '<button type="button" data-z="kbd" aria-label="Keyboard">⌨</button>' +
       '<button type="button" data-z="out" aria-label="Zoom out">−</button>' +
       '<button type="button" data-z="fit" aria-label="Fit window to screen">Fit</button>' +
@@ -48,6 +51,7 @@ export class MobileUI {
       const z = (e.target as HTMLElement).dataset.z
       if (!z || !this.session) return
       if (z === 'kbd') return this.toggleKeyboard()
+      if (z === 'cmd') return this.toggleCommands()
       if (z === 'fit') return this.session.fit()
       const v = this.session.getView()
       const f = z === 'in' ? 1.25 : 0.8
@@ -56,6 +60,49 @@ export class MobileUI {
       const s = Math.min(4, Math.max(0.25, v.s * f))
       this.session.setView(s, cx - ((cx - v.tx) / v.s) * s, cy - ((cy - v.ty) / v.s) * s)
     })
+
+    // command panel: XPP's common keyboard commands, one tap each (they go to
+    // XPP's main window, as when typed there)
+    this.cmds = document.createElement('div')
+    this.cmds.className = 'cmdpanel'
+    this.cmds.setAttribute('role', 'menu')
+    const commands: Array<[string, string, string[]]> = [
+      ['Integrate', 'I G', ['i', 'g']],
+      ['Last', 'I L', ['i', 'l']],
+      ['Continue', 'C', ['c']],
+      ['Nullclines', 'N N', ['n', 'n']],
+      ['Direction field', 'D D', ['d', 'd']],
+      ['Erase', 'E', ['e']],
+      ['Fit window', 'W F', ['w', 'f']],
+      ['Restore', 'R', ['r']],
+      ['Sing pts', 'S G', ['s', 'g']],
+      ['Xi vs t', 'X', ['x']],
+      ['AUTO', 'F A', ['f', 'a']],
+      ['Calculator', 'F C', ['f', 'c']],
+      ['Esc', 'cancel', ['Escape']],
+      ['Enter', 'accept', ['Enter']],
+      ['Keyboard', '⌨', []],
+    ]
+    for (const [label, hint, keys] of commands) {
+      const b = document.createElement('button')
+      b.type = 'button'
+      b.setAttribute('role', 'menuitem')
+      b.innerHTML = `<span></span><small></small>`
+      b.querySelector('span')!.textContent = label
+      b.querySelector('small')!.textContent = hint
+      b.addEventListener('click', () => {
+        if (!this.session) return
+        if (!keys.length) {
+          this.toggleCommands(false)
+          return this.toggleKeyboard()
+        }
+        // menu commands go to the main window; Esc/Enter to the active one
+        if (keys[0] !== 'Escape' && keys[0] !== 'Enter') this.session.activate(this.session.mainWindow)
+        for (const k of keys) this.session.pressKey(k)
+        if (keys[0] !== 'Escape' && keys[0] !== 'Enter') this.toggleCommands(false)
+      })
+      this.cmds.append(b)
+    }
 
     // key strip: keys phone keyboards lack, plus a button for the keyboard
     this.keys = document.createElement('div')
@@ -125,13 +172,44 @@ export class MobileUI {
     // tabs in the toolbar row, key strip at the bottom, zoom over the desktop
     app.querySelector('header .menubtn')!.before(this.tabs)
     app.append(this.keys)
-    desktop.append(this.zoomBar)
+    desktop.append(this.zoomBar, this.cmds)
     document.body.append(this.input)
+
+    // Esc without a keyboard: the Android Back gesture/button (twice quickly
+    // still leaves the page)
+    window.addEventListener('popstate', () => {
+      if (!this.session?.running || this.device === 'desktop') return
+      const now = performance.now()
+      if (now - this.lastBack < 800) return history.back() // leave
+      this.lastBack = now
+      this.session.pressKey('Escape')
+      history.pushState({ xpp: 1 }, '')
+    })
+
+    // keep the app (key strip, zoom buttons) above the on-screen keyboard in
+    // browsers that only shrink the visual viewport
+    const vv = window.visualViewport
+    if (vv) {
+      const fit = () => {
+        if (this.device === 'desktop') return document.documentElement.style.removeProperty('--app-h')
+        document.documentElement.style.setProperty('--app-h', Math.round(vv.height) + 'px')
+        window.scrollTo(0, 0)
+      }
+      vv.addEventListener('resize', fit)
+      this.fitViewport = fit
+    }
   }
+
+  private fitViewport: () => void = () => {}
 
   attach(session: XppSession) {
     this.session = session
     session.onWindowsChanged = () => this.renderTabs()
+    session.onTwoFingerTap = () => {
+      if (this.device !== 'desktop') session.pressKey('Escape')
+    }
+    // a history entry for Back to pop (Back = Esc)
+    if (this.device !== 'desktop' && !history.state?.xpp) history.pushState({ xpp: 1 }, '')
     this.applyToSession()
   }
 
@@ -140,6 +218,8 @@ export class MobileUI {
     const changed = device !== this.device
     this.device = device
     document.documentElement.dataset.device = device
+    this.fitViewport()
+    if (device === 'desktop') this.toggleCommands(false)
     this.applyToSession()
     if (changed) this.onChange(device)
   }
@@ -159,6 +239,11 @@ export class MobileUI {
       this.ctrl = false
       this.keys.querySelector('[data-key="ctrl"]')?.classList.remove('on')
     }
+  }
+
+  private toggleCommands(on?: boolean) {
+    const open = this.cmds.classList.toggle('open', on)
+    this.zoomBar.querySelector('[data-z="cmd"]')?.classList.toggle('on', open)
   }
 
   /** ⌨: the device keyboard plus the strip of extra keys, together */

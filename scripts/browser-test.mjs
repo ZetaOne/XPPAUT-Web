@@ -23,6 +23,7 @@
 //   tap X Y / longpress X Y / tdrag X1 Y1 X2 Y2   touch gestures
 //   pinch X Y F        two-finger pinch around X,Y by factor F (e.g. 1.5)
 //   inserttext TEXT    type TEXT the way a phone keyboard does (text input)
+//   twotap X Y         quick two-finger tap
 //   tapsel SEL         tap the centre of the element matching SEL
 //   wclick TITLE X Y   click at X,Y inside the XPP window (panel) whose title
 //                      starts with TITLE (use _ for spaces in TITLE)
@@ -178,6 +179,11 @@ try {
         await send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x1 + ((x2 - x1) * i) / 10, y: y1 + ((y2 - y1) * i) / 10, id: 1 }] });
         await sleep(20);
       }
+      await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    } else if (cmd === 'twotap') {
+      const [x, y] = a.map(Number);
+      await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x - 30, y, id: 1 }, { x: x + 30, y, id: 2 }] });
+      await sleep(80);
       await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     } else if (cmd === 'inserttext') {
       await send('Input.insertText', { text: rest });
