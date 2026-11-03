@@ -580,6 +580,8 @@ export class XppSession {
         if (!this.running) return;
         const t = e.target as HTMLElement;
         if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+        // keys belong to the page while a dialog is open (Esc closes it)
+        if (t?.closest?.('dialog') || document.querySelector('dialog[open]')) return;
         if (e.metaKey || (e.ctrlKey && e.shiftKey)) return; // leave browser shortcuts alone
         let ks: number;
         let text: string;

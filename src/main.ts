@@ -534,6 +534,29 @@ function restoreEdited(name: string | null) {
 
 window.addEventListener('pagehide', () => terminal.closeAll())
 
+// toolbar menus (Settings, Files): Esc or a click elsewhere closes them.
+// Capture phase, so XPP does not also get that Esc.
+const openMenus = () => [...document.querySelectorAll<HTMLDetailsElement>('header details[open]')]
+window.addEventListener(
+  'keydown',
+  (e) => {
+    if (e.key !== 'Escape') return
+    const open = openMenus()
+    if (!open.length) return
+    for (const d of open) d.open = false
+    e.preventDefault()
+    e.stopImmediatePropagation()
+  },
+  true,
+)
+document.addEventListener(
+  'pointerdown',
+  (e) => {
+    for (const d of openMenus()) if (!d.contains(e.target as Node)) d.open = false
+  },
+  true,
+)
+
 // ---- session: save everything as one .zip; warn before leaving --------------
 let unsaved = false // the user did something since the last "Save session"
 let leaving = false // we are leaving on purpose (already asked)
