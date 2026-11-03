@@ -207,6 +207,17 @@ original).
     since the last save. Exports/Output/Separate-windows moved into a
     Settings menu so the toolbar fits on one line.
 
+18. **Themes** (user request): a Theme menu at the right of the toolbar:
+    System (follows OS light/dark), Light, Dark, Midnight Blue, Solarized
+    Light/Dark, Nord, Dracula, Sepia, High Contrast. CSS variables per
+    `:root[data-theme]`; remembered in localStorage and applied by an inline
+    script in index.html before first paint. Colours the page around XPP
+    only; XPP's windows keep their original look. Start-page text checked
+    for contrast (>= 4.4:1 on every theme). Esc/outside click close it.
+19. **README draft** (local only, not pushed: the user wants it improved
+    first): feature list, and two SVG plots exported from XPP (phase plane
+    with nullclines, the user's AUTO bifurcation diagram) in docs/.
+
 ## Next
 
 - Browser overhead (~1.3x with JSPI) is mostly yielding ~30 times a second

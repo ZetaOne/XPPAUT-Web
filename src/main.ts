@@ -59,6 +59,15 @@ app.innerHTML = `
       <button id="savesession" title="Download a .zip with everything XPP saved, screenshots of the open windows (SS folder) and XPP's output">Save session</button>
       <button id="restart">Restart</button>
     </div>
+    <details class="themes" id="themes">
+      <summary class="round" title="Theme" aria-label="Theme">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/>
+        </svg>
+      </summary>
+      <div class="themes-panel" id="themelist" role="menu"></div>
+    </details>
   </header>
   <div class="layout">
     <main class="desktop" id="desktop">
@@ -533,6 +542,46 @@ function restoreEdited(name: string | null) {
 }
 
 window.addEventListener('pagehide', () => terminal.closeAll())
+
+// ---- themes (colours of the page around XPP; XPP's windows keep their look) --
+const THEMES: Array<{ id: string; name: string; swatch: string[] }> = [
+  { id: 'system', name: 'System (light/dark)', swatch: ['#ffffff', '#5c6670', '#222326', '#2a3038'] },
+  { id: 'light', name: 'Light', swatch: ['#ffffff', '#e6e6e1', '#5c6670', '#2f5d8a'] },
+  { id: 'dark', name: 'Dark', swatch: ['#222326', '#34363a', '#2a3038', '#4b7fb3'] },
+  { id: 'midnight', name: 'Midnight Blue', swatch: ['#101d36', '#1c3158', '#14274a', '#3d7bd9'] },
+  { id: 'solarized-light', name: 'Solarized Light', swatch: ['#fdf6e3', '#eee8d5', '#586e75', '#268bd2'] },
+  { id: 'solarized-dark', name: 'Solarized Dark', swatch: ['#002b36', '#073642', '#0a3a47', '#268bd2'] },
+  { id: 'nord', name: 'Nord', swatch: ['#3b4252', '#4c566a', '#434c5e', '#5e81ac'] },
+  { id: 'dracula', name: 'Dracula', swatch: ['#282a36', '#44475a', '#343746', '#bd93f9'] },
+  { id: 'sepia', name: 'Sepia', swatch: ['#faf4e6', '#ebdfc4', '#7a6344', '#8b5a2b'] },
+  { id: 'contrast', name: 'High Contrast', swatch: ['#000000', '#ffffff', '#000000', '#ffff00'] },
+]
+
+function applyTheme(id: string) {
+  if (id === 'system') delete document.documentElement.dataset.theme
+  else document.documentElement.dataset.theme = id
+  for (const b of document.querySelectorAll<HTMLButtonElement>('#themelist button'))
+    b.setAttribute('aria-checked', String(b.dataset.theme === id))
+}
+
+{
+  const list = $('themelist')
+  for (const t of THEMES) {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.setAttribute('role', 'menuitemradio')
+    b.dataset.theme = t.id
+    b.innerHTML = `<span class="swatch">${t.swatch.map((c) => `<i style="background:${c}"></i>`).join('')}</span>`
+    b.append(t.name)
+    b.addEventListener('click', () => {
+      applyTheme(t.id)
+      store.set('xpp-theme', t.id)
+      ;($('themes') as HTMLDetailsElement).open = false
+    })
+    list.append(b)
+  }
+  applyTheme(store.get('xpp-theme') || 'system') // index.html applied it early too
+}
 
 // toolbar menus (Settings, Files): Esc or a click elsewhere closes them.
 // Capture phase, so XPP does not also get that Esc.
