@@ -18,15 +18,16 @@ rm -rf "$root/public/odes"
 python3 - "$root" <<'EOF'
 import json, os, shutil, sys
 root = sys.argv[1]
-groups = [
-    ("ode", "XPP examples", "ode"),
-    ("tstauto", "AUTO test models", "tstauto"),
-    ("canonical", "Canonical models", "canonical"),
-    ("help", "Examples from the help pages", "help/odes"),
+groups = [  # folders relative to the project
+    ("ode", "XPP examples", "xppaut/ode"),
+    ("tstauto", "AUTO test models", "xppaut/tstauto"),
+    ("canonical", "Canonical models", "xppaut/canonical"),
+    ("help", "Examples from the help pages", "xppaut/help/odes"),
+    ("more", "More models", "examples"),  # added here, not part of XPPAUT
 ]
 index = []
 for gid, label, src in groups:
-    src = os.path.join(root, "xppaut", src)
+    src = os.path.join(root, src)
     dst = os.path.join(root, "public", "odes", gid)
     os.makedirs(dst, exist_ok=True)
     odes, data = [], []
