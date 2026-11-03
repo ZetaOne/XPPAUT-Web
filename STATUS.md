@@ -214,9 +214,11 @@ original).
     script in index.html before first paint. Colours the page around XPP
     only; XPP's windows keep their original look. Start-page text checked
     for contrast (>= 4.4:1 on every theme). Esc/outside click close it.
-19. **README draft** (local only, not pushed: the user wants it improved
-    first): feature list, and two SVG plots exported from XPP (phase plane
-    with nullclines, the user's AUTO bifurcation diagram) in docs/.
+19. **README** (published 2026-11-03): author JKG-2026, feature list, two
+    SVG plots exported from XPP (phase plane with nullclines, the user's AUTO
+    bifurcation diagram) in docs/, browsers, Linux build guide, licence
+    (GPL v2 like Ermentrout/xppaut; sources permit later versions; credits
+    for Ermentrout & Dougherty, AUTO, CVODE).
 
 ## Next
 
