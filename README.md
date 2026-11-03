@@ -1,96 +1,97 @@
 # XPPAUT-Web
 
-XPPAUT running in the web browser: the original XPPAUT 8 program by Bard
-Ermentrout, compiled to WebAssembly, with its X11 interface reproduced on an
-HTML canvas so it looks and works like the desktop version.
+**Author:** JKG-2026
 
-**Use it:** https://zetaone.github.io/XPPAUT-Web/
+XPPAUT, the dynamical-systems tool by Bard Ermentrout, running in the browser.
+Same program, same interface, nothing to install.
 
-Everything runs in the visitor's browser; the site is static, so any number of
-people can use it at once.
+**→ https://zetaone.github.io/XPPAUT-Web/**
 
-## Getting started
+<p>
+  <img src="docs/nullclines.svg" width="49%" alt="Phase plane of the Morris-Lecar model: a limit cycle with the V and W nullclines">
+  <img src="docs/bifurcation.svg" width="49%" alt="Bifurcation diagram of the Morris-Lecar model computed with AUTO">
+</p>
+
+*Morris-Lecar (`lecar.ode`), exported as SVG from XPPAUT-Web. Left: limit cycle
+and nullclines in the V–W plane. Right: AUTO continuation in `iapp`, with
+steady states (red stable, black unstable) and periodic orbits from the Hopf
+point (green stable, blue unstable).*
+
+## Features
+
+- **The real XPPAUT 8**: its C code compiled to WebAssembly. Windows match the
+  desktop pixel for pixel; results match on all 144 tested examples.
+- **AUTO** for steady states, periodic orbits and bifurcation diagrams.
+- **212 example models** from the XPPAUT release, or your own `.ode` with its
+  `.ani`, `.tab` and `.dat` files.
+- **Window panels**: drag, resize, close, save as PNG, or pop out into a
+  separate browser window.
+- **Exports**: PostScript, SVG, data and `.set` files download automatically,
+  or go to a folder you choose.
+- **Save session**: one `.zip` with all files, screenshots of every window and
+  XPP's output, offered before you restart or quit.
+- **Model editor**, **XPP's terminal output**, **built-in help**, and
+  **ten colour themes**.
+- **Fast and private**: about 0.5 MB, near-native speed, nothing leaves your
+  browser.
+
+## Quick start
+
+1. Choose an example (or **Open .ode file…**) and press **Run**.
+2. Use XPP as on the desktop: **I G** integrates, **N N** draws nullclines,
+   **F A** opens AUTO.
+3. **Save session** keeps everything; **Settings** sets where exports and output go.
+
+Link straight to a model: `https://zetaone.github.io/XPPAUT-Web/?ode=ode/lecar.ode`
+
+## Browsers
+
+Nothing to install: the site runs in a current desktop browser. Chrome and
+Edge get the fastest build; other browsers load a compatible fallback.
+Tested in Chrome.
+
+## How it works
+
+The XPPAUT source is compiled with Emscripten. XPP draws its own interface with
+X11, so `web/xlib/` reimplements the 69 X11 calls it uses, and the page
+(`src/`) shows each X window as a canvas.
+
+## Building from source
+
+Only needed to change the code. Tested on **Linux (Ubuntu 24.04)**; macOS
+should work but is untested; on Windows use WSL (Ubuntu).
+
+Requirements: `git`, `bash`, `make`, Python 3, and Node.js 22 or newer. The
+script below downloads Emscripten (about 1 GB) into `.emsdk/` inside the project.
 
 ```bash
+git clone https://github.com/ZetaOne/XPPAUT-Web.git && cd XPPAUT-Web
+scripts/setup-emsdk.sh             # Emscripten, once
 npm install
-npm run dev      # start the dev server
-npm run build    # type-check and build to dist/
-npm run preview  # serve the production build
+npm run build:wasm                 # compile XPP; copy examples and help
+npm run dev                        # open http://localhost:5173/
 ```
 
-## Approach
+`npm run build` writes the static site to `dist/`. Pushes to `master` are built
+and deployed to GitHub Pages automatically.
 
-The original XPPAUT C source is compiled to WebAssembly with Emscripten. Its
-X11 interface (77 Xlib functions, no toolkit) is reimplemented in the browser
-on an HTML canvas, so the UI looks and behaves like the desktop version. Files
-XPP writes are kept in an in-memory file system and offered as downloads.
-
-## Layout
-
-- `xppaut/` - upstream XPPAUT 8.0 source with a few small fixes (see `xppaut/UPSTREAM.md`)
-- `web/` - build for the web port: `Makefile`, X11 headers (`include/`) and our Xlib implementation (`xlib/`)
-- `src/` - web front end (Vite + TypeScript)
-- `scripts/` - build and test scripts
-- `tests/reference/` - output from the native desktop build, used to check the web build
-
-## Native reference build
-
-Builds the desktop version (needs gcc, make and libX11 headers) and checks a
-batch run against the stored reference output:
+**Tests** (Linux): compare with the desktop XPPAUT. Extra packages:
+`sudo apt install build-essential libx11-dev xvfb xdotool imagemagick python3-pil`.
 
 ```bash
-./scripts/build-native.sh
-./scripts/test-native.sh
+scripts/build-native.sh && scripts/test-native.sh   # desktop reference build
+scripts/compare-batch.sh build/headless-cc/xppaut   # numerical results
+scripts/compare-gui.sh tests/gui/*.txt              # screenshots vs desktop XPP
 ```
-
-## Running the web app
-
-```bash
-source .emsdk/emsdk_env.sh   # Emscripten (install once: scripts/setup-emsdk.sh)
-npm run build:wasm            # compile XPP, copy it and the example .odes into public/
-npm run dev                   # open http://localhost:5173/  (or ?ode=lecar.ode)
-```
-
-## How it is built
-
-`web/xlib/` is a small X11 implementation inside the program: the 69 Xlib
-functions XPP calls, drawing into in-memory pixel buffers.
-
-- `web/xlib/platform_web.c` + `src/xpp.ts`: in the browser, each X window
-  becomes a panel with a canvas; mouse and keyboard become X events.
-- `web/xlib/platform_native.c`: a native, scriptable headless build for
-  tests, e.g.
-  `XPPWEB_SCRIPT=script.txt build/headless-cc/xppaut lecar.ode`
-  with commands like `key i`, `click X Y`, `screenshot out.ppm`.
-
-```bash
-make -C web headless                 # native, gcc   -> build/headless-cc/xppaut
-make -C web CC=clang-18 headless     # native, clang -> build/headless-clang-18/xppaut
-scripts/compare-batch.sh build/headless-cc/xppaut   # compare all ode/*.ode with the desktop build
-scripts/build-muslm-baseline.sh               # native build with Emscripten's libm (musl)
-BASELINE=build/headless-muslm/xppaut scripts/compare-batch.sh scripts/xpp-wasm-node.mjs
-node scripts/browser-test.mjs "http://localhost:4173/?ode=lecar.ode" "wait 3000" "key i" "key g" "shot out.png"
-```
-
-Pixel comparison with the real desktop XPP (needs Xvfb, xdotool):
-
-```bash
-scripts/compare-gui.sh tests/gui/*.txt   # each scenario: real XPP vs ours
-tests/xdraw/run.sh                       # rasterisation test, libX11 vs ours
-```
-
-The WebAssembly build matches the musl baseline byte for byte. Against the
-glibc desktop build a few chaotic examples differ in the last digits, purely
-from libm rounding.
-
-## Publishing
-
-Every push to `master` rebuilds and redeploys the site with GitHub Actions
-(`.github/workflows/pages.yml`: Emscripten 6.0.13, `scripts/build-web.sh`,
-`npm run build`, then GitHub Pages).
 
 ## Licence
 
-GNU General Public License, version 2 or (at your option) any later version,
-the same as XPPAUT (see `LICENSE`). XPPAUT is by Bard Ermentrout; this port's
-changes to its source are listed in `xppaut/UPSTREAM.md`.
+**GNU General Public License v2**, the licence of XPPAUT itself
+([Ermentrout/xppaut](https://github.com/Ermentrout/xppaut)); its source files
+also permit any later version. See [`LICENSE`](LICENSE).
+
+- XPPAUT © 2002–2017 Bard Ermentrout & Daniel Dougherty.
+  [Homepage](https://sites.pitt.edu/~phase/bard/bardware/xpp/xpp.html).
+- It includes AUTO (E. J. Doedel) and CVODE (S. D. Cohen & A. C. Hindmarsh, LLNL).
+- Changes to the XPPAUT source for this port: [`xppaut/UPSTREAM.md`](xppaut/UPSTREAM.md).
+- The site icon is taken from the plot in the XPPAUT homepage banner.
