@@ -28,6 +28,9 @@
 //   wclick TITLE X Y   click at X,Y inside the XPP window (panel) whose title
 //                      starts with TITLE (use _ for spaces in TITLE)
 //   upload SEL FILE..  set the files of the <input type=file> matching SEL
+//   cdp METHOD [JSON]  send a DevTools command and print its result
+//   offline [off]      cut the network (or restore it)
+//   reload             reload the page
 //
 // Console output from the page is printed with a "page:" prefix.
 import { spawn } from 'node:child_process';
@@ -237,8 +240,18 @@ try {
       if (!t) throw new Error('no browser window titled ' + rest);
       await fetch(`http://127.0.0.1:${port}/json/close/${t.id}`);
     } else if (cmd === 'eval') {
-      const r = await send('Runtime.evaluate', { expression: rest, returnByValue: true });
+      const r = await send('Runtime.evaluate', { expression: rest, returnByValue: true, awaitPromise: true });
       console.log(JSON.stringify(r.result.value ?? r.result.description));
+    } else if (cmd === 'cdp') {
+      const [method, ...json] = a;
+      console.log(JSON.stringify(await send(method, json.length ? JSON.parse(json.join(' ')) : {})));
+    } else if (cmd === 'offline') {
+      const off = a[0] !== 'off';
+      await send('Network.enable');
+      await send('Network.emulateNetworkConditions', { offline: off, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+    } else if (cmd === 'reload') {
+      await send('Page.reload', {});
+      await sleep(1500);
     } else throw new Error('unknown step: ' + step);
   }
 } catch (e) {

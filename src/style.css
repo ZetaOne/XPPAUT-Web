@@ -994,3 +994,40 @@ summary.round:focus-visible {
   color: var(--muted);
   font-size: 11px;
 }
+
+/* ---- installable app: Install button, "new version" banner ----------------- */
+.install {
+  margin-left: auto; /* right end of the toolbar, before the theme button */
+}
+
+.install:not([hidden]) ~ .themes {
+  margin-left: 0;
+}
+
+:root[data-device='phone'] .install {
+  order: 9;
+  height: 34px;
+}
+
+:root[data-device='phone'] header:has(.install:not([hidden])) .menubtn {
+  margin-left: 0;
+}
+
+.toast {
+  position: fixed;
+  z-index: 200000;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bar);
+  color: var(--fg);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.3);
+}

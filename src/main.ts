@@ -3,6 +3,7 @@ import { XppSession, xppBuild, type WindowImage } from './xpp'
 import { Terminal, type TerminalMode } from './terminal'
 import { download, makeZip } from './zip'
 import { MobileUI, detectDevice, watchDevice, type ViewMode } from './mobile'
+import { setupPwa } from './pwa'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 
@@ -68,6 +69,7 @@ app.innerHTML = `
       <button id="savesession" title="Download a .zip with everything XPP saved, screenshots of the open windows (SS folder) and XPP's output">Save session</button>
       <button id="restart">Restart</button>
     </div>
+    <button type="button" class="install" id="install" hidden title="Install XPPAUT-Web as an app: its own window and icon, and it works offline">Install</button>
     <details class="themes" id="themes">
       <summary class="round" title="Theme" aria-label="Theme">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -601,7 +603,11 @@ function applyTheme(id: string) {
   else document.documentElement.dataset.theme = id
   for (const b of document.querySelectorAll<HTMLButtonElement>('#themelist button'))
     b.setAttribute('aria-checked', String(b.dataset.theme === id))
+  // the phone's status bar / app title bar takes the toolbar's colour
+  const bar = getComputedStyle(document.documentElement).getPropertyValue('--bar').trim()
+  if (bar) document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bar)
 }
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => applyTheme(store.get('xpp-theme') || 'system'))
 
 {
   const list = $('themelist')
@@ -760,3 +766,18 @@ async function saveSession() {
 }
 
 $('savesession').addEventListener('click', () => void saveSession())
+
+// ---- installable app: Install button; offer new versions when deployed ------
+setupPwa($<HTMLButtonElement>('install'), (apply) => {
+  const bar = document.createElement('div')
+  bar.className = 'toast'
+  bar.setAttribute('role', 'status')
+  bar.innerHTML =
+    '<span>A new version of XPPAUT-Web is available.</span>' +
+    '<button type="button" class="primary">Update</button><button type="button">Later</button>'
+  const [update, later] = bar.querySelectorAll('button')
+  update.addEventListener('click', () => leaveThen(() => { bar.remove(); apply() }))
+  later.addEventListener('click', () => bar.remove())
+  document.querySelector('.toast')?.remove()
+  document.body.append(bar)
+})

@@ -248,6 +248,22 @@ original).
     Dir field D D, Erase, Fit W F, Restore, Sing pts S G, Xi vs t, AUTO F A,
     Calculator F C, Esc, Enter, Keyboard), sent to the main window.
     Verified in emulation; the keyboard overlap fix needs a real device.
+22. **Installable app (PWA)**: `public/manifest.webmanifest` (standalone,
+    icons 192/512 + maskable from the banner graph) and a service worker.
+    `pwa/sw.js` is a template; the Vite plugin in `vite.config.ts` writes
+    `dist/sw.js` with the list of built files and a version = hash of them
+    and the template. Install precaches everything (~3 MB: page, the wasm
+    build this browser runs, all examples, help); cache-first with
+    `ignoreVary` (servers send `Vary: Origin`; module scripts send Origin);
+    navigations to the app (any `?ode=`) get the cached index.html. New
+    version: banner "Update / Later"; Update goes through leaveThen (offer
+    to save), then skip-waiting and reload. Checks for updates on return to
+    the app and hourly. Install button from `beforeinstallprompt`
+    (`src/pwa.ts`); theme-color meta follows the toolbar colour. Tested in
+    headless Chrome: no installability errors; with the preview server
+    stopped, a never-opened example loads, integrates, help opens; update
+    banner, switch and old-cache cleanup work. DevTools "offline" does not
+    affect the service worker's own fetches: stop the server to test.
 
 ## Next
 

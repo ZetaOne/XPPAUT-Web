@@ -32,6 +32,8 @@ point (green stable, blue unstable).*
   XPP's output, offered before you restart or quit.
 - **Phones and tablets**: detected automatically; tap, long-press (right
   button) and drag, pinch to zoom, and keys phone keyboards lack.
+- **Install as an app** (Android, Chrome, Edge): its own icon and window,
+  works offline, and offers updates when a new version is published.
 - **Model editor**, **XPP's terminal output**, **built-in help**, and
   **ten colour themes**.
 - **Fast and private**: about 0.5 MB, near-native speed, nothing leaves your
