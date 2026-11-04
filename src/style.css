@@ -995,6 +995,122 @@ summary.round:focus-visible {
   font-size: 11px;
 }
 
+/* ---- phones in landscape, XPP running: toolbar as a rail on the left, zoom
+   and Cmd in a column on the right, so XPP's window gets the full height ---- */
+:root[data-device='phone'][data-orient='landscape'] #app:has(> header #session:not([hidden])) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+/* rail: both rows; XPP's area top right; the key strip (with ⌨) under it */
+:root[data-device='phone'][data-orient='landscape'] #app:has(> header #session:not([hidden])) > header {
+  grid-row: 1 / 3;
+  grid-column: 1;
+}
+
+:root[data-device='phone'][data-orient='landscape'] #app:has(> header #session:not([hidden])) > .layout {
+  grid-row: 1;
+  grid-column: 2;
+}
+
+:root[data-device='phone'][data-orient='landscape'] #app:has(> header #session:not([hidden])) > .keystrip {
+  grid-row: 2;
+  grid-column: 2;
+}
+
+:root[data-device='phone'][data-orient='landscape'] header.bar:has(#session:not([hidden])) {
+  flex-direction: column;
+  align-items: stretch;
+  flex: 0 0 auto;
+  width: 104px;
+  padding: calc(6px + env(safe-area-inset-top)) 6px 6px calc(6px + env(safe-area-inset-left));
+  border-bottom: 0;
+  border-right: 1px solid var(--line);
+  overflow: visible;
+}
+
+:root[data-device='phone'][data-orient='landscape'] header.bar:has(#session:not([hidden])) .brand {
+  display: none;
+}
+
+:root[data-device='phone'][data-orient='landscape'] header.bar:has(#session:not([hidden])) .menubtn,
+:root[data-device='phone'][data-orient='landscape'] header.bar:has(#session:not([hidden])) .install {
+  order: 0;
+  width: 100%;
+  margin: 0;
+}
+
+:root[data-device='phone'][data-orient='landscape'] header.bar:has(#session:not([hidden])) .themes {
+  order: 20;
+  margin-top: auto;
+  align-self: center;
+}
+
+:root[data-device='phone'][data-orient='landscape'] header.bar:has(#session:not([hidden])) .themes-panel {
+  top: auto;
+  bottom: 0;
+  right: auto;
+  left: calc(100% + 8px);
+  max-height: calc(100vh - 16px);
+  overflow: auto;
+}
+
+/* window tabs: a vertical list */
+:root[data-device='phone'][data-orient='landscape'] .wintabs:not(:empty) {
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+:root[data-device='phone'][data-orient='landscape'] .wintabs button {
+  max-width: none;
+  width: 100%;
+  padding: 0 6px;
+}
+
+/* ☰ opens beside the rail */
+:root[data-device='phone'][data-orient='landscape'] header.menu-open .session:not([hidden]) {
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  right: auto;
+  width: min(340px, 60vw);
+  overflow-y: auto;
+  border-bottom: 0;
+  border-right: 1px solid var(--line);
+}
+
+:root[data-device='phone'][data-orient='landscape'] .layout {
+  min-width: 0;
+}
+
+/* zoom/Cmd: a column on the right edge */
+:root[data-device='phone'][data-orient='landscape'] .zoombar {
+  flex-direction: column;
+  top: 50%;
+  bottom: auto;
+  right: calc(8px + env(safe-area-inset-right));
+  transform: translateY(-50%);
+}
+
+:root[data-device='phone'][data-orient='landscape'] .zoombar button + button {
+  border-left: 0;
+  border-top: 1px solid var(--line);
+}
+
+:root[data-device='phone'][data-orient='landscape'] .cmdpanel.open {
+  right: calc(72px + env(safe-area-inset-right));
+  bottom: 8px;
+  top: 8px;
+  max-height: none;
+  width: min(520px, calc(100% - 90px));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-content: start;
+}
+
 /* ---- installable app: Install button, "new version" banner ----------------- */
 .install {
   margin-left: auto; /* right end of the toolbar, before the theme button */
@@ -1037,4 +1153,312 @@ summary.round:focus-visible {
 .android-app label:has(#separate),
 .android-app .xwin-btn[title^='Open in a separate'] {
   display: none;
+}
+
+/* settings that only make sense on phones and tablets */
+:root:not([data-device='phone']):not([data-device='tablet']) .touch-only {
+  display: none;
+}
+
+/* Stop (touch devices, while XPP computes) */
+.stopbtn {
+  display: none;
+}
+
+:root[data-device='phone'] .stopbtn:not([hidden]),
+:root[data-device='tablet'] .stopbtn:not([hidden]) {
+  display: block;
+  position: absolute;
+  z-index: 99999;
+  left: 50%;
+  bottom: 62px; /* above the zoom/Cmd buttons */
+  transform: translateX(-50%);
+  min-width: 120px;
+  height: 46px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 23px;
+  background: #c62828;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 600;
+  box-shadow: 0 3px 12px rgb(0 0 0 / 0.35);
+}
+
+.toast.notice {
+  top: calc(56px + env(safe-area-inset-top, 0px));
+  bottom: auto;
+}
+
+/* phones: XPP's "Yo!" message box floats at the top (src/xpp.ts applyPhone) */
+.xwin.note-float {
+  left: 50% !important;
+  top: 8px !important;
+  transform: translateX(-50%);
+  max-width: calc(100% - 16px);
+  overflow: hidden;
+}
+
+:root[data-orient='landscape'] .stopbtn:not([hidden]) {
+  bottom: 12px; /* the zoom/Cmd buttons are on the right */
+}
+
+/* ---- loupe (src/touch.ts): magnifies what is under a held finger ---------- */
+.loupe {
+  position: fixed;
+  z-index: 200001;
+  width: 128px;
+  pointer-events: none;
+  text-align: center;
+}
+
+.loupe[hidden] {
+  display: none;
+}
+
+.loupe canvas {
+  display: block;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto;
+  border: 3px solid var(--bar);
+  border-radius: 50%;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.4);
+  image-rendering: pixelated;
+}
+
+.loupe-xy {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--bar);
+  color: var(--fg);
+  font: 12px/1.4 ui-monospace, monospace;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
+}
+
+.loupe-xy[hidden] {
+  display: none;
+}
+
+/* ---- slider drawer (src/touch.ts) ------------------------------------------ */
+.sliders {
+  position: absolute;
+  z-index: 99998;
+  left: 8px;
+  right: 8px;
+  bottom: 60px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  background: var(--bar);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.35);
+}
+
+.sliders[hidden] {
+  display: none;
+}
+
+:root[data-orient='landscape'] .sliders {
+  left: auto;
+  top: 8px;
+  bottom: 8px;
+  right: calc(72px + env(safe-area-inset-right));
+  width: min(460px, calc(100% - 90px));
+  align-content: start;
+  overflow-y: auto;
+}
+
+.sliders-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sliders-head span {
+  flex: 1;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.sliders-close {
+  min-width: 36px;
+  font-size: 18px;
+}
+
+.slider-row {
+  display: grid;
+  grid-template-columns: 4.5em 1fr 4.5em 2.8em;
+  grid-template-areas:
+    'name name name out'
+    'lo range hi play';
+  gap: 6px;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.slider-row select { grid-area: name; min-width: 0; }
+.slider-row .lo { grid-area: lo; }
+.slider-row .hi { grid-area: hi; }
+.slider-row output { grid-area: out; justify-self: end; font: 14px ui-monospace, monospace; }
+.slider-row .play { grid-area: play; }
+.slider-row .range { grid-area: range; width: 100%; height: 34px; }
+
+.slider-row input[type='number'] {
+  min-width: 0;
+  padding: 4px 6px;
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.cmdpanel-title {
+  grid-column: 1 / -1;
+  font-weight: 600;
+  padding: 0 2px 2px;
+}
+
+.keystrip button.name {
+  font: 14px ui-monospace, monospace;
+  color: var(--accent);
+}
+
+/* first-run touch tips (src/mobile.ts showTips) */
+.tips {
+  position: fixed;
+  z-index: 200002;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(440px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  padding: 14px 16px;
+  background: var(--bar);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.45);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.tips h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.tips ul {
+  margin: 0 0 12px;
+  padding-left: 18px;
+}
+
+.tips li + li {
+  margin-top: 6px;
+}
+
+.tips button {
+  display: block;
+  margin-left: auto;
+  min-width: 90px;
+  min-height: 38px;
+}
+
+/* start screen: restore the auto-saved session */
+.restore {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  margin: 0 auto 18px;
+  padding: 10px 14px;
+  max-width: 520px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bar);
+}
+
+.restore small {
+  color: var(--muted);
+}
+
+/* start screen (XPP not running): no zoom/Cmd buttons; keep the title on one line */
+#app:has(#session[hidden]) .zoombar {
+  display: none;
+}
+
+:root[data-device='phone'] .brand {
+  white-space: nowrap;
+}
+
+/* key strip: extra keys where there is room (landscape, tablets) */
+.keystrip button.wide {
+  display: none;
+}
+
+:root[data-orient='landscape'] .keystrip button.wide,
+:root[data-device='tablet'] .keystrip button.wide {
+  display: block;
+}
+
+/* start screen: recent models */
+.recent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 8px;
+  max-width: 640px;
+  margin: 0 auto 18px;
+}
+
+.recent > span {
+  color: var(--muted);
+}
+
+.recent button {
+  font-size: 14px;
+}
+
+.recent .recent-clear {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+/* eigenvalues printed by Sing pts, shown on touch devices (src/main.ts) */
+.eigen {
+  position: fixed;
+  z-index: 200000;
+  left: 10px;
+  bottom: calc(70px + env(safe-area-inset-bottom, 0px)); /* clear of XPP's windows and the Cmd buttons */
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 200px;
+  padding: 8px 12px;
+  background: var(--bar);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.35);
+}
+
+.eigen ol {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding-left: 20px;
+  font: 14px/1.5 ui-monospace, monospace;
+}
+
+.eigen button {
+  min-width: 34px;
 }

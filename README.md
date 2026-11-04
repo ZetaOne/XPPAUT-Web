@@ -74,10 +74,24 @@ The phone layout is chosen automatically (switch it under **Settings → View**)
 
 - **Touch**: tap = click, drag = drag, long-press = right click. Pinch to zoom,
   two fingers to pan; **Fit** fits the window to the screen.
-- **Cmd**: XPP's common commands (Integrate, Nullclines, Direction field,
-  AUTO, …), one tap each.
-- **⌨** opens the keyboard together with the keys phones lack: Esc, Tab, Ctrl
-  and the arrows. For XPP's keyboard commands, **Gboard** (Google's keyboard)
+- **Cmd**: XPP's commands, one tap each, including its Numerics menu and,
+  when the AUTO window is in front, AUTO's commands (Run, Grab, Axes, …).
+  **Tap to start** starts a trajectory wherever you tap the graph;
+  **Fixed point here** finds the equilibrium near your tap and shows its
+  stability and eigenvalues;
+  **Sliders** gives large sliders for parameters (XPP re-runs as you move
+  one); **Share graph**, **Data (CSV)** and **Share .ode** export in one tap.
+- **Hold a finger** on a window to magnify what is under it, with the
+  graph's coordinates (also on AUTO's bifurcation diagram).
+- **Landscape**: the whole window fits the screen, with the controls at the
+  sides. **Settings → Rotation** can lock portrait or landscape (in the
+  Android app, or when installed).
+- The start screen lists your **recent models**.
+- **Stop** appears while XPP computes. If the phone closes the page in the
+  background, the start screen offers to **restore** the model, its files
+  and the parameter values.
+- **⌨** opens the keyboard together with the keys phones lack: Esc, Tab, Ctrl,
+  the arrows, symbols and the model's parameter and variable names. For XPP's keyboard commands, **Gboard** (Google's keyboard)
   gives the best results; other keyboards may miss or delay keys.
 - **Esc** without a keyboard: a two-finger tap, or Android's Back gesture.
 - Each XPP window gets a **tab** in the toolbar; **☰** holds Files, Edit .ode,

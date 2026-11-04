@@ -1,6 +1,7 @@
 # Project status
 
-Last updated: 2026-11-02 (project lives at /data/hdrive/XPPAUT-Web)
+Last updated: 2026-11-04 (moved from /data/hdrive/XPPAUT-Web on Jeevan's
+machine to a second machine; see ../HANDOFF.md there)
 
 **Live site:** https://zetaone.github.io/XPPAUT-Web/ (repo
 https://github.com/ZetaOne/XPPAUT-Web, public, GPL-2.0-or-later). Every push
@@ -277,8 +278,82 @@ original).
     bug (not fixed): Extend or Periodic from a point of a two-parameter
     Hopf curve overflows a buffer in `readlb` (autlib1.c:4575, found with
     AddressSanitizer); crashes natively, likely memory corruption in wasm.
+24. **Android app** (`android/`, see its README): the site in a WebView,
+    offline, Open with, Downloads/XPPAUT, Back = Esc. Tested on an
+    Android 14 emulator (Pixel 6 AVD, WebView 113) on 2026-11-04: example
+    runs, Cmd panel (Integrate, Nullclines), Back closes XPP menus, window
+    PNG and Save session (.zip with Share) land in Downloads/XPPAUT, Open
+    with a .ode from Downloads. Fixed then: the window ⤓ PNG button made its
+    own browser download, which does nothing in the app (now goes through
+    `download()`); Open with while XPP ran asked twice (the app's dialog,
+    then the page's "Leave page?"; the app now calls `xppAppDiscard` first).
+    Emulator quirk: its WebView reports no coarse pointer, so the phone
+    layout needs Settings -> View -> Mobile there; real phones report touch.
+    Still to do: a real phone, then a GitHub Release with the signed APK
+    (from Jeevan's machine, which has the key) and a README section.
+    Second machine setup notes: Emscripten's bundled Node 24 needs
+    `node --experimental-wasm-jspi` for the JSPI batch tests (the flag is
+    not allowed in NODE_OPTIONS; use a wrapper script as the runner).
 
 ## Next
+
+**Mobile usability plan** (2026-11-04, from a survey of GeoGebra, Desmos,
+MATLAB Mobile, Pydroid/Juno, HiPER Calc, Slopes, PhET and an emulator test).
+Rule: XPP's own windows keep their original look; only the page around them
+changes. Status after the same day's work (tested on the Android 14
+emulator; desktop and tablet layouts checked unchanged in headless Chrome):
+
+1. Landscape/portrait - DONE: phones in landscape fit the whole window
+   (portrait still fits the width), toolbar as a left rail (tabs listed
+   vertically, ☰ opens beside it), zoom/Cmd as a right column the fit keeps
+   clear; re-fit on rotation but not when the keyboard resizes the page.
+   Settings -> Rotation (Automatic/Portrait/Landscape): app via
+   `setOrientation` (bridge), installed web app via screen.orientation.lock.
+   Landscape (and tablets) also get Home, End, PgUp, PgDn, Del in the key
+   strip; the landscape layout is a grid (rail | XPP area, key strip under
+   XPP's area). Not done: two windows side by side on phones (too small;
+   tablets already show free windows).
+2. Tap to start - DONE: Cmd -> Tap to start = XPP's Initialconds/mIce (I I).
+   XPP's "Yo!" message box now floats at the top on phones instead of
+   taking the screen (src/xpp.ts isNote/applyPhone).
+3. Loupe - DONE (src/touch.ts): holding a finger magnifies (pixelated) what
+   is under it and shows the coordinates: main graph via XPP's
+   scale_to_real, AUTO diagram with AUTO's own readout formula.
+4. Sliders - DONE: Cmd -> Sliders, three large rows that drive XPP's own
+   Par/Var sliders (set up by hook, moved with press/drag/release events,
+   so XPP re-runs from its own event loop); low/high editable; Play sweeps.
+5. Export/share - DONE: Cmd -> Share graph (PNG; app: share sheet; web:
+   Web Share or download), Data (CSV) (written to /work, delivered as an
+   export), Share .ode. Recent models: the start screen lists the last 8
+   (examples by id, your own files with their text, not their data files;
+   localStorage `xpp-recent`, Clear forgets it).
+6. Auto-save - DONE: on page hide (if unsaved) the model, XPP's files and
+   all parameter/initial values go to localStorage (`xpp-autosave`); the
+   start screen offers Restore. XPP's graph/numerics settings are not kept.
+7. Stop - DONE: a red Stop (= Esc) while XPP has computed for > 0.7 s.
+8. Symbol bar - DONE: key strip has ( ) ^ * / + - = , . ' and the model's
+   parameter and variable names.
+9. Hardware keyboard/mouse: not changed (detection already re-checks on
+   pointer changes; typed keys already reach XPP).
+10. First-run tips - DONE (Cmd -> Tips shows them again). Fixed point: Cmd
+   -> Fixed point here = XPP's Sing pts/Mouse (S M): tap near it, XPP finds
+   it and shows its Equilibria window; the eigenvalues XPP prints (after
+   "Print eigenvalues? YES") are shown in a card on touch devices, which
+   have no output panel.
+   Fixed on the way: when a file came in by "Open with" before the
+   examples index loaded, the page also started the bundled example of the
+   same name from ?ode= (replacing the user's file); it now only does that
+   when XPP is not running yet.
+
+Also: Cmd panel has pages: XPP main menu, Numerics (XPP's keys
+t s r d m o b n i e c p h u k v a; value prompts open the keyboard; Done =
+Esc) and AUTO (shown when the AUTO window is in front: Run, Grab with
+◀ ▶ / Next label / Grab it, Parameter, Axes, Numerics, Usr period, Clear,
+reDraw, File). Messages (notice) also show as a toast on touch devices
+(the status text is folded away there).
+Hooks for these: `web/xlib/xpp_hooks.c` (WebAssembly only, our code; no
+change to xppaut/): xw_graph_xy, xw_params, xw_slider_setup/where/info,
+xw_write_csv, xw_set_value.
 
 - Browser overhead (~1.3x with JSPI) is mostly yielding ~30 times a second
   during runs; could be tuned.

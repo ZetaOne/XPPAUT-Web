@@ -4,7 +4,8 @@ import { Terminal, type TerminalMode } from './terminal'
 import { download, makeZip } from './zip'
 import { MobileUI, detectDevice, watchDevice, type ViewMode } from './mobile'
 import { setupPwa } from './pwa'
-import { setupApp } from './android'
+import { lockRotation, setupApp, shareFile } from './android'
+import { Loupe, SliderDrawer } from './touch'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 
@@ -60,6 +61,13 @@ app.innerHTML = `
               <option value="auto">Automatic</option>
               <option value="mobile">Mobile (touch)</option>
               <option value="desktop">Desktop</option>
+            </select>
+          </label>
+          <label class="touch-only" title="Keep the screen upright or sideways (in the app, or when installed)">Rotation
+            <select id="rotation">
+              <option value="auto">Automatic</option>
+              <option value="portrait">Portrait</option>
+              <option value="landscape">Landscape</option>
             </select>
           </label>
           <label class="check" title="Open XPP's new windows as separate browser windows (allow pop-ups for this site). Any window can also be popped out with ⧉ in its title bar.">
@@ -176,14 +184,60 @@ $('termsave').addEventListener('click', () =>
   download((odeName || 'xpp') + '-output.txt', new Blob([terminal.text()], { type: 'text/plain' })),
 )
 
+// Sing pts with "Print eigenvalues?" -> YES prints them as text, which
+// phones and tablets do not show (no output panel there): show them in a card
+let eigen: string[] | null = null
+let eigenTimer = 0
+function watchEigen(chunk: string) {
+  for (const line of chunk.split('\n')) {
+    if (/^\s*Eigenvalues:/.test(line)) {
+      eigen = []
+      continue
+    }
+    if (!eigen) continue
+    const m = line.match(/^\s*(-?[\d.]+(?:e[-+]?\d+)?)\s+\+\s+i\s+(-?[\d.]+(?:e[-+]?\d+)?)/i)
+    if (m) {
+      const [re, im] = [Number(m[1]), Number(m[2])]
+      eigen.push(im === 0 ? `${re}` : `${re} ${im < 0 ? '−' : '+'} ${Math.abs(im)} i`)
+      clearTimeout(eigenTimer)
+      eigenTimer = window.setTimeout(showEigen, 200)
+    } else if (line.trim()) showEigen()
+  }
+}
+function showEigen() {
+  const list = eigen
+  eigen = null
+  if (!list?.length || document.documentElement.dataset.device === 'desktop') return
+  document.querySelector('.eigen')?.remove()
+  const d = document.createElement('div')
+  d.className = 'eigen'
+  d.setAttribute('role', 'status')
+  d.innerHTML = '<b>Eigenvalues</b><button type="button" aria-label="Close">×</button><ol></ol>'
+  for (const e of list) d.querySelector('ol')!.append(Object.assign(document.createElement('li'), { textContent: e }))
+  d.querySelector('button')!.addEventListener('click', () => d.remove())
+  document.body.append(d)
+}
+
 function notice(msg: string) {
   $('status').textContent = msg
   $('status').title = msg
   setTimeout(() => ($('status').textContent = statusText), 7000)
+  // phones and tablets: the status text is folded away, so show a toast too
+  if (document.documentElement.dataset.device && document.documentElement.dataset.device !== 'desktop') {
+    document.querySelector('.toast.notice')?.remove()
+    const t = document.createElement('div')
+    t.className = 'toast notice'
+    t.setAttribute('role', 'status')
+    t.textContent = msg
+    t.addEventListener('click', () => t.remove())
+    document.body.append(t)
+    setTimeout(() => t.remove(), 6000)
+  }
 }
 
 // ---- starting XPP -----------------------------------------------------------
 async function launch(name: string, text: string, extras: Array<{ name: string; data: Uint8Array }> = [], id = name) {
+  remember(id, name, text)
   odeName = name
   odeId = id
   $('start').hidden = true
@@ -199,7 +253,10 @@ async function launch(name: string, text: string, extras: Array<{ name: string; 
   // the user's click that started XPP can open the output window
   if (store.get('xpp-terminal') === 'window') termMode.value = terminal.setMode('window')
   session = new XppSession(desktop, {
-    onOutput: (line) => terminal.write(line),
+    onOutput: (line) => {
+      terminal.write(line)
+      watchEigen(line)
+    },
     onNotice: notice,
     onFileWritten: exported,
     onExit: async (status) => {
@@ -322,6 +379,9 @@ fetch('odes/index.json')
     example.innerHTML = exampleOptions()
     ;($('switch') as HTMLSelectElement).innerHTML = '<option value="">(your file)</option>' + exampleOptions()
     example.value = 'ode/lecar.ode'
+    // XPP may already be running a file opened before the index arrived
+    // (e.g. "Open with" in the app): do not replace it with an example
+    if (session) return
     const q = new URLSearchParams(location.search)
     const want = q.get('ode')
     const edited = restoreEdited(want)
@@ -352,6 +412,7 @@ setupApp(
     input.files = dt.files
     input.dispatchEvent(new Event('change'))
   },
+  () => { leaving = true },
 )
 $('restart').addEventListener('click', () => leaveThen(() => location.reload()))
 $('switch').addEventListener('change', () => {
@@ -567,14 +628,152 @@ function restoreEdited(name: string | null) {
 
 window.addEventListener('pagehide', () => terminal.closeAll())
 
+// ---- auto-save: when the page is hidden (app in the background, tab
+// switched, phone locked) keep the model, XPP's files and the current
+// parameter and initial values, so they can be restored if the browser or
+// Android closes the page. Offered on the start screen next time.
+const AUTOSAVE = 'xpp-autosave'
+interface AutoSave {
+  id: string
+  name: string
+  text: string
+  extras: Array<{ name: string; data: string }>
+  values: Array<{ name: string; value: number; ic: boolean }>
+  time: number
+}
+function autoSave() {
+  if (!session?.running || !unsaved || leaving) return // leaving: the user chose to go
+  try {
+    let size = 0
+    const extras = session.listFiles()
+      .filter((f) => f.name !== odeName && !/^fort\.\d+$/.test(f.name) && (size += f.size) < 2_000_000)
+      .map((f) => ({ name: f.name, data: toBase64(session!.readFile(f.name)) }))
+    const snap: AutoSave = {
+      id: odeId, name: odeName, text: new TextDecoder().decode(session.readFile(odeName)),
+      extras, values: session.params(), time: Date.now(),
+    }
+    localStorage.setItem(AUTOSAVE, JSON.stringify(snap))
+  } catch { /* storage full or blocked: nothing to restore */ }
+}
+document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && autoSave())
+window.addEventListener('pagehide', autoSave)
+
+function offerRestore() {
+  let snap: AutoSave | null = null
+  try {
+    snap = JSON.parse(localStorage.getItem(AUTOSAVE) || 'null')
+  } catch { /* none */ }
+  if (!snap || Date.now() - snap.time > 30 * 86400_000 || new URLSearchParams(location.search).has('ode')) return
+  const bar = document.createElement('div')
+  bar.className = 'restore'
+  const when = new Date(snap.time).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
+  bar.innerHTML = `<span>Your last session: <b></b> <small></small></span>
+    <button type="button" class="restore-go">Restore</button>
+    <button type="button" class="restore-no" aria-label="Forget it">×</button>`
+  bar.querySelector('b')!.textContent = snap.name
+  bar.querySelector('small')!.textContent = when
+  const forget = () => {
+    bar.remove()
+    try { localStorage.removeItem(AUTOSAVE) } catch { /* ignore */ }
+  }
+  bar.querySelector('.restore-no')!.addEventListener('click', forget)
+  bar.querySelector('.restore-go')!.addEventListener('click', async () => {
+    const s = snap!
+    forget()
+    await launch(s.name, s.text, s.extras.map((f) => ({ name: f.name, data: Uint8Array.from(atob(f.data), (c) => c.charCodeAt(0)) })), s.id)
+    // once XPP is up, put the values back
+    const t = setInterval(() => {
+      if (!session?.running || session.busy || !session.windows().length) return
+      clearInterval(t)
+      for (const v of s.values) session.setValue(v.name, v.value, v.ic)
+      notice('Restored ' + s.name + ': files and parameter/initial values')
+    }, 300)
+  })
+  $('hint').prepend(bar)
+}
+offerRestore()
+
+// ---- recent models (start screen): examples by name, your own files with
+// their text (not their data files)
+const RECENT = 'xpp-recent'
+interface Recent {
+  id: string
+  name: string
+  text?: string
+  time: number
+}
+function recents(): Recent[] {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT) || '[]')
+  } catch {
+    return []
+  }
+}
+function remember(id: string, name: string, text: string) {
+  const example = id.includes('/') && !!splitId(id)[0] // your own files have bare names
+  if (!example && text.length > 200_000) return // too large to keep
+  const entry: Recent = example ? { id, name, time: Date.now() } : { id, name, text, time: Date.now() }
+  try {
+    localStorage.setItem(RECENT, JSON.stringify([entry, ...recents().filter((r) => r.id !== id)].slice(0, 8)))
+  } catch { /* storage full or blocked */ }
+}
+function showRecent() {
+  const list = recents()
+  if (!list.length) return
+  const box = document.createElement('div')
+  box.className = 'recent'
+  box.innerHTML = '<span>Recent:</span>'
+  for (const r of list) {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.textContent = r.name
+    b.title = r.text
+      ? `Your file, opened ${new Date(r.time).toLocaleString()} (its data files are not kept)`
+      : 'Example ' + r.id
+    b.addEventListener('click', () => (r.text ? launch(r.name, r.text, [], r.id) : loadExample(r.id)))
+    box.append(b)
+  }
+  const forget = document.createElement('button')
+  forget.type = 'button'
+  forget.className = 'recent-clear'
+  forget.textContent = 'Clear'
+  forget.title = 'Forget this list'
+  forget.addEventListener('click', () => {
+    box.remove()
+    try { localStorage.removeItem(RECENT) } catch { /* ignore */ }
+  })
+  box.append(forget)
+  $('hint').insertBefore(box, $('hint').querySelector('p'))
+}
+showRecent()
+
 // ---- phones and tablets ---------------------------------------------------------
 const viewSelect = $<HTMLSelectElement>('viewmode')
 let viewMode = (store.get('xpp-view') as ViewMode) || 'auto'
 viewSelect.value = viewMode
-const mobile = new MobileUI(app, desktop, (d) => {
-  if (d === 'phone' && window.innerHeight > window.innerWidth && session)
-    notice('Tip: turn the phone sideways for a larger view')
+const mobile = new MobileUI(app, desktop)
+mobile.tip = notice
+// touch helpers: a loupe with XPP's coordinates, large sliders, sharing
+const loupe = new Loupe(desktop, () => session)
+loupe.enabled = () => mobile.device !== 'desktop'
+const sliders = new SliderDrawer(desktop, () => session, notice)
+mobile.addCommand('Sliders', 'parameters', () => sliders.toggle())
+mobile.addCommand('Share graph', 'picture', () => {
+  const main = session?.windowImages().find((w) => /^XPP Ver/.test(w.title))
+  if (!main) return notice('No graph to share')
+  main.canvas.toBlob((b) => b && void shareFile(baseName() + '.png', b, download), 'image/png')
 })
+mobile.addCommand('Data (CSV)', 'save', async () => {
+  // written in XPP's folder: delivered like XPP's own exports (Settings -> Exports)
+  const rows = await session!.writeCsv('/work/' + baseName() + '.csv')
+  if (rows <= 0) notice('No data yet: integrate first')
+})
+mobile.addCommand('Share .ode', 'model', () => {
+  void shareFile(odeName, new Blob([session!.readFile(odeName) as BlobPart], { type: 'text/plain' }), download)
+})
+function baseName() {
+  return (odeName || 'xpp').replace(/\.ode$/i, '')
+}
 const updateDevice = () => mobile.apply(detectDevice(viewMode))
 updateDevice()
 watchDevice(updateDevice)
@@ -582,6 +781,18 @@ viewSelect.addEventListener('change', () => {
   viewMode = viewSelect.value as ViewMode
   store.set('xpp-view', viewMode)
   updateDevice()
+})
+// Settings -> Rotation (phones and tablets)
+const rotationSelect = $<HTMLSelectElement>('rotation')
+rotationSelect.value = store.get('xpp-rotation') || 'auto'
+if (rotationSelect.value !== 'auto') void lockRotation(rotationSelect.value as 'portrait')
+rotationSelect.addEventListener('change', async () => {
+  const mode = rotationSelect.value as 'auto' | 'portrait' | 'landscape'
+  if (await lockRotation(mode)) store.set('xpp-rotation', mode)
+  else {
+    rotationSelect.value = 'auto'
+    notice("This browser can't lock the rotation; install XPPAUT-Web as an app (or use the phone's rotation lock)")
+  }
 })
 // ☰ on phones: the toolbar folds into a menu
 $('menubtn').addEventListener('click', () => {
