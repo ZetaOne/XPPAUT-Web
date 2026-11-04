@@ -1031,3 +1031,10 @@ summary.round:focus-visible {
   color: var(--fg);
   box-shadow: 0 6px 24px rgb(0 0 0 / 0.3);
 }
+
+/* ---- inside the Android app (src/android.ts): no browser pop-ups or install */
+.android-app #install,
+.android-app label:has(#separate),
+.android-app .xwin-btn[title^='Open in a separate'] {
+  display: none;
+}

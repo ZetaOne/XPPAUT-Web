@@ -4,6 +4,7 @@ import { Terminal, type TerminalMode } from './terminal'
 import { download, makeZip } from './zip'
 import { MobileUI, detectDevice, watchDevice, type ViewMode } from './mobile'
 import { setupPwa } from './pwa'
+import { setupApp } from './android'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 
@@ -341,6 +342,17 @@ $<HTMLInputElement>('upload').addEventListener('change', async (e) => {
   )
   await launch(ode.name, await ode.text(), extras)
 })
+// Android app: files opened with XPPAUT from other apps start XPP like Open .ode file…
+setupApp(
+  () => session ?? undefined,
+  (files) => {
+    const input = $<HTMLInputElement>('upload')
+    const dt = new DataTransfer()
+    for (const f of files) dt.items.add(f)
+    input.files = dt.files
+    input.dispatchEvent(new Event('change'))
+  },
+)
 $('restart').addEventListener('click', () => leaveThen(() => location.reload()))
 $('switch').addEventListener('change', () => {
   const sw = $('switch') as HTMLSelectElement

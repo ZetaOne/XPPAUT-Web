@@ -27,3 +27,11 @@ build/
 public/wasm/
 public/odes/
 public/help/
+
+# Android app (android/): build output, machine paths, signing secrets
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/keystore.properties
+*.jks

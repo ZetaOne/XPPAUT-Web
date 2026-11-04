@@ -1,3 +1,5 @@
+import { inApp } from './android'
+
 // Installable app (PWA): register the service worker (pwa/sw.js), offer an
 // Install button, and tell the page when a new version has been deployed.
 
@@ -15,6 +17,7 @@ export const standalone = () =>
  *                 to it (the page reloads)
  */
 export function setupPwa(install: HTMLButtonElement, onUpdate: (apply: () => void) => void) {
+  if (inApp) return // the Android app is installed and offline already
   // ---- Install button
   let offer: InstallPrompt | null = null
   window.addEventListener('beforeinstallprompt', (e) => {

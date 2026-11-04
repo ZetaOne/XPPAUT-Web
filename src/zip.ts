@@ -1,3 +1,4 @@
+import { appSave, inApp } from './android'
 // Minimal .zip writer (stored, no compression) for "download all files".
 
 const CRC_TABLE = (() => {
@@ -68,6 +69,10 @@ export function makeZip(files: Array<{ name: string; data: Uint8Array }>): Blob 
 
 export function download(name: string, data: Blob | Uint8Array): void {
   const blob = data instanceof Blob ? data : new Blob([data as BlobPart])
+  if (inApp) {
+    void appSave(name, blob) // Android app: saved to Downloads by the app
+    return
+  }
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
