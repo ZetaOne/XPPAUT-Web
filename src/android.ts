@@ -6,8 +6,12 @@ import type { XppSession } from './xpp'
 interface Bridge {
   /** save a file (base64) in Downloads/XPPAUT; the app shows where it went */
   saveFile(name: string, mime: string, base64: string): void
+  /** save a file in Downloads/XPPAUT and open the share sheet for it */
+  shareFile(name: string, mime: string, base64: string): void
   /** keep the screen on while XPP computes */
   setKeepScreenOn(on: boolean): void
+  /** lock the rotation: 'portrait', 'landscape' or 'auto' */
+  setOrientation(mode: string): void
   /** the page is ready to receive files opened from other apps */
   ready(): void
 }
@@ -22,20 +26,60 @@ const MIME: Record<string, string> = {
   eps: 'application/postscript', txt: 'text/plain',
 }
 
-/** the app's replacement for a browser download */
-export async function appSave(name: string, blob: Blob): Promise<void> {
+/**
+ * Settings -> Rotation. The app locks it through Android; an installed web
+ * app (or full screen) through the Screen Orientation API. Returns false
+ * where locking is not possible (an ordinary browser tab).
+ */
+export async function lockRotation(mode: 'auto' | 'portrait' | 'landscape'): Promise<boolean> {
+  if (bridge) {
+    bridge.setOrientation(mode)
+    return true
+  }
+  const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }
+  if (!o?.lock) return false
+  try {
+    if (mode === 'auto') o.unlock()
+    else await o.lock(mode)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** the app's replacement for a browser download (share: open the share sheet) */
+export async function appSave(name: string, blob: Blob, share = false): Promise<void> {
   const bytes = new Uint8Array(await blob.arrayBuffer())
   let bin = ''
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
   const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase()
-  bridge!.saveFile(name, MIME[ext] || 'application/octet-stream', btoa(bin))
+  ;(share ? bridge!.shareFile : bridge!.saveFile).call(bridge, name, MIME[ext] || 'application/octet-stream', btoa(bin))
+}
+
+/** share a file: the app's or the system's share sheet; otherwise download it */
+export async function shareFile(name: string, blob: Blob, fallback: (name: string, blob: Blob) => void): Promise<void> {
+  if (bridge) return appSave(name, blob, true)
+  const file = new File([blob], name, { type: blob.type || 'application/octet-stream' })
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: name })
+      return
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') return // the user closed the sheet
+    }
+  }
+  fallback(name, blob)
 }
 
 /**
  * Set up the app-only behaviour. `session` returns the running XPP (if any);
  * `open` starts XPP with files handed over by the app.
  */
-export function setupApp(session: () => XppSession | undefined, open: (files: File[]) => void) {
+export function setupApp(
+  session: () => XppSession | undefined,
+  open: (files: File[]) => void,
+  discard: () => void,
+) {
   if (!bridge) return
   document.documentElement.classList.add('android-app')
   // things an app has no use for: browser pop-up windows
@@ -47,6 +91,8 @@ export function setupApp(session: () => XppSession | undefined, open: (files: Fi
     open(files.map((f) => new File([Uint8Array.from(atob(f.b64), (c) => c.charCodeAt(0))], f.name)))
   }
   w.xppAppRunning = () => !!session()?.running
+  // the app already asked before restarting XPP: no second "Leave page?" warning
+  w.xppAppDiscard = discard
   // Android Back: Esc for XPP; 'exit' when there is nothing to cancel
   w.xppAppBack = () => {
     const s = session()

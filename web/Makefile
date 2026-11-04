@@ -45,6 +45,8 @@ WA := $(ROOT)/build/wasm
 EMCC ?= emcc
 # called by the page (src/xpp.ts)
 XW_EXPORTS := _xw_render,_xw_toplevels,_xw_toplevel_dirty,_xw_title,_xw_toplevel_info,_xw_input_motion,_xw_input_button,_xw_input_key,_xw_input_configure,_xw_input_close,_xw_input_raise
+# touch controls (xlib/xpp_hooks.c)
+XW_EXPORTS := $(XW_EXPORTS),_xw_graph_xy,_xw_params,_xw_slider_setup,_xw_slider_where,_xw_slider_info,_xw_write_csv,_xw_set_value
 # XPP's event loops block in XNextEvent; the browser needs them to yield.
 # Asyncify instruments the code (works everywhere, ~1.5-2x slower); JSPI
 # lets the engine suspend wasm (native speed, needs WebAssembly.Suspending).
@@ -58,7 +60,7 @@ WASM_LDFLAGS := -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createXpp \
 # fopen/fclose are wrapped (platform_web.c) so the page learns about every
 # file XPP writes and can download it
 WJ := $(ROOT)/build/wasm-jspi
-WASM_OBJS = $(addprefix $(WA)/,$(OBJECTS) $(XLIB) platform_web.o)
+WASM_OBJS = $(addprefix $(WA)/,$(OBJECTS) $(XLIB) platform_web.o xpp_hooks.o)
 
 wasm: $(WA)/xppaut.mjs $(WJ)/xppaut.mjs
 
@@ -70,6 +72,10 @@ $(WJ)/xppaut.mjs: $(WASM_OBJS) | $(WJ)
 
 $(WA)/%.o: $(XPP)/%.c | $(WA)
 	$(EMCC) -O2 $(XPP_CFLAGS) -c $< -o $@
+
+# reads XPP's globals, so it needs XPP's headers
+$(WA)/xpp_hooks.o: xlib/xpp_hooks.c | $(WA)
+	$(EMCC) -O2 $(OWN_CFLAGS) -I$(XPP) -Wno-unused-parameter -c $< -o $@
 
 $(WA)/%.o: xlib/%.c | $(WA)
 	$(EMCC) -O2 $(OWN_CFLAGS) -c $< -o $@

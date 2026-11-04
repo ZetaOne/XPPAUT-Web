@@ -6,6 +6,7 @@ import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.ApplicationInfo;
 import android.database.Cursor;
 import android.graphics.Color;
@@ -284,7 +285,10 @@ public class MainActivity extends Activity {
                     pendingFiles.clear();
                     pendingFiles.addAll(files);
                     pageReady = false;
-                    web.loadUrl(HOME); // fresh start; files go in when it is ready
+                    // fresh start; files go in when it is ready. The user just
+                    // confirmed, so the page must not ask "Leave page?" again.
+                    web.evaluateJavascript("window.xppAppDiscard && xppAppDiscard()",
+                        r -> web.loadUrl(HOME));
                 })
                 .show();
         });
@@ -333,6 +337,15 @@ public class MainActivity extends Activity {
             });
         }
 
+        /** Settings -> Rotation: "portrait", "landscape" or anything else = automatic */
+        @JavascriptInterface
+        public void setOrientation(String mode) {
+            final int o = "portrait".equals(mode) ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+                : "landscape".equals(mode) ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                : ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED;
+            ui.post(() -> setRequestedOrientation(o));
+        }
+
         @JavascriptInterface
         public void setKeepScreenOn(boolean on) {
             ui.post(() -> {
@@ -341,9 +354,34 @@ public class MainActivity extends Activity {
             });
         }
 
+        /** save in Downloads/XPPAUT, then open the share sheet for it */
+        @JavascriptInterface
+        public void shareFile(String name, String mime, String base64) {
+            Uri uri = store(name, mime, base64);
+            if (uri != null) ui.post(() -> share(uri, mime, name));
+        }
+
         /** save in Downloads/XPPAUT; session .zip files also offer Share */
         @JavascriptInterface
         public void saveFile(String name, String mime, String base64) {
+            final Uri saved = store(name, mime, base64);
+            if (saved == null) return;
+            ui.post(() -> {
+                if (name.toLowerCase().endsWith(".zip")) {
+                    new AlertDialog.Builder(MainActivity.this)
+                        .setTitle("Session saved")
+                        .setMessage(name + "\nis in Downloads/XPPAUT.")
+                        .setPositiveButton("OK", null)
+                        .setNeutralButton("Share", (d, w) -> share(saved, mime, name))
+                        .show();
+                } else {
+                    Toast.makeText(MainActivity.this, "Saved to Downloads/XPPAUT: " + name, Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        /** write a file to Downloads/XPPAUT; null (and a message) if that fails */
+        private Uri store(String name, String mime, String base64) {
             byte[] data = Base64.decode(base64, Base64.DEFAULT);
             ContentValues v = new ContentValues();
             v.put(MediaStore.Downloads.DISPLAY_NAME, name);
@@ -359,21 +397,9 @@ public class MainActivity extends Activity {
                 }
             } catch (IOException e) {
                 ui.post(() -> Toast.makeText(MainActivity.this, "Could not save " + name + ": " + e.getMessage(), Toast.LENGTH_LONG).show());
-                return;
+                return null;
             }
-            final Uri saved = uri;
-            ui.post(() -> {
-                if (name.toLowerCase().endsWith(".zip")) {
-                    new AlertDialog.Builder(MainActivity.this)
-                        .setTitle("Session saved")
-                        .setMessage(name + "\nis in Downloads/XPPAUT.")
-                        .setPositiveButton("OK", null)
-                        .setNeutralButton("Share", (d, w) -> share(saved, mime, name))
-                        .show();
-                } else {
-                    Toast.makeText(MainActivity.this, "Saved to Downloads/XPPAUT: " + name, Toast.LENGTH_SHORT).show();
-                }
-            });
+            return uri;
         }
     }
 

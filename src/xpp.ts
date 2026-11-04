@@ -3,6 +3,8 @@
 // any panel can be popped out into its own browser window.
 // See web/xlib/platform_web.c for the C side of these hooks.
 
+import { download } from './zip';
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type XppModule = any;
 
@@ -136,18 +138,24 @@ export class XppSession {
       this.view.s === 1 && !tx && !ty ? '' : `translate(${tx}px, ${ty}px) scale(${this.view.s})`;
   }
 
+  /** room on the right of the desktop kept free of the window (touch
+   *  controls in landscape), in CSS pixels */
+  fitInsetRight = 0;
+
   /** zoom so that window id (default: the active one) fills the desktop */
   fit(id = this.activeId): void {
     const p = this.panels.get(id);
     if (!p || p.popup) return;
-    const W = this.desktop.clientWidth;
+    const W = this.desktop.clientWidth - this.fitInsetRight;
     const H = this.desktop.clientHeight;
     const w = p.el.offsetWidth + 2; // panel size: title bar height varies (touch)
     const h = p.el.offsetHeight + 2;
-    // phones: fit the width (readable; pan up/down with two fingers);
-    // otherwise fit the whole window
-    const s = Math.min(4, Math.max(0.25, this.phone ? (W - 4) / w : Math.min((W - 8) / w, (H - 8) / h)));
-    this.setView(s, Math.round((W - w * s) / 2 - (p.el.offsetLeft - 1) * s), Math.round(4 - (p.el.offsetTop - 1) * s));
+    // phones held upright: fit the width (readable; pan up/down with two
+    // fingers); otherwise (landscape, tablets) fit the whole window
+    const widthOnly = this.phone && H > W;
+    const s = Math.min(4, Math.max(0.25, widthOnly ? (W - 4) / w : Math.min((W - 8) / w, (H - 8) / h)));
+    const top = widthOnly ? 4 : Math.max(4, Math.round((H - h * s) / 2));
+    this.setView(s, Math.round((W - w * s) / 2 - (p.el.offsetLeft - 1) * s), Math.round(top - (p.el.offsetTop - 1) * s));
   }
 
   /** XPP's main window (where most keyboard commands go) */
@@ -163,7 +171,7 @@ export class XppSession {
   /** open XPP windows (mapped), for the phone tab bar */
   windows(): Array<{ id: number; title: string; active: boolean }> {
     return [...this.panels.values()]
-      .filter((p) => p.mapped)
+      .filter((p) => p.mapped && !(this.phone && this.isNote(p)))
       .map((p) => ({ id: p.id, title: p.title.textContent || 'XPP', active: p.id === this.activeId }));
   }
 
@@ -173,14 +181,163 @@ export class XppSession {
     if (p) this.raise(p);
   }
 
-  setPhone(on: boolean): void {
+  setPhone(on: boolean, refit = true): void {
     this.phone = on;
     this.applyPhone();
-    if (on) this.fit();
+    if (on && refit) this.fit();
+  }
+
+  /** XPP's small message box ("Yo!", e.g. "Click on initial data -- ESC to
+   *  quit"): on phones it floats over the window it is about, instead of
+   *  taking the screen */
+  private isNote(p: Panel): boolean {
+    return p.title.textContent === 'Yo!';
   }
 
   private applyPhone(): void {
-    for (const p of this.panels.values()) p.el.classList.toggle('offstage', this.phone && p.id !== this.activeId);
+    for (const p of this.panels.values()) {
+      const note = this.phone && this.isNote(p);
+      p.el.classList.toggle('offstage', this.phone && !note && p.id !== this.activeId);
+      p.el.classList.toggle('note-float', note);
+      // outside the zoomed layer, so it stays put at the top of the screen
+      const home = note ? this.desktop : this.world;
+      if (p.el.parentElement !== home) home.append(p.el);
+    }
+  }
+
+  // ---- touch controls: read and set XPP state (web/xlib/xpp_hooks.c) ------
+
+  /** XPP's graph coordinates under a page point, if it is over the graph */
+  graphAt(clientX: number, clientY: number): { x: number; y: number; xname: string; yname: string } | null {
+    const m = this.mod;
+    if (!m) return null;
+    for (const p of this.panels.values()) {
+      if (!p.mapped || p.popup || p.el.classList.contains('offstage')) continue;
+      const r = p.canvas.getBoundingClientRect();
+      if (clientX < r.left || clientX >= r.right || clientY < r.top || clientY >= r.bottom) continue;
+      const [rx, ry] = this.rootXY(p, { clientX, clientY });
+      const buf = m._malloc(16 + 64);
+      try {
+        if (!m._xw_graph_xy(rx, ry, buf, buf + 16, 64)) return null;
+        const f = new Float64Array(m.HEAPU8.buffer, buf, 2);
+        const [xname, yname] = m.UTF8ToString(buf + 16).split('\t');
+        return { x: f[0], y: f[1], xname, yname };
+      } finally {
+        m._free(buf);
+      }
+    }
+    return null;
+  }
+
+  /** the model's parameters, then its variables (initial values) */
+  params(): Array<{ name: string; value: number; ic: boolean }> {
+    const m = this.mod;
+    if (!m) return [];
+    const n = 64 * 1024;
+    const buf = m._malloc(n);
+    try {
+      m._xw_params(buf, n);
+      return m.UTF8ToString(buf).split('\n').filter(Boolean).map((l: string) => {
+        const ic = l.startsWith('@');
+        const [name, v] = (ic ? l.slice(1) : l).split('=');
+        return { name, value: Number(v), ic };
+      });
+    } finally {
+      m._free(buf);
+    }
+  }
+
+  /** what XPP's Par/Var slider k (0-2) is set to */
+  sliderInfo(k: number): { name: string; value: number; lo: number; hi: number } | null {
+    const m = this.mod;
+    if (!m) return null;
+    const buf = m._malloc(32 + 32);
+    try {
+      m._xw_slider_info(k, buf, buf + 32, 32);
+      const f = new Float64Array(m.HEAPU8.buffer, buf, 4);
+      return f[0] ? { name: m.UTF8ToString(buf + 32), value: f[1], lo: f[2], hi: f[3] } : null;
+    } finally {
+      m._free(buf);
+    }
+  }
+
+  /** set up XPP's slider k for a parameter (as its "Set Sliders" dialog) */
+  setupSlider(k: number, name: string, lo: number, hi: number, value: number): Promise<boolean> {
+    return new Promise((resolve) =>
+      this.queue(() => {
+        const m = this.mod;
+        const buf = m._malloc(16 + 32);
+        m.stringToUTF8(name, buf + 16, 32);
+        const ok = !!m._xw_slider_setup(k, buf + 16, lo, hi, value, buf);
+        m._free(buf);
+        resolve(ok);
+      }),
+    );
+  }
+
+  /** XPP's slider k: where its slide is (root coordinates) and its length */
+  private sliderWhere(k: number): { x: number; y: number; l: number; h: number } | null {
+    const m = this.mod;
+    const buf = m._malloc(16);
+    try {
+      if (!m._xw_slider_where(k, buf)) return null;
+      const [x, y, l, h] = new Int32Array(m.HEAPU8.buffer, buf, 4);
+      return { x, y, l, h };
+    } finally {
+      m._free(buf);
+    }
+  }
+
+  /** the slider positions XPP's slider k can take (its value steps) */
+  sliderSteps(k: number): number {
+    const w = this.mod ? this.sliderWhere(k) : null;
+    return w ? Math.max(1, w.l - 4) : 100;
+  }
+
+  /**
+   * Move XPP's slider k to `value` with a press, drag and release on it, so
+   * XPP sets the parameter and re-runs the integration itself, as when the
+   * slider is dragged with a mouse. The value is rounded to the slider's
+   * steps; returns the value XPP uses.
+   */
+  moveSlider(k: number, value: number): number | null {
+    const info = this.sliderInfo(k);
+    const w = info && this.sliderWhere(k);
+    if (!info || !w) return null;
+    const steps = Math.max(1, w.l - 4);
+    const pos = 2 + Math.round(Math.min(1, Math.max(0, (value - info.lo) / (info.hi - info.lo))) * steps);
+    const [x, y] = [w.x + pos, w.y + (w.h >> 1)];
+    this.queue(() => {
+      this.mod._xw_input_motion(x, y, 0);
+      this.mod._xw_input_button(x, y, 1, 1, 0);
+      this.mod._xw_input_motion(x, y, Button1Mask);
+      this.mod._xw_input_button(x, y, 1, 0, Button1Mask);
+    });
+    return info.lo + ((info.hi - info.lo) * (pos - 2)) / steps;
+  }
+
+  /** set a parameter, or a variable's initial value (ic) */
+  setValue(name: string, value: number, ic: boolean): void {
+    this.queue(() => {
+      const m = this.mod;
+      const buf = m._malloc(64);
+      m.stringToUTF8(name, buf, 64);
+      m._xw_set_value(buf, value, ic ? 1 : 0);
+      m._free(buf);
+    });
+  }
+
+  /** write XPP's data (as in its Data Viewer) as CSV; resolves to the rows */
+  writeCsv(path: string): Promise<number> {
+    return new Promise((resolve) =>
+      this.queue(() => {
+        const m = this.mod;
+        const buf = m._malloc(path.length * 4 + 1);
+        m.stringToUTF8(path, buf, path.length * 4 + 1);
+        resolve(m._xw_write_csv(buf));
+        m._free(buf);
+      }),
+    );
   }
 
   /** a key from the on-screen key strip or keyboard ('Escape', 'a', ...) */
@@ -355,6 +512,8 @@ export class XppSession {
       const isNew = !p;
       if (!p) p = this.makePanel(id);
       p.mapped = !!mapped;
+      const title = m.UTF8ToString(m._xw_title(id)) || 'XPP';
+      p.title.textContent = title;
       if (mapped && !p.placed) {
         // first time shown: keep the title bar on screen, cascade windows
         // that all asked for the same corner
@@ -384,8 +543,6 @@ export class XppSession {
       p.el.style.top = y - TITLE_H + 'px';
       p.canvas.style.width = w + 'px';
       p.canvas.style.height = h + 'px';
-      const title = m.UTF8ToString(m._xw_title(id)) || 'XPP';
-      p.title.textContent = title;
       if (p.popup && p.popup.document.title !== title) p.popup.document.title = title;
     }
     for (const [id, p] of this.panels)
@@ -484,23 +641,14 @@ export class XppSession {
 
   private savePng(p: Panel): void {
     const name = (p.title.textContent || 'xpp').replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '');
-    p.canvas.toBlob((b) => {
-      if (!b) return;
-      const url = URL.createObjectURL(b);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = (name || 'xpp') + '.png';
-      document.body.append(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 2000);
-    }, 'image/png');
+    // download() also routes it to Downloads/XPPAUT in the Android app
+    p.canvas.toBlob((b) => { if (b) download((name || 'xpp') + '.png', b); }, 'image/png');
   }
 
   private raise(p: Panel): void {
     p.el.style.zIndex = String(++this.zTop);
     this.queue(() => this.mod._xw_input_raise(p.id));
-    if (this.activeId !== p.id) {
+    if (this.activeId !== p.id && !(this.phone && this.isNote(p))) {
       this.activeId = p.id;
       if (this.phone) {
         this.applyPhone();
