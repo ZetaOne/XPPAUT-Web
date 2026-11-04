@@ -1284,13 +1284,27 @@ summary.round:focus-visible {
   bottom: auto;
 }
 
-/* phones: XPP's "Yo!" message box floats at the top (src/xpp.ts applyPhone) */
+/* phones: XPP's "Yo!" message box (e.g. "Click on initial data -- ESC to
+   quit") becomes a small note in the top-right corner, without its title
+   bar, so the graph stays free to tap (src/xpp.ts applyPhone). Esc/Back
+   still ends it. */
 .xwin.note-float {
-  left: 50% !important;
-  top: 8px !important;
-  transform: translateX(-50%);
-  max-width: calc(100% - 16px);
+  left: auto !important;
+  right: 6px;
+  top: 6px !important;
+  transform: scale(0.62);
+  transform-origin: top right;
+  max-width: calc((100% - 12px) / 0.62);
   overflow: hidden;
+  opacity: 0.9;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
+  pointer-events: none; /* taps go to the graph underneath */
+}
+
+.xwin.note-float .xwin-bar,
+.xwin.note-float .xwin-grip {
+  display: none;
 }
 
 :root[data-orient='landscape'] .stopbtn:not([hidden]) {
