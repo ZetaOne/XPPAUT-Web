@@ -19,15 +19,13 @@ point (green stable, blue unstable).*
 
 ## Video tour
 
-**On a computer** (2 min): click the preview to play the full video.
-
-<a href="https://zetaone.github.io/XPPAUT-Web/videos/tour.mp4"><img src="docs/tour-preview.gif" width="100%" alt="Preview of the XPPAUT-Web tour: integrating, nullclines and a direction field with keyboard commands"></a>
-
-**On a phone** (2 min): click the preview to play the full video.
-
-<p align="center">
-  <a href="https://zetaone.github.io/XPPAUT-Web/videos/tour-phone.mp4"><img src="docs/tour-phone-preview.gif" width="45%" alt="Preview of XPPAUT-Web on a phone: the Cmd panel, integrating and continuing an orbit"></a>
+<p>
+  <a href="https://zetaone.github.io/XPPAUT-Web/videos/tour.mp4"><img src="docs/tour-preview.gif" width="69%" alt="Preview of the XPPAUT-Web tour on a computer: integrating, nullclines and a direction field with keyboard commands"></a>
+  <a href="https://zetaone.github.io/XPPAUT-Web/videos/tour-phone.mp4"><img src="docs/tour-phone-preview.gif" width="26%" alt="Preview of XPPAUT-Web on a phone: the Cmd panel, integrating and continuing an orbit"></a>
 </p>
+
+*Left: on a computer. Right: on a phone (the Cmd panel, then Integrate and
+Last). Click a preview to play the full 2-minute video.*
 
 ## Features
 
