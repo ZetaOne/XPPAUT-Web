@@ -5,6 +5,7 @@ import { download, makeZip } from './zip'
 import { MobileUI, detectDevice, watchDevice, type ViewMode } from './mobile'
 import { setupPwa } from './pwa'
 import { setupApp } from './android'
+import { FONT_NAMES, PRESETS, chosenFont, fontArgs, fontKey, saveFont, type FontChoice } from './fonts'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 
@@ -71,6 +72,19 @@ app.innerHTML = `
       <button id="restart">Restart</button>
     </div>
     <button type="button" class="install" id="install" hidden title="Install XPPAUT-Web as an app: its own window and icon, and it works offline">Install</button>
+    <details class="fontsize" id="fontsize">
+      <summary class="round" title="XPP font size" aria-label="XPP font size">Aa</summary>
+      <div class="fontsize-panel" id="fontpanel">
+        <div class="fontsize-head">XPP font size</div>
+        <div id="fontpresets" role="radiogroup" aria-label="Font size"></div>
+        <label class="fontsize-custom"><input type="radio" name="fontpreset" value="custom"> Custom</label>
+        <div class="fontsize-pick" id="fontpick">
+          <label>Menus and buttons <select id="fontbig"></select></label>
+          <label>Small text <select id="fontsmall"></select></label>
+        </div>
+        <p class="fontsize-note" id="fontnote">XPP picks its fonts when it starts.</p>
+      </div>
+    </details>
     <details class="themes" id="themes">
       <summary class="round" title="Theme" aria-label="Theme">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -107,6 +121,17 @@ app.innerHTML = `
         <button type="button" id="eddownload">Download</button>
         <button type="button" id="edrestart">Restart XPP with this file</button>
         <button value="cancel">Close</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="fontask">
+    <form method="dialog" class="leave">
+      <h3>Change XPP's font size?</h3>
+      <p id="fonttext"></p>
+      <div class="editor-foot">
+        <button value="cancel">Cancel</button>
+        <button value="later">At next start</button>
+        <button value="now" class="primary">Restart XPP now</button>
       </div>
     </form>
   </dialog>
@@ -221,7 +246,9 @@ async function launch(name: string, text: string, extras: Array<{ name: string; 
     wasm = undefined // fall back to a plain download inside start()
   }
   $('loadtext').textContent = 'Starting XPP…'
-  await session.start(name, text, extras, wasm)
+  startedFont = chosenFont()
+  await session.start(name, text, extras, wasm, fontArgs(startedFont))
+  showFont()
   $('hint')?.remove()
 }
 
@@ -529,15 +556,20 @@ $('edrestart').addEventListener('click', () => {
 })
 
 function restartEdited() {
+  restartWith($<HTMLTextAreaElement>('edtext').value)
+}
+
+/** restart XPP with this model text and the other files in its working folder */
+function restartWith(text: string) {
   // XPP cannot reload in place; restart the page with the edited file and the
   // other files in the working folder
   const extras = (session?.listFiles() ?? [])
     .filter((f) => f.name !== odeName && f.size < 2_000_000)
     .map((f) => ({ name: f.name, data: toBase64(session!.readFile(f.name)) }))
   try {
-    sessionStorage.setItem('xpp-edited', JSON.stringify({ id: odeId, name: odeName, text: $<HTMLTextAreaElement>('edtext').value, extras }))
+    sessionStorage.setItem('xpp-edited', JSON.stringify({ id: odeId, name: odeName, text, extras }))
   } catch {
-    sessionStorage.setItem('xpp-edited', JSON.stringify({ id: odeId, name: odeName, text: $<HTMLTextAreaElement>('edtext').value, extras: [] }))
+    sessionStorage.setItem('xpp-edited', JSON.stringify({ id: odeId, name: odeName, text, extras: [] }))
   }
   location.reload()
 }
@@ -793,3 +825,88 @@ setupPwa($<HTMLButtonElement>('install'), (apply) => {
   document.querySelector('.toast')?.remove()
   document.body.append(bar)
 })
+
+// ---- XPP font size (Aa): -bigfont / -smallfont when XPP starts ---------------
+let startedFont: FontChoice | null = null // what the running XPP uses
+{
+  const presets = $('fontpresets')
+  for (const p of PRESETS) {
+    const l = document.createElement('label')
+    l.innerHTML = `<input type="radio" name="fontpreset" value="${p.id}"> <span></span> <small></small>`
+    l.querySelector('span')!.textContent = p.label
+    l.querySelector('small')!.textContent = p.fonts.big === p.fonts.small ? p.fonts.big : `${p.fonts.big} / ${p.fonts.small}`
+    presets.append(l)
+  }
+  for (const id of ['fontbig', 'fontsmall'])
+    $(id).innerHTML = FONT_NAMES.map((n) => `<option value="${n}">${n}</option>`).join('')
+}
+const fontRadios = () => [...document.querySelectorAll<HTMLInputElement>('input[name="fontpreset"]')]
+
+/** show a choice in the panel */
+function showFont(f: FontChoice = chosenFont()) {
+  const key = fontKey(f)
+  const preset = PRESETS.some((p) => p.id === key) ? key : 'custom'
+  for (const r of fontRadios()) r.checked = r.value === preset
+  ;($('fontbig') as HTMLSelectElement).value = f.big
+  ;($('fontsmall') as HTMLSelectElement).value = f.small
+  $('fontpick').classList.toggle('on', preset === 'custom')
+  const pending = startedFont && session?.running && fontKey(startedFont) !== key
+  $('fontnote').textContent = pending
+    ? 'Used the next time XPP starts.'
+    : 'XPP picks its fonts when it starts.'
+}
+
+function panelFont(): FontChoice {
+  const r = fontRadios().find((x) => x.checked)?.value ?? 'normal'
+  const p = PRESETS.find((x) => x.id === r)
+  if (p) return { ...p.fonts }
+  return { big: ($('fontbig') as HTMLSelectElement).value, small: ($('fontsmall') as HTMLSelectElement).value }
+}
+
+const fontDialog = $<HTMLDialogElement>('fontask')
+async function changeFont() {
+  const f = panelFont()
+  $('fontpick').classList.toggle('on', fontRadios().find((x) => x.checked)?.value === 'custom')
+  // a link's ?font=… no longer applies once the user chooses
+  const q = new URLSearchParams(location.search)
+  if (q.has('font')) {
+    q.delete('font')
+    history.replaceState(history.state, '', '?' + q.toString())
+  }
+  if (!session?.running || (startedFont && fontKey(startedFont) === fontKey(f))) {
+    saveFont(f)
+    showFont(f)
+    return
+  }
+  $('fonttext').textContent =
+    `XPP picks its fonts when it starts. Restart XPP now with ${f.big} (menus) and ${f.small} (small text)? ` +
+    'The model and the files in XPP\'s folder are kept; you can save the session first.'
+  ;($('fontsize') as HTMLDetailsElement).open = false
+  fontDialog.returnValue = ''
+  fontDialog.showModal()
+  const answer = await new Promise<string>((r) => fontDialog.addEventListener('close', () => r(fontDialog.returnValue), { once: true }))
+  if (answer === 'now') {
+    saveFont(f)
+    leaveThen(() => restartWith(new TextDecoder().decode(session!.readFile(odeName))), () => showFont(startedFont!))
+  } else if (answer === 'later') {
+    saveFont(f)
+    showFont(f)
+    notice('The new font size is used the next time XPP starts')
+  } else {
+    showFont(startedFont ?? chosenFont()) // cancelled: back to what is in use
+  }
+}
+$('fontpanel').addEventListener('change', (e) => {
+  const t = e.target as HTMLElement
+  // picking "Custom" only opens the two lists; choosing in them applies
+  if (t instanceof HTMLInputElement && t.value === 'custom') {
+    $('fontpick').classList.add('on')
+    return
+  }
+  if (t.id === 'fontbig' || t.id === 'fontsmall') {
+    const c = fontRadios().find((x) => x.value === 'custom')
+    if (c) c.checked = true
+  }
+  void changeFont()
+})
+showFont()

@@ -205,6 +205,7 @@ export class XppSession {
     contents: string,
     extras: Array<{ name: string; data: Uint8Array }> = [],
     wasmBinary?: ArrayBuffer, // already downloaded (with progress) by the page
+    args: string[] = [], // extra XPP command-line options (e.g. -bigfont 9x15)
   ): Promise<void> {
     // JSPI build where the engine supports it (native speed), else Asyncify
     const { engine, dir } = xppBuild();
@@ -272,7 +273,7 @@ export class XppSession {
     this.running = true;
     const isExit = (e: unknown) => e && (e as any).name === 'ExitStatus';
     try {
-      const r = m.callMain([fileName]); // returns a Promise with JSPI
+      const r = m.callMain([...args, fileName]); // returns a Promise with JSPI
       if (r && typeof r.then === 'function')
         r.catch((e: unknown) => {
           if (!isExit(e)) throw e;
