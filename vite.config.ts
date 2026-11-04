@@ -27,7 +27,8 @@ function serviceWorker(): Plugin {
     },
     closeBundle() {
       const files = walk(outDir)
-        .filter((f) => f !== 'sw.js' && !f.endsWith('.map'))
+        // videos (README tour) are played online only, not stored offline
+        .filter((f) => f !== 'sw.js' && !f.endsWith('.map') && !f.startsWith('videos/'))
         .sort()
       const template = readFileSync(resolve(root, 'pwa/sw.js'), 'utf8')
       const hash = createHash('sha256').update(template) // a changed worker is a new version too
