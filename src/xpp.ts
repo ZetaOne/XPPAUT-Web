@@ -990,7 +990,11 @@ export class XppSession {
     if (p) p.canvas.style.cursor = CURSORS[shape - 1] ?? 'default';
   }
 
+  /** XPP's bell flashes the desktop (Settings → Flash on bell; off by default) */
+  bellFlash = false;
+
   private bell(): void {
+    if (!this.bellFlash) return;
     this.desktop.classList.remove('bell');
     void this.desktop.offsetWidth;
     this.desktop.classList.add('bell');

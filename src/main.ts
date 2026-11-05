@@ -74,6 +74,9 @@ app.innerHTML = `
           <label class="check" title="Open XPP's new windows as separate browser windows (allow pop-ups for this site). Any window can also be popped out with ⧉ in its title bar.">
             <input type="checkbox" id="separate"> Separate windows
           </label>
+          <label class="check" title="Flash the screen when XPP rings its bell (like File &gt; Bell on in XPP). Off by default.">
+            <input type="checkbox" id="bellflash"> Flash on bell
+          </label>
         </div>
       </details>
       <button id="savesession" title="Download a .zip with everything XPP saved, screenshots of the open windows (SS folder) and XPP's output">Save session</button>
@@ -161,6 +164,7 @@ const example = $<HTMLSelectElement>('example')
 const desktop = $<HTMLElement>('desktop')
 const termMode = $<HTMLSelectElement>('termmode')
 const separate = $<HTMLInputElement>('separate')
+const bellFlash = $<HTMLInputElement>('bellflash')
 
 let session: XppSession | null = null
 let odeName = ''
@@ -183,6 +187,12 @@ const store = {
     }
   },
 }
+// Flash on bell: off by default (XPP's bell otherwise flashes the screen)
+bellFlash.checked = store.get('xpp-bellflash') === '1'
+bellFlash.addEventListener('change', () => {
+  store.set('xpp-bellflash', bellFlash.checked ? '1' : '0')
+  if (session) session.bellFlash = bellFlash.checked
+})
 
 // ---- terminal output ------------------------------------------------------
 const terminal = new Terminal($('term'), $<HTMLPreElement>('termpre'))
@@ -306,6 +316,7 @@ async function launch(name: string, text: string, extras: Array<{ name: string; 
     },
   })
   session.popOutNew = separate.checked
+  session.bellFlash = bellFlash.checked
   mobile.attach(session)
   ;(window as unknown as { xpp: XppSession }).xpp = session // for tests and debugging
   setInterval(updateFileCount, 2000)
