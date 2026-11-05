@@ -1529,7 +1529,7 @@ summary.round:focus-visible {
 }
 
 .recent > span {
-  color: var(--muted);
+  color: var(--hint-muted); /* on the desktop colour, like the hint text */
 }
 
 .recent button {
@@ -1589,4 +1589,16 @@ summary.round:focus-visible {
   right: auto;
   left: calc(100% + 8px);
   width: 280px;
+}
+
+/* phones, start screen: buttons on the first row, the example picker on its
+   own row below (room for Install, ☰, Aa and ◐) */
+:root[data-device='phone'] #app:has(#session[hidden]) > header.bar {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
+:root[data-device='phone'] #app:has(#session[hidden]) > header.bar > .start {
+  order: 30;
+  flex-basis: 100%;
 }

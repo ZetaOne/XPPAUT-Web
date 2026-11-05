@@ -287,7 +287,21 @@ async function launch(name: string, text: string, extras: Array<{ name: string; 
     onExit: async (status) => {
       statusText = `${name}: XPP has quit`
       $('status').textContent = statusText
-      if (unsaved && (await askToSave('quit')) === 'save') await saveSession()
+      // one question, then back to the start screen (pick another model)
+      if (unsaved) {
+        if ((await askToSave('quit')) === 'save') {
+          await saveSession()
+          await new Promise((r) => setTimeout(r, 800)) // let the download start
+        } else {
+          try {
+            localStorage.removeItem(AUTOSAVE) // declined: nothing to restore later
+          } catch {
+            /* storage blocked */
+          }
+        }
+      }
+      unsaved = false
+      backToStart()
       void status
     },
   })
@@ -951,9 +965,20 @@ async function leaveThen(go: () => void, cancelled: () => void = () => {}) {
     const answer = await askToSave('leave')
     if (answer === 'cancel') return cancelled()
     if (answer === 'save') await saveSession()
+    unsaved = false // answered: do not ask again for the same work
   }
   leaving = true
   go()
+}
+
+/** the start screen (example list, Run, Open .ode file…), keeping other
+ *  link options such as ?font= */
+function backToStart() {
+  leaving = true
+  const q = new URLSearchParams(location.search)
+  q.delete('ode')
+  const rest = q.toString()
+  location.assign(location.pathname + (rest ? '?' + rest : ''))
 }
 
 function canvasPng(c: HTMLCanvasElement): Promise<Uint8Array> {
