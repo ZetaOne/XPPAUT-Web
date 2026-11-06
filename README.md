@@ -122,8 +122,14 @@ shows **Update** when a new version is published.
 
 ## Download for your computer (no internet needed)
 
-Saving the web page does not work (a browser will not run XPP from a saved
-page), so there are two downloads, rebuilt with every update:
+**Chrome, Edge, Brave:** the simplest way is the install icon at the right of
+the address bar (a small screen with a downward arrow), or **Install** in the
+toolbar. This keeps XPPAUT-Web on your computer: it opens from its own icon,
+works offline, and updates itself (see [Install as an app](#install-as-an-app)).
+
+**Save page as…** (Ctrl+S / ⌘S) does **not** work: a browser will not run XPP
+from a saved page. For a copy you keep as a file, or for other browsers, use
+one of these two downloads (rebuilt with every update):
 
 - [**XPPAUT-Web.html**](https://github.com/ZetaOne/XPPAUT-Web/releases/download/offline/XPPAUT-Web.html)
   (about 2 MB): the whole program in one file. Double-click it and it opens
@@ -136,8 +142,8 @@ page), so there are two downloads, rebuilt with every update:
   including **Install** as an app. Needs Python 3 on Mac and Linux (on
   Windows it uses Python if present, otherwise PowerShell).
 
-Both run the same XPP as the website. Tested in Chrome; other current browsers
-should work too.
+Both run the same XPP as the website. Tested in Chrome and Firefox; other
+current browsers (e.g. Safari 16.4 or later) should work too.
 
 ## Report a bug or give feedback
 
