@@ -978,6 +978,10 @@ const THEMES: Array<{ id: string; name: string; swatch: string[] }> = [
   { id: 'dracula', name: 'Dracula', swatch: ['#282a36', '#44475a', '#343746', '#bd93f9'] },
   { id: 'sepia', name: 'Sepia', swatch: ['#faf4e6', '#ebdfc4', '#7a6344', '#8b5a2b'] },
   { id: 'contrast', name: 'High Contrast', swatch: ['#000000', '#ffffff', '#000000', '#ffff00'] },
+  // multi-coloured, palettes from open-source editor themes (MIT)
+  { id: 'funky1', name: 'Funky 1 (Fairy Floss)', swatch: ['#5a5475', '#ffb8d1', '#c2ffdf', '#c5a3ff'] },
+  { id: 'funky2', name: 'Funky 2 (Night Owl)', swatch: ['#011627', '#82aaff', '#c792ea', '#addb67'] },
+  { id: 'funky3', name: 'Funky 3 (Synthwave)', swatch: ['#241b2f', '#ff7edb', '#36f9f6', '#fede5d'] },
 ]
 
 function applyTheme(id: string) {

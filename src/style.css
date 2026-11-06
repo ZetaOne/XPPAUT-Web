@@ -185,6 +185,84 @@
   box-shadow: 0 0 0 2px #ffffff;
 }
 
+/* ---- funky themes: a multi-coloured stripe under the toolbar ---------------- */
+:root[data-theme^='funky'] .bar {
+  border-bottom: 3px solid transparent;
+  border-image: var(--stripe) 1;
+}
+
+/* Fairy Floss, github.com/sailorhg/fairyfloss (MIT): palette on the page around XPP, with a glow behind the windows */
+:root[data-theme='funky1'] {
+  color-scheme: dark;
+  --bg: #4a4466;
+  --fg: #f8f8f2;
+  --muted: #cbc4e6;
+  --bar: #5a5475;
+  --line: #716799;
+  --desk: radial-gradient(circle at 12% 18%, #ffb8d155 0, transparent 42%),
+    radial-gradient(circle at 88% 28%, #c2ffdf50 0, transparent 42%),
+    radial-gradient(circle at 50% 100%, #c5a3ff48 0, transparent 50%),
+    #5a5475;
+  --panel-bar: #716799;
+  --panel-bar-active: #8077a8;
+  --hint: #f8f8f2;
+  --hint-muted: #fff352;
+  --accent: #ffb8d1;
+  --accent-fg: #3f3a56;
+  --term-bg: #3f3a56;
+  --term-head: #4a4466;
+  --term-fg: #f8f8f2;
+  --stripe: linear-gradient(90deg, #ffb8d1, #c5a3ff, #c2ffdf, #fff352, #ff857f);
+}
+
+/* Night Owl, github.com/sdras/night-owl-vscode-theme (MIT): palette on the page around XPP, with a glow behind the windows */
+:root[data-theme='funky2'] {
+  color-scheme: dark;
+  --bg: #01111d;
+  --fg: #d6deeb;
+  --muted: #7e97ac;
+  --bar: #011627;
+  --line: #1d3b53;
+  --desk: radial-gradient(circle at 12% 18%, #82aaff55 0, transparent 42%),
+    radial-gradient(circle at 88% 28%, #c792ea50 0, transparent 42%),
+    radial-gradient(circle at 50% 100%, #addb6748 0, transparent 50%),
+    #011627;
+  --panel-bar: #0b2942;
+  --panel-bar-active: #1d3b53;
+  --hint: #d6deeb;
+  --hint-muted: #7fdbca;
+  --accent: #82aaff;
+  --accent-fg: #011627;
+  --term-bg: #010e1a;
+  --term-head: #01111d;
+  --term-fg: #d6deeb;
+  --stripe: linear-gradient(90deg, #82aaff, #c792ea, #7fdbca, #addb67, #f78c6c);
+}
+
+/* Synthwave '84, github.com/robb0wen/synthwave-vscode (MIT): palette on the page around XPP, with a glow behind the windows */
+:root[data-theme='funky3'] {
+  color-scheme: dark;
+  --bg: #1e1a2b;
+  --fg: #ffffff;
+  --muted: #b6b1d0;
+  --bar: #241b2f;
+  --line: #463465;
+  --desk: radial-gradient(circle at 12% 18%, #ff7edb55 0, transparent 42%),
+    radial-gradient(circle at 88% 28%, #36f9f650 0, transparent 42%),
+    radial-gradient(circle at 50% 100%, #fede5d48 0, transparent 50%),
+    #262335;
+  --panel-bar: #34294f;
+  --panel-bar-active: #463465;
+  --hint: #ffffff;
+  --hint-muted: #fede5d;
+  --accent: #ff7edb;
+  --accent-fg: #241b2f;
+  --term-bg: #171520;
+  --term-head: #241b2f;
+  --term-fg: #f4eee4;
+  --stripe: linear-gradient(90deg, #ff7edb, #36f9f6, #fede5d, #f97e72, #72f1b8);
+}
+
 * {
   box-sizing: border-box;
 }
