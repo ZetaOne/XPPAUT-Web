@@ -42,7 +42,8 @@ export function setupPwa(install: HTMLButtonElement, onUpdate: (apply: () => voi
   if (standalone()) void navigator.storage?.persist?.()
 
   // ---- service worker (built sites only; `npm run dev` has none)
-  if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return
+  // (not for a page opened from a file: the offline downloads in the README)
+  if (!import.meta.env.PROD || !('serviceWorker' in navigator) || !location.protocol.startsWith('http')) return
   let switching = false
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (switching) location.reload()

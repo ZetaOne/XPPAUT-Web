@@ -110,6 +110,7 @@ app.innerHTML = `
     <main class="desktop" id="desktop">
       <div class="hint" id="hint">
         <p>Pick an example or open your own <code>.ode</code> file to start XPP.</p>
+        <p class="drophint">Or drop your <code>.ode</code> file here, together with any <code>.tab</code>, <code>.dat</code> or <code>.ani</code> files it uses (a folder works too).</p>
         <div class="loadbar" id="loadbar" role="progressbar" aria-label="Loading XPP"><div id="loadfill"></div></div>
         <p class="loadtext" id="loadtext">Loading XPP…</p>
       </div>
@@ -143,6 +144,29 @@ app.innerHTML = `
         <button value="cancel">Cancel</button>
         <button value="later">At next start</button>
         <button value="now" class="primary">Restart XPP now</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="needfiles">
+    <form method="dialog" class="leave">
+      <h3 id="needtitle"></h3>
+      <p id="needtext"></p>
+      <ul id="needlist"></ul>
+      <div class="editor-foot">
+        <button value="cancel">Cancel</button>
+        <button value="anyway">Start anyway</button>
+        <label class="file primary-file">Add files…<input type="file" id="needadd" multiple hidden></label>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="loadfail">
+    <form method="dialog" class="leave">
+      <h3 id="failtitle"></h3>
+      <p>XPP stopped while reading the model. Its messages:</p>
+      <pre id="failtext"></pre>
+      <p id="failhint"></p>
+      <div class="editor-foot">
+        <button value="ok" class="primary">OK</button>
       </div>
     </form>
   </dialog>
@@ -272,6 +296,12 @@ function notice(msg: string) {
 
 // ---- starting XPP -----------------------------------------------------------
 async function launch(name: string, text: string, extras: Array<{ name: string; data: Uint8Array }> = [], id = name) {
+  // your own model (examples bring their files): ask for table files it names
+  if (!id.includes('/')) {
+    const ok = await neededFiles(name, text, extras)
+    if (!ok) return
+    extras = ok
+  }
   remember(id, name, text)
   odeName = name
   odeId = id
@@ -297,6 +327,12 @@ async function launch(name: string, text: string, extras: Array<{ name: string; 
     onExit: async (status) => {
       statusText = `${name}: XPP has quit`
       $('status').textContent = statusText
+      // quit before showing a window: it could not read the model; say why
+      if (!session?.shown) {
+        await loadFailed(name, text)
+        backToStart()
+        return
+      }
       // one question, then back to the start screen (pick another model)
       if (unsaved) {
         if ((await askToSave('quit')) === 'save') {
@@ -445,15 +481,81 @@ fetch('odes/index.json')
   })
 
 $('run').addEventListener('click', () => loadExample(example.value))
-$<HTMLInputElement>('upload').addEventListener('change', async (e) => {
-  const files = [...((e.target as HTMLInputElement).files ?? [])]
+/** start XPP with the .ode among `files`; the others go into its working folder */
+async function openFiles(files: File[]) {
   const ode = files.find((f) => /\.ode$/i.test(f.name)) ?? files[0]
   if (!ode) return
   const extras = await Promise.all(
     files.filter((f) => f !== ode).map(async (f) => ({ name: f.name, data: new Uint8Array(await f.arrayBuffer()) })),
   )
   await launch(ode.name, await ode.text(), extras)
+}
+$<HTMLInputElement>('upload').addEventListener('change', (e) => {
+  void openFiles([...((e.target as HTMLInputElement).files ?? [])])
 })
+
+// ---- drag and drop: on the start screen it opens the model (like Open .ode
+// file…), while XPP runs it adds the files to XPP's folder (like Add files…).
+// Dropped folders are read through, files only (XPP looks in its own folder).
+async function droppedFiles(dt: DataTransfer): Promise<File[]> {
+  const entries = [...dt.items].map((i) => i.webkitGetAsEntry?.()).filter((e): e is FileSystemEntry => !!e)
+  if (!entries.length) return [...dt.files]
+  const out: File[] = []
+  const walk = async (e: FileSystemEntry): Promise<void> => {
+    if (e.isFile) {
+      out.push(await new Promise<File>((res, rej) => (e as FileSystemFileEntry).file(res, rej)))
+    } else if (e.isDirectory) {
+      const reader = (e as FileSystemDirectoryEntry).createReader()
+      for (;;) {
+        const batch = await new Promise<FileSystemEntry[]>((res, rej) => reader.readEntries(res, rej))
+        if (!batch.length) break
+        for (const c of batch) await walk(c)
+      }
+    }
+  }
+  for (const e of entries) await walk(e)
+  return out
+}
+{
+  const area = $('desktop')
+  const hasFiles = (e: DragEvent) => !!e.dataTransfer?.types.includes('Files')
+  let depth = 0
+  const done = () => {
+    depth = 0
+    area.classList.remove('dropping')
+  }
+  area.addEventListener('dragenter', (e) => {
+    if (!hasFiles(e)) return
+    e.preventDefault()
+    depth++
+    area.classList.add('dropping')
+  })
+  area.addEventListener('dragover', (e) => {
+    if (!hasFiles(e)) return
+    e.preventDefault()
+    e.dataTransfer!.dropEffect = 'copy'
+  })
+  area.addEventListener('dragleave', () => {
+    if (--depth <= 0) done()
+  })
+  area.addEventListener('drop', async (e) => {
+    if (!hasFiles(e)) return
+    e.preventDefault()
+    done()
+    const files = (await droppedFiles(e.dataTransfer!)).filter((f) => !f.name.startsWith('.') || f.name === '.xpprc')
+    if (!files.length) return
+    if (session?.running) {
+      for (const f of files) session.writeFile(f.name, new Uint8Array(await f.arrayBuffer()))
+      renderFiles()
+      updateFileCount()
+      notice(`Added to XPP's folder (Files): ${files.map((f) => f.name).join(', ')}`)
+    } else if (!files.some((f) => /\.ode$/i.test(f.name))) {
+      notice('Drop an .ode file (with the files it uses) to start XPP.')
+    } else await openFiles(files)
+  })
+  // a file dropped next to the drop area must not make the browser open it
+  for (const t of ['dragover', 'drop']) window.addEventListener(t, (e) => hasFiles(e as DragEvent) && e.preventDefault())
+}
 // Android app: files opened with XPPAUT from other apps start XPP like Open .ode file…
 setupApp(
   () => session ?? undefined,
@@ -950,6 +1052,106 @@ window.addEventListener('beforeunload', (e) => {
 })
 
 const leaveDialog = $<HTMLDialogElement>('leave')
+// ---- files a model needs ----------------------------------------------------------
+type Extra = { name: string; data: Uint8Array }
+
+/** the files named by `table <name> <file>` lines (not `table <name> % ...`) */
+function tableFiles(text: string): string[] {
+  const out: string[] = []
+  for (const line of text.split(/\r?\n/)) {
+    const m = /^\s*table\s+\S+\s+(\S+)/i.exec(line)
+    if (m && m[1] !== '%' && !out.includes(m[1])) out.push(m[1])
+  }
+  return out
+}
+
+const fileBase = (p: string) => p.slice(p.replace(/\\/g, '/').lastIndexOf('/') + 1)
+
+/** where XPP will look for `ref` (its folder is /work): "data/x.tab", "/tabular/x.tab" */
+function placeOf(ref: string): string {
+  const parts = (ref.startsWith('/') ? ref : '/work/' + ref).split('/')
+  const out: string[] = []
+  for (const p of parts) {
+    if (p === '..') out.pop()
+    else if (p && p !== '.') out.push(p)
+  }
+  const abs = '/' + out.join('/')
+  return abs.startsWith('/work/') ? abs.slice(6) : abs
+}
+
+/**
+ * Check the table files the model names against the files given with it.
+ * A file given by name is also put where the model looks for it (a folder
+ * named in the .ode). Missing files: ask (Add files… / Start anyway / Cancel).
+ * Returns the files to start with, or null to cancel.
+ */
+async function neededFiles(name: string, text: string, extras: Extra[]): Promise<Extra[] | null> {
+  let files = [...extras]
+  for (;;) {
+    const missing: string[] = []
+    for (const ref of tableFiles(text)) {
+      const at = placeOf(ref)
+      if (files.some((f) => f.name === at)) continue
+      const have = files.find((f) => fileBase(f.name) === fileBase(ref))
+      if (have) files.push({ name: at, data: have.data })
+      else missing.push(ref)
+    }
+    if (!missing.length) return files
+    const answer = await askForFiles(name, missing)
+    if (answer === 'cancel') return null
+    if (answer === 'anyway') return files
+    files = [...files, ...answer]
+  }
+}
+
+function askForFiles(name: string, missing: string[]): Promise<'cancel' | 'anyway' | Extra[]> {
+  const d = $<HTMLDialogElement>('needfiles')
+  const one = missing.length === 1
+  $('needtitle').textContent = `${name} needs ${one ? 'a file' : missing.length + ' files'} you have not added`
+  $('needtext').textContent =
+    `Its table ${one ? 'line names' : 'lines name'} the ${one ? 'file' : 'files'} below. XPP cannot start without ${one ? 'it' : 'them'}: add ${one ? 'it' : 'them'} (you can pick several at once).`
+  const list = $('needlist')
+  list.replaceChildren(...missing.map((m) => Object.assign(document.createElement('li'), { textContent: m })))
+  const input = $<HTMLInputElement>('needadd')
+  input.value = ''
+  d.returnValue = ''
+  d.showModal()
+  return new Promise((resolve) => {
+    const picked = async () => {
+      d.removeEventListener('close', closed)
+      const files = await Promise.all(
+        [...(input.files ?? [])].map(async (f) => ({ name: f.name, data: new Uint8Array(await f.arrayBuffer()) })),
+      )
+      d.close()
+      resolve(files)
+    }
+    const closed = () => {
+      input.removeEventListener('change', picked)
+      resolve(d.returnValue === 'anyway' ? 'anyway' : 'cancel')
+    }
+    input.addEventListener('change', picked, { once: true })
+    d.addEventListener('close', closed, { once: true })
+  })
+}
+
+/** XPP quit before showing a window: show its messages instead of a bare start screen */
+function loadFailed(name: string, text: string): Promise<void> {
+  const d = $<HTMLDialogElement>('loadfail')
+  const lines = terminal
+    .text()
+    .split('\n')
+    .filter((l) => l.trim())
+  $('failtitle').textContent = `XPP could not open ${name}`
+  $('failtext').textContent = lines.slice(-6).join('\n') || '(no message)'
+  const notFound = lines.some((l) => /not found/i.test(l))
+  $('failhint').textContent =
+    notFound || tableFiles(text).length
+      ? 'If the model uses table or data files, open it again together with them: pick them all in Open .ode file…, or drop them here together.'
+      : 'Fix the model (Edit .ode, or your own editor) and open it again.'
+  d.showModal()
+  return new Promise((resolve) => d.addEventListener('close', () => resolve(), { once: true }))
+}
+
 function askToSave(kind: 'leave' | 'quit'): Promise<'save' | 'discard' | 'cancel'> {
   const quit = kind === 'quit'
   $('leavetitle').textContent = quit ? 'XPP has quit. Save this session?' : 'Save your session first?'

@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write # the "offline" release with the downloads
   pages: write
   id-token: write
 
@@ -47,6 +47,18 @@ jobs:
 
       - name: Build the page
         run: npm run build
+
+      - name: Offline downloads (single HTML file, zip with a local server)
+        run: node scripts/build-offline.mjs
+
+      - name: Put them in the "offline" release (links in the README)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view offline > /dev/null 2>&1 ||
+            gh release create offline --latest=false --title "Offline version (always the latest)" \
+              --notes "XPPAUT-Web for your computer, without the internet. Rebuilt with every update of the website; see the README (Download for your computer)."
+          gh release upload offline offline/XPPAUT-Web.html offline/XPPAUT-Web-offline.zip --clobber
 
       - uses: actions/configure-pages@v5
 

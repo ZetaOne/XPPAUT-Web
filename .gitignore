@@ -35,3 +35,6 @@ android/app/build/
 android/local.properties
 android/keystore.properties
 *.jks
+
+# offline downloads (scripts/build-offline.mjs)
+offline/

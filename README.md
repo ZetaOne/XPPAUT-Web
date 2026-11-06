@@ -33,7 +33,8 @@ Last). Click a preview to play the full 2-minute video.*
   desktop version pixel for pixel.
 - **AUTO** for steady states, periodic orbits and bifurcation diagrams.
 - **212 example models** from the XPPAUT release, or your own `.ode` file with
-  its `.ani`, `.tab` and `.dat` files.
+  its `.ani`, `.tab` and `.dat` files (pick them together, or drag and drop
+  them onto the page; a model whose table file is missing asks for it).
 - **Window panels**: drag, resize, close, save as PNG, or pop out into a
   separate browser window. Windows are also easier to close than on the desktop.
 - **Exports**: PostScript, SVG, data and `.set` files download automatically,
@@ -51,7 +52,9 @@ Last). Click a preview to play the full 2-minute video.*
 
 ## Quick start
 
-1. Choose an example (or **Open .ode file…**) and press **Run**.
+1. Choose an example and press **Run**, or **Open .ode file…** (or drop your
+   `.ode` file on the page) together with the table and data files it uses.
+   XPP looks for them in its own folder, shown under **Files**.
 2. Use XPP as on the desktop: **I G** integrates, **N N** draws nullclines,
    **F A** opens AUTO.
 3. **Save session** keeps everything; **Settings** sets where exports and output go.
@@ -116,6 +119,25 @@ shows **Update** when a new version is published.
   in the address bar.
 - **iPhone and iPad** (Safari): **Share → Add to Home Screen**. *Not tested
   yet.*
+
+## Download for your computer (no internet needed)
+
+Saving the web page does not work (a browser will not run XPP from a saved
+page), so there are two downloads, rebuilt with every update:
+
+- [**XPPAUT-Web.html**](https://github.com/ZetaOne/XPPAUT-Web/releases/download/offline/XPPAUT-Web.html)
+  (about 2 MB): the whole program in one file. Double-click it and it opens
+  in your browser. Nothing to install. Help pages open in a window of their own.
+- [**XPPAUT-Web-offline.zip**](https://github.com/ZetaOne/XPPAUT-Web/releases/download/offline/XPPAUT-Web-offline.zip)
+  (about 2 MB): the site as files, with a small local web server to start it.
+  Unzip it and double-click **Start XPPAUT (Mac).command** (the first time:
+  right-click → Open), **Start XPPAUT (Windows).bat**, or run `start-linux.sh`.
+  It opens at `http://localhost:8765/` and works exactly like the website,
+  including **Install** as an app. Needs Python 3 on Mac and Linux (on
+  Windows it uses Python if present, otherwise PowerShell).
+
+Both run the same XPP as the website. Tested in Chrome; other current browsers
+should work too.
 
 ## Report a bug or give feedback
 

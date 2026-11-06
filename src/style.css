@@ -394,6 +394,41 @@ button.small,
 }
 
 
+.hint .drophint {
+  max-width: 34em;
+  margin-top: 6px;
+  font-size: 15px;
+  color: var(--hint-muted);
+}
+
+/* phones and tablets: no files to drag */
+@media (hover: none) and (pointer: coarse) {
+  .hint .drophint {
+    display: none;
+  }
+}
+
+/* files dragged over the XPP area */
+.desktop.dropping .hint {
+  visibility: hidden;
+}
+
+.desktop.dropping::after {
+  content: 'Drop files here';
+  position: absolute;
+  inset: 10px;
+  z-index: 200000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px dashed var(--hint);
+  border-radius: 12px;
+  background: rgb(0 0 0 / 0.35);
+  color: var(--hint);
+  font: 600 22px system-ui, sans-serif;
+  pointer-events: none;
+}
+
 .hint .loadtext {
   font-size: 16px;
   color: var(--hint-muted);
@@ -582,7 +617,9 @@ dialog#editor::backdrop {
 }
 
 /* ---- leave / save-session dialog --------------------------------------- */
-dialog#leave {
+dialog#leave,
+dialog#needfiles,
+dialog#loadfail {
   width: min(520px, calc(100vw - 32px));
   padding: 0;
   border: 1px solid var(--line);
@@ -591,7 +628,9 @@ dialog#leave {
   color: var(--fg);
 }
 
-dialog#leave::backdrop {
+dialog#leave::backdrop,
+dialog#needfiles::backdrop,
+dialog#loadfail::backdrop {
   background: rgb(0 0 0 / 0.35);
 }
 
@@ -605,6 +644,30 @@ dialog#leave::backdrop {
   margin: 0;
   padding: 0 18px 14px;
   color: var(--muted);
+}
+
+#needlist {
+  margin: 0 0 14px;
+  padding: 0 18px 0 40px;
+  font-family: ui-monospace, monospace;
+}
+
+#failtext {
+  max-height: 40vh;
+  margin: 0 18px 12px;
+  padding: 8px 10px;
+  overflow: auto;
+  border-radius: 4px;
+  background: var(--desk);
+  color: var(--hint);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+label.primary-file {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
 }
 
 button.primary {

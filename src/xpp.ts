@@ -5,6 +5,11 @@
 
 import { download } from './zip';
 
+/** set by the single-file offline page (scripts/build-offline.mjs): files are
+ *  inside the page, so the loader and help come from there, not from URLs */
+const offline = () =>
+  (globalThis as { xppOffline?: { moduleUrl(url: string): Promise<string>; openHelp(page: string): void } }).xppOffline;
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type XppModule = any;
 
@@ -99,6 +104,8 @@ export class XppSession {
   private cascade = 0;
   /** XPP is running (has not quit) */
   running = false;
+  /** XPP has shown a window (it quits before that when it cannot read the .ode) */
+  shown = false;
   private keyHandler: ((e: KeyboardEvent) => void) | null = null;
   private mainId = 0;
 
@@ -368,7 +375,7 @@ export class XppSession {
     const { engine, dir } = xppBuild();
     this.engine = engine;
     const url = new URL(dir + 'xppaut.mjs', document.baseURI).href;
-    const { default: createXpp } = await import(/* @vite-ignore */ url);
+    const { default: createXpp } = await import(/* @vite-ignore */ (await offline()?.moduleUrl(url)) ?? url);
     const out = (s: string) => this.cb.onOutput?.(s);
     this.mod = await createXpp({
       noInitialRun: true,
@@ -401,6 +408,7 @@ export class XppSession {
         this.cb.onFileWritten?.(path.replace(/\/{2,}/g, '/'));
       },
       xppOpenHelp: () => {
+        if (offline()) return offline()!.openHelp('xpphelp.html');
         const w = window.open(new URL('help/xpphelp.html', document.baseURI).href, 'xpp-help');
         if (!w) this.cb.onNotice?.('Pop-up blocked: XPP help is at help/xpphelp.html');
       },
@@ -420,7 +428,14 @@ export class XppSession {
       /* exists */
     }
     m.FS.chdir('/work');
-    for (const f of extras) m.FS.writeFile('/work/' + f.name, f.data);
+    // a name with a folder ("data/x.tab", "/home/me/x.tab") is put there, for
+    // .ode files that name their table files that way
+    for (const f of extras) {
+      const path = f.name.startsWith('/') ? f.name : '/work/' + f.name;
+      const dir = path.slice(0, path.lastIndexOf('/'));
+      if (dir && dir !== '/work') m.FS.mkdirTree(dir);
+      m.FS.writeFile(path, f.data);
+    }
     m.FS.writeFile('/work/' + fileName, contents);
     this.odeName = fileName;
     this.installKeyboard(window);
@@ -512,6 +527,7 @@ export class XppSession {
       const isNew = !p;
       if (!p) p = this.makePanel(id);
       p.mapped = !!mapped;
+      if (mapped) this.shown = true;
       const title = m.UTF8ToString(m._xw_title(id)) || 'XPP';
       p.title.textContent = title;
       if (mapped && !p.placed) {
