@@ -149,17 +149,31 @@ current browsers (e.g. Safari 16.4 or later) should work too.
 
 Email **jeevancodes8580@gmail.com**, or
 [open an issue](https://github.com/ZetaOne/XPPAUT-Web/issues) on GitHub.
-Please mention your device and browser, and attach the `.ode` file if a model
-misbehaves.
+Please mention your device and browser, and if a model misbehaves, attach the
+`.ode` file and any files it uses (`.tab`, `.dat`, `.ani`, ...).
 
-## How it works
+## Host it yourself or build from source
 
-The XPPAUT source is compiled with Emscripten. XPP draws its own interface with
-X11, so `web/xlib/` reimplements the 69 X11 calls it uses, and the page
-(`src/`) shows each X window as a canvas. For more details, with diagrams, see
-[**How XPPAUT-Web works** (PDF)](docs/how-it-works.pdf).
+### Host it yourself (locally or on a server)
 
-## Building from source
+No build needed: XPPAUT-Web is a static site, and XPP always runs in each
+visitor's own browser, so the server only hands out files (no computing, no
+software to install, nothing sent back).
+
+- **On a web page** (e.g. a course or university page): upload
+  [**XPPAUT-Web.html**](https://github.com/ZetaOne/XPPAUT-Web/releases/download/offline/XPPAUT-Web.html)
+  and link to it. Visitors click it and XPP runs. Your copy does not update
+  itself: upload a newer one to get new features, or link to this site instead.
+- **The full site** (with Install as an app and offline use): unzip
+  [**XPPAUT-Web-offline.zip**](https://github.com/ZetaOne/XPPAUT-Web/releases/download/offline/XPPAUT-Web-offline.zip)
+  and put the contents of its `site/` folder on any static web server (Apache,
+  nginx, GitHub Pages, ...), in any folder. The server should send `.wasm` as
+  `application/wasm` and `.mjs` as `text/javascript`; installing as an app
+  needs HTTPS (or `localhost`).
+- **On your own computer**: the zip's start scripts serve the site at
+  `http://localhost:8765/` (see [Download for your computer](#download-for-your-computer-no-internet-needed)).
+
+### Build from source
 
 Only needed to change the code. Tested on **Linux (Ubuntu 24.04)**; macOS
 should work but is untested; on Windows, use WSL (Ubuntu).
@@ -186,6 +200,13 @@ scripts/build-native.sh && scripts/test-native.sh   # desktop reference build
 scripts/compare-batch.sh build/headless-cc/xppaut   # numerical results
 scripts/compare-gui.sh tests/gui/*.txt              # screenshots vs desktop XPP
 ```
+
+## How it works
+
+The XPPAUT source is compiled with Emscripten. XPP draws its own interface with
+X11, so `web/xlib/` reimplements the 69 X11 calls it uses, and the page
+(`src/`) shows each X window as a canvas. For more details, with diagrams, see
+[**How XPPAUT-Web works** (PDF)](docs/how-it-works.pdf).
 
 ## Licence
 
