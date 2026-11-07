@@ -128,6 +128,13 @@ shows **Update** when a new version is published.
 (13 MB, Android 10 or newer). Open it on the phone and allow installing from
 that app when Android asks. It updates an earlier version in place.
 
+The file is **12,729,159 bytes**, SHA-256
+`ebe004ace31135e7e36a1c70f1a59d2b74bc0e282d9168162c6c19085e947fe4`
+([checksum file](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.2-dev/XPPAUT-1.2-dev.apk.sha256)).
+If Android says *"package appears to be invalid"*, the download is usually
+incomplete: compare the size (Files app → Details) and download it again,
+then open it from the Files app.
+
 > **In development.** The app works, but it is still being finished.
 > **Voice commands are not very advanced yet**: expect some phrases to be
 > misheard or not understood.
