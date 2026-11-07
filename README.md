@@ -124,9 +124,9 @@ shows **Update** when a new version is published.
 
 ## Android app (in development)
 
-[**Download XPPAUT-1.1-dev.apk**](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.1-dev/XPPAUT-1.1-dev.apk)
+[**Download XPPAUT-1.2-dev.apk**](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.2-dev/XPPAUT-1.2-dev.apk)
 (13 MB, Android 10 or newer). Open it on the phone and allow installing from
-that app when Android asks.
+that app when Android asks. It updates an earlier version in place.
 
 > **In development.** The app works, but it is still being finished.
 > **Voice commands are not very advanced yet**: expect some phrases to be
@@ -140,8 +140,9 @@ The website in an app, working offline, plus:
 - **.ode editor** that checks the model with XPP's own parser as you type.
 - **Voice control (🎤)**: XPP's commands, setting values ("set gk to 2.5"),
   your Cmd panel's buttons and your own phrases, and dictating `.ode` lines.
-  It uses the phone's speech recognition, or an offline model (about 40 MB,
-  downloaded once when you first choose it).
+  It uses the phone's own speech recognition by default, or an offline model
+  (about 40 MB, downloaded once) on phones without one or when chosen in
+  Settings → Voice.
 
 ## Download for your computer (no internet needed)
 
