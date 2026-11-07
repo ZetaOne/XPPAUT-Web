@@ -7,6 +7,8 @@ Same program, same interface, nothing to install.
 
 **→ https://zetaone.github.io/XPPAUT-Web/**
 
+This page as a PDF, to print or pass on: [**XPPAUT-Web-README.pdf**](https://zetaone.github.io/XPPAUT-Web/XPPAUT-Web-README.pdf)
+
 <p>
   <img src="docs/nullclines.svg" width="49%" alt="Phase plane of the Morris-Lecar model: a limit cycle with the V and W nullclines">
   <img src="docs/bifurcation.svg" width="49%" alt="Bifurcation diagram of the Morris-Lecar model computed with AUTO">

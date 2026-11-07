@@ -48,6 +48,11 @@ jobs:
       - name: Build the page
         run: npm run build
 
+      - name: README as a PDF (on the site, so the link always gives the latest)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/readme-pdf.mjs
+
       - name: Offline downloads (single HTML file, zip with a local server)
         run: node scripts/build-offline.mjs
 
