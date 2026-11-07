@@ -122,6 +122,27 @@ shows **Update** when a new version is published.
 - **iPhone and iPad** (Safari): **Share → Add to Home Screen**. *Not tested
   yet.*
 
+## Android app (in development)
+
+[**Download XPPAUT-1.1-dev.apk**](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.1-dev/XPPAUT-1.1-dev.apk)
+(13 MB, Android 10 or newer). Open it on the phone and allow installing from
+that app when Android asks.
+
+> **In development.** The app works, but it is still being finished.
+> **Voice commands are not very advanced yet**: expect some phrases to be
+> misheard or not understood.
+
+The website in an app, working offline, plus:
+
+- **Open with XPPAUT** for `.ode` files from other apps; files and session
+  `.zip`s are saved in **Downloads/XPPAUT**, with Share.
+- **Back** = Esc, and the screen stays on while XPP computes.
+- **.ode editor** that checks the model with XPP's own parser as you type.
+- **Voice control (🎤)**: XPP's commands, setting values ("set gk to 2.5"),
+  your Cmd panel's buttons and your own phrases, and dictating `.ode` lines.
+  It uses the phone's speech recognition, or an offline model (about 40 MB,
+  downloaded once when you first choose it).
+
 ## Download for your computer (no internet needed)
 
 **Chrome, Edge, Brave:** the simplest way is the install icon at the right of
