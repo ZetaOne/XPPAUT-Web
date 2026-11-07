@@ -2,6 +2,7 @@
 // XPP (window tabs, zoom buttons, an on-screen key strip, a ☰ toolbar).
 // Desktops are left exactly as they are.
 import type { XppSession } from './xpp'
+import { findCommand, parseKeys, type XppCommand } from './commands'
 
 export type Device = 'phone' | 'tablet' | 'desktop'
 
@@ -17,7 +18,53 @@ interface Cmd {
   stay?: boolean
   typing?: boolean
   tip?: string
+  /** a heading row instead of a button */
+  title?: string
 }
+
+/** one entry of the user's Cmd panel: keys (to XPP's main or AUTO window) or a
+ *  page feature (@sliders, ...) */
+export interface Shortcut {
+  label: string
+  keys?: string
+  to?: 'auto'
+  feature?: string
+}
+
+/** at most this many commands on the Cmd panel's main page (Integrate and Sliders included) */
+export const CMD_MAX = 16
+const CMD_KEY = 'xpp-cmds'
+const isIntegrate = (c: Shortcut) => !c.feature && !c.to && parseKeys(c.keys ?? '').join(' ') === 'i g'
+
+/** commands that always stay on the Cmd panel: Integrate and Sliders */
+export const isLocked = (c: Shortcut) => isIntegrate(c) || c.feature === 'sliders'
+
+/** put the locked commands back if a list lost them (Integrate first, Sliders after it) */
+function withLocked(list: Shortcut[]): Shortcut[] {
+  const out = [...list]
+  if (!out.some(isIntegrate)) out.unshift({ label: 'Integrate', keys: 'i g' })
+  if (!out.some((c) => c.feature === 'sliders')) out.splice(out.findIndex(isIntegrate) + 1, 0, { label: 'Sliders', feature: 'sliders' })
+  return out
+}
+
+const DEFAULT_LIST = [
+  'Integrate = i g',
+  'Tap to start = i i',
+  'Last = i l',
+  'Continue = c',
+  'Nullclines = n n',
+  'Direction field = d d',
+  'Erase = e',
+  'Fit window = w f',
+  'Restore = r',
+  'Sing pts = s g',
+  'Fixed point here = s m',
+  'Numerics… = @numerics',
+  'AUTO = f a',
+  'Sliders = @sliders',
+  'Share graph = @share-graph',
+  'Tips = @tips',
+].join('\n')
 
 /** XPP's AUTO window ("It's AUTO man!") */
 const isAuto = (title: string) => title.startsWith("It's AUTO")
@@ -91,26 +138,9 @@ export class MobileUI {
     ]
     // Numerics entries that ask for a value on XPP's command line
     const num = (label: string, key: string, typing = false): Cmd => ({ label, hint: key.toUpperCase(), keys: [key], typing, stay: !typing })
+    this.common = common
     this.pages = {
-      main: [
-        { label: 'Integrate', hint: 'I G', keys: ['i', 'g'] },
-        { label: 'Tap to start', hint: 'I I', keys: ['i', 'i'], tip: 'Tap the graph to start a trajectory there, as often as you like. Esc (or Back) ends.' },
-        { label: 'Last', hint: 'I L', keys: ['i', 'l'] },
-        { label: 'Continue', hint: 'C', keys: ['c'] },
-        { label: 'Nullclines', hint: 'N N', keys: ['n', 'n'] },
-        { label: 'Direction field', hint: 'D D', keys: ['d', 'd'] },
-        { label: 'Erase', hint: 'E', keys: ['e'] },
-        { label: 'Fit window', hint: 'W F', keys: ['w', 'f'] },
-        { label: 'Restore', hint: 'R', keys: ['r'] },
-        { label: 'Sing pts', hint: 'S G', keys: ['s', 'g'] },
-        { label: 'Fixed point here', hint: 'S M', keys: ['s', 'm'], tip: 'Tap near a fixed point: XPP finds it and shows its stability and eigenvalues' },
-        { label: 'Xi vs t', hint: 'X', keys: ['x'] },
-        { label: 'Numerics…', hint: 'U', keys: ['u'], page: 'numerics' },
-        { label: 'AUTO', hint: 'F A', keys: ['f', 'a'] },
-        { label: 'Calculator', hint: 'F C', keys: ['f', 'c'] },
-        { label: 'Tips', hint: 'touch help', fn: () => this.showTips() },
-        ...common,
-      ],
+      main: [], // built from the user's list (cmdList), see buildMain
       numerics: [
         num('Total', 't', true), num('Start time', 's', true), num('Transient', 'r', true),
         num('Dt', 'd', true), num('Method', 'm'), num('nOutput', 'o', true),
@@ -139,7 +169,8 @@ export class MobileUI {
         ...common,
       ],
     }
-    this.renderPage('main')
+    this.loadList()
+    this.buildMain()
 
     // key strip: keys phone keyboards lack, plus a button for the keyboard
     this.keys = document.createElement('div')
@@ -269,11 +300,189 @@ export class MobileUI {
 
   private fitViewport: () => void = () => {}
 
-  /** add a command to the Cmd panel's main page (before Esc/Enter/Keyboard) */
-  addCommand(label: string, hint: string, fn: () => void) {
-    const main = this.pages.main
-    main.splice(main.findIndex((c) => c.label === 'Esc'), 0, { label, hint, fn })
+  // ---- the user's Cmd panel: a list kept as text ("Label = keys" lines) ----
+  private common: Cmd[] = []
+  private features: Record<string, { label: string; hint: string; fn: () => void; page?: string }> = {
+    tips: { label: 'Tips', hint: 'touch help', fn: () => this.showTips() },
+    numerics: { label: 'Numerics…', hint: 'U', fn: () => {}, page: 'numerics' },
+  }
+  private list: Shortcut[] = []
+  /** opens the full command list (set by the page: src/cmdlib.ts) */
+  openLibrary: () => void = () => {}
+
+  /** a page feature the list can name as @id (Sliders, Share graph, ...) */
+  addFeature(id: string, label: string, hint: string, fn: () => void) {
+    this.features[id] = { label, hint, fn }
+    this.buildMain()
+  }
+
+  featureList(): Array<{ id: string; label: string; hint: string }> {
+    return Object.entries(this.features).map(([id, f]) => ({ id, label: f.label, hint: f.hint }))
+  }
+
+  /** the shortcuts in the Cmd panel, in order (Integrate always among them) */
+  shortcuts(): Shortcut[] {
+    return this.list
+  }
+
+  /** text form of the list, for editing */
+  listText(list = this.list): string {
+    return list.map((c) => `${c.label} = ${c.feature ? '@' + c.feature : (c.to ? 'auto: ' : '') + c.keys}`).join('\n')
+  }
+
+  /** read a list from text; returns [list, problems] (nothing applied) */
+  parseList(text: string, strict = true): [Shortcut[], string[]] {
+    const out: Shortcut[] = []
+    const problems: string[] = []
+    text.split(/\r?\n/).forEach((raw, i) => {
+      const line = raw.replace(/#.*$/, '').trim()
+      if (!line) return
+      const eq = line.lastIndexOf('=')
+      const label = eq > 0 ? line.slice(0, eq).trim() : ''
+      let rhs = eq > 0 ? line.slice(eq + 1).trim() : ''
+      if (!label || !rhs) return problems.push(`Line ${i + 1}: write it as  Label = keys  (e.g. Fit = w f)`)
+      if (rhs.startsWith('@')) {
+        const id = rhs.slice(1).trim()
+        if (strict && !this.features[id]) return problems.push(`Line ${i + 1}: there is no @${id} (use one of ${Object.keys(this.features).map((f) => '@' + f).join(' ')})`)
+        return out.push({ label, feature: id })
+      }
+      let to: 'auto' | undefined
+      if (/^auto\s*:/i.test(rhs)) {
+        to = 'auto'
+        rhs = rhs.replace(/^auto\s*:/i, '').trim()
+      }
+      if (!parseKeys(rhs).length) return problems.push(`Line ${i + 1}: no keys after "="`)
+      out.push({ label, keys: parseKeys(rhs).map((k) => (k.length > 1 ? k.replace('Arrow', '').replace('Escape', 'Esc') : k)).join(' '), to })
+    })
+    out.splice(0, out.length, ...withLocked(out))
+    if (out.length > CMD_MAX) problems.push(`The Cmd panel holds ${CMD_MAX} commands; this list has ${out.length}. Remove ${out.length - CMD_MAX}.`)
+    return [out, problems]
+  }
+
+  /** set the list (from the text editor or the command list); null if fine */
+  setList(list: Shortcut[]): string | null {
+    list = withLocked(list)
+    if (list.length > CMD_MAX) return `The Cmd panel holds ${CMD_MAX} commands (Integrate and Sliders included). Remove one first.`
+    try {
+      const old = localStorage.getItem(CMD_KEY)
+      if (old !== null) localStorage.setItem(CMD_KEY + '-prev', old)
+      localStorage.setItem(CMD_KEY, this.listText(list))
+    } catch {
+      /* storage blocked: this visit only */
+    }
+    this.list = list
+    this.buildMain()
+    return null
+  }
+
+  defaultText(): string {
+    return DEFAULT_LIST
+  }
+
+  previousText(): string | null {
+    try {
+      return localStorage.getItem(CMD_KEY + '-prev')
+    } catch {
+      return null
+    }
+  }
+
+  /** set when the saved list could not be used (the page tells the user) */
+  listWasReset = false
+
+  private loadList() {
+    let text: string | null = null
+    try {
+      text = localStorage.getItem(CMD_KEY)
+    } catch {
+      /* storage blocked */
+    }
+    // page features (@sliders...) are added after this: do not check them yet
+    const [list, problems] = this.parseList(text ?? DEFAULT_LIST, false)
+    // anything wrong with what was saved (edited by hand, an old version...):
+    // the default panel, not a broken one; the old text stays as "Previous"
+    if (text !== null && (problems.length || list.length > CMD_MAX)) return this.resetList()
+    this.list = list
+  }
+
+  /** back to the default panel (keeps what was saved as "Previous") */
+  resetList() {
+    this.listWasReset = true
+    try {
+      const old = localStorage.getItem(CMD_KEY)
+      if (old !== null) localStorage.setItem(CMD_KEY + '-prev', old)
+      localStorage.removeItem(CMD_KEY)
+    } catch {
+      /* storage blocked */
+    }
+    this.list = this.parseList(DEFAULT_LIST, false)[0]
+    this.buildMain()
+  }
+
+  /** a shortcut or catalogue entry as a Cmd panel button */
+  private toCmd(c: Shortcut | XppCommand): Cmd {
+    if ('feature' in c && c.feature) {
+      const f = this.features[c.feature]
+      return f ? { label: c.label, hint: f.hint, fn: f.page ? undefined : f.fn, keys: f.page ? ['u'] : undefined, page: f.page } : { label: c.label, hint: '?', fn: () => {} }
+    }
+    const keys = parseKeys(c.keys ?? '')
+    const known = findCommand(c.keys ?? '', c.to)
+    return {
+      label: c.label,
+      hint: keys.map((k) => (k.length > 1 ? k.replace('Arrow', '').replace('Escape', 'Esc') : k.toUpperCase())).join(' '),
+      keys,
+      to: c.to,
+      typing: known?.typing,
+      tip: known?.tip,
+      page: known?.page,
+    }
+  }
+
+  /** run a catalogue entry or shortcut (the command list uses this) */
+  runCommand(c: Shortcut | XppCommand) {
+    this.run(this.toCmd(c))
+  }
+
+  /** the model's own buttons: XPP's  @ BUT=name:keys  options in the .ode */
+  modelButtons(): Shortcut[] {
+    const s = this.session
+    if (!s?.odeName) return []
+    let text = ''
+    try {
+      text = new TextDecoder().decode(s.readFile(s.odeName))
+    } catch {
+      return []
+    }
+    const out: Shortcut[] = []
+    for (const line of text.split(/\r?\n/)) {
+      if (!/^\s*@/.test(line)) continue
+      for (const m of line.matchAll(/\bbut\s*=\s*([^:,\s]+)\s*:\s*([^,\s]+)/gi)) out.push({ label: m[1], keys: m[2].split('').join(' ') })
+    }
+    return out.slice(0, 20) // XPP's own limit
+  }
+
+  private buildMain() {
+    let cmds: Cmd[]
+    try {
+      // a page feature this version no longer has is left out, not shown broken
+      cmds = this.list.filter((c) => !c.feature || this.features[c.feature] || !this.featuresReady).map((c) => this.toCmd(c))
+    } catch {
+      cmds = this.parseList(DEFAULT_LIST, false)[0].map((c) => this.toCmd(c))
+    }
+    this.pages.main = [...cmds, { label: 'More…', hint: 'all commands', fn: () => this.openLibrary() }, ...this.common]
     if (this.page === 'main') this.renderPage('main')
+  }
+
+  /** the page has added all its features (@sliders...): unknown ones in the
+   *  saved list are now known to be gone */
+  private featuresReady = false
+  featuresDone() {
+    this.featuresReady = true
+    if (this.list.some((c) => c.feature && !this.features[c.feature])) {
+      this.list = withLocked(this.list.filter((c) => !c.feature || this.features[c.feature]))
+      this.setList(this.list)
+    }
+    this.buildMain()
   }
 
   private pages: Record<string, Cmd[]> = {}
@@ -290,7 +499,21 @@ export class MobileUI {
       h.textContent = titles[name]
       this.cmds.append(h)
     }
-    for (const c of this.pages[name]) {
+    const model = name === 'main' ? this.modelButtons() : []
+    const items = [...this.pages[name]]
+    if (model.length) {
+      // the model's  @ BUT=  buttons, before More…/Esc/Enter/Keyboard
+      const at = items.findIndex((c) => c.label === 'More…')
+      items.splice(at, 0, { label: '', hint: '', title: 'This model' } as Cmd, ...model.map((c) => this.toCmd(c)))
+    }
+    for (const c of items) {
+      if (c.title) {
+        const h = document.createElement('div')
+        h.className = 'cmdpanel-title'
+        h.textContent = c.title
+        this.cmds.append(h)
+        continue
+      }
       const b = document.createElement('button')
       b.type = 'button'
       b.setAttribute('role', 'menuitem')
@@ -337,6 +560,7 @@ export class MobileUI {
   attach(session: XppSession) {
     this.session = session
     session.onWindowsChanged = () => this.renderTabs()
+    this.buildMain() // the model's own buttons
     session.onTwoFingerTap = () => {
       if (this.device !== 'desktop') session.pressKey('Escape')
     }
@@ -419,12 +643,12 @@ export class MobileUI {
     }
   }
 
-  private toggleCommands(on?: boolean) {
+  toggleCommands(on?: boolean) {
     const opening = on ?? !this.cmds.classList.contains('open')
     if (opening && this.session) {
       const front = this.session.windows().find((w) => w.active)
       if (front && isAuto(front.title)) this.renderPage('auto')
-      else if (this.page === 'auto') this.renderPage('main')
+      else if (this.page === 'auto' || this.page === 'main') this.renderPage('main') // fresh: the model's buttons
     }
     const open = this.cmds.classList.toggle('open', on)
     this.zoomBar.querySelector('[data-z="cmd"]')?.classList.toggle('on', open)

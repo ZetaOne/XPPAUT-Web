@@ -1743,3 +1743,194 @@ summary.round:focus-visible {
   order: 30;
   flex-basis: 100%;
 }
+
+/* ---- XPP commands: see-through side panel (src/cmdlib.ts) ------------------- */
+.cmdlib {
+  position: fixed;
+  top: 52px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 200001;
+  display: flex;
+  flex-direction: column;
+  width: min(380px, calc(100vw - 16px));
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bar) 80%, transparent);
+  color: var(--fg);
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.35);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.cmdlib[hidden] {
+  display: none;
+}
+
+.cmdlib-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 6px;
+}
+
+.cmdlib-count {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cmdlib-close {
+  margin-left: auto;
+  padding: 0 8px;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.cmdlib-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 12px 8px;
+}
+
+.cmdlib-tabs button[aria-selected='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+
+.cmdlib-list,
+.cmdlib-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 12px 12px;
+}
+
+.cmdlib-list[hidden],
+.cmdlib-text[hidden] {
+  display: none;
+}
+
+.cmdlib-search {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  font: inherit;
+}
+
+.cmdlib-body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.cmdlib-body h4 {
+  position: sticky;
+  top: 0;
+  margin: 10px 0 4px;
+  padding: 2px 0;
+  background: color-mix(in srgb, var(--bar) 92%, transparent);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cmdlib-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 3px;
+}
+
+.cmdlib-run {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
+  text-align: left;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+}
+
+.cmdlib-run small {
+  color: var(--muted);
+  font: 11px ui-monospace, monospace;
+  white-space: nowrap;
+}
+
+.cmdlib-side {
+  width: 40px;
+  font-size: 16px;
+}
+
+.cmdlib-none {
+  color: var(--muted);
+}
+
+.cmdlib-text textarea {
+  flex: 1;
+  min-height: 200px;
+  padding: 8px;
+  font: 13px/1.45 ui-monospace, monospace;
+  resize: none;
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  color: var(--fg);
+}
+
+.cmdlib-problems {
+  color: #e5534b;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+.cmdlib-foot {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  padding-top: 8px;
+}
+
+#cmdlibbtn {
+  justify-self: start;
+}
+
+.cmdlib-grip {
+  width: 30px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: grab;
+  touch-action: none; /* the finger drags the row, not the list */
+}
+
+.cmdlib-row.dragging {
+  position: relative;
+  z-index: 1;
+  opacity: 0.9;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.3);
+}
+
+.cmdlib-row.dragging .cmdlib-grip {
+  cursor: grabbing;
+}
+
+.cmdlib-row.own:not(.dragging) {
+  transition: transform 0.12s;
+}
+
+.cmdlib-body h4 {
+  display: flex;
+  align-items: center;
+}
+
+.cmdlib-reset {
+  margin-left: auto;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}

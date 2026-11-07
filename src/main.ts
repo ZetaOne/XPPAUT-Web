@@ -2,6 +2,7 @@ import './style.css'
 import { XppSession, xppBuild, type WindowImage } from './xpp'
 import { Terminal, type TerminalMode } from './terminal'
 import { download, makeZip } from './zip'
+import { CommandLibrary } from './cmdlib'
 import { MobileUI, detectDevice, watchDevice, type ViewMode } from './mobile'
 import { setupPwa } from './pwa'
 import { lockRotation, setupApp, shareFile } from './android'
@@ -74,6 +75,7 @@ app.innerHTML = `
           <label class="check" title="Open XPP's new windows as separate browser windows (allow pop-ups for this site). Any window can also be popped out with ⧉ in its title bar.">
             <input type="checkbox" id="separate"> Separate windows
           </label>
+          <button type="button" id="cmdlibbtn" title="Every XPP command: run one, or choose what the Cmd panel shows (phones and tablets)">XPP commands…</button>
           <label class="check" title="Flash the screen when XPP rings its bell (like File &gt; Bell on in XPP). Off by default.">
             <input type="checkbox" id="bellflash"> Flash on bell
           </label>
@@ -916,20 +918,27 @@ mobile.tip = notice
 const loupe = new Loupe(desktop, () => session)
 loupe.enabled = () => mobile.device !== 'desktop'
 const sliders = new SliderDrawer(desktop, () => session, notice)
-mobile.addCommand('Sliders', 'parameters', () => sliders.toggle())
-mobile.addCommand('Share graph', 'picture', () => {
+const cmdlib = new CommandLibrary(mobile, notice)
+$('cmdlibbtn').addEventListener('click', () => {
+  ;($('settings') as HTMLDetailsElement).open = false
+  cmdlib.open()
+})
+mobile.addFeature('sliders', 'Sliders', 'parameters', () => sliders.toggle())
+mobile.addFeature('share-graph', 'Share graph', 'picture', () => {
   const main = session?.windowImages().find((w) => /^XPP Ver/.test(w.title))
   if (!main) return notice('No graph to share')
   main.canvas.toBlob((b) => b && void shareFile(baseName() + '.png', b, download), 'image/png')
 })
-mobile.addCommand('Data (CSV)', 'save', async () => {
+mobile.addFeature('share-data', 'Data (CSV)', 'save', async () => {
   // written in XPP's folder: delivered like XPP's own exports (Settings -> Exports)
   const rows = await session!.writeCsv('/work/' + baseName() + '.csv')
   if (rows <= 0) notice('No data yet: integrate first')
 })
-mobile.addCommand('Share .ode', 'model', () => {
+mobile.addFeature('share-ode', 'Share .ode', 'model', () => {
   void shareFile(odeName, new Blob([session!.readFile(odeName) as BlobPart], { type: 'text/plain' }), download)
 })
+mobile.featuresDone()
+if (mobile.listWasReset) setTimeout(() => notice('Your Cmd panel could not be read, so it is back to the default.'), 1500)
 function baseName() {
   return (odeName || 'xpp').replace(/\.ode$/i, '')
 }
