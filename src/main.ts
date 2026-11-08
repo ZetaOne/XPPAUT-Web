@@ -1260,6 +1260,7 @@ async function saveSession() {
     const data = session.readFile(dir + '/' + f)
     if (f === 'state.set') files.push({ name: `${odeName}.set`, data })
     else if (f === 'data.csv') files.push({ name: 'data.csv', data })
+    else if (f === 'diagram.dat' || f === 'allinfo.dat' || f.endsWith('.auto')) files.push({ name: 'auto/' + f, data })
     else files.push({ name: 'figures/' + f, data })
   }
   const imgs = session.windowImages()
@@ -1280,6 +1281,11 @@ async function saveSession() {
         `figures/  made by XPP itself when saving: graph-1 is the main window, graph-2... the\n` +
         `          windows from Makewindow; auto-diagram is AUTO's bifurcation diagram. SVG\n` +
         `          (vector, opens in a browser or Inkscape) and PostScript (.ps) of each\n` +
+        `auto/     AUTO's data, written as its File menu would: diagram.dat (Write pts:\n` +
+        `          x y1 y2 type branch two-par-flag, as plotted), allinfo.dat (All info:\n` +
+        `          every point with all variables and eigenvalues) and <model>.auto\n` +
+        `          (Save diagram: load it back in AUTO with File -> Load diagram).\n` +
+        `          AUTO's raw results (<model>.b .d .s), if any, are in files/\n` +
         `SS/       screenshots of the XPP windows at the time of saving: one per window,\n` +
         `          00-all-windows.png with all of them as arranged on screen, and\n` +
         `          closed-*.png, the last picture of windows closed before saving\n` +

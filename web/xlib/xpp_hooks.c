@@ -214,6 +214,8 @@ EMSCRIPTEN_KEEPALIVE int xw_set_value(const char *name, double v, int ic)
 #include "load_eqn.h"
 #include <time.h>
 #include <sys/stat.h>
+#include <stdlib.h>
+#include <libgen.h>
 
 extern GRAPH graph[MAXPOP], *MyGraph;
 extern int current_pop, PS_Color, METHOD, MaxPoints;
@@ -232,6 +234,61 @@ static void auto_points(void)
     add_ps_point(d->par, d->per, d->uhi, d->ulo, d->ubar, d->norm, type, d->ntot != 1,
                  d->lab, d->nfpar, d->icp1, d->icp2, d->flag2, d->evr, d->evi);
   }
+}
+
+extern int NAutoPar;
+extern char this_auto_file[];
+int save_diagram(FILE *fp, int n);
+
+/* AUTO File > Write pts (write_pts in diagram.c), without its dialog:
+   the points of the diagram as plotted, "x y1 y2 type branch flag" */
+static int write_diagram_dat(const char *path)
+{
+  FILE *fp = fopen(path, "w");
+  if (!fp) return 0;
+  for (DIAGRAM *d = bifd; d; d = d->next) {
+    double x, y1, y2, par1 = d->par[d->icp1], par2 = 0;
+    if (d->icp2 < NAutoPar) par2 = d->par[d->icp2];
+    if (check_plot_type(d->flag2, d->icp1, d->icp2) == 1) {
+      auto_xy_plot(&x, &y1, &y2, par1, par2, d->per, d->uhi, d->ulo, d->ubar, d->norm);
+      fprintf(fp, "%g %g %g %d %d %d\n", x, y1, y2,
+              get_bif_type(d->ibr, d->ntot, d->lab), abs(d->ibr), d->flag2);
+    }
+  }
+  fclose(fp);
+  return 1;
+}
+
+/* AUTO File > All info (write_info_out in diagram.c), without its dialog */
+static int write_allinfo(const char *path)
+{
+  FILE *fp = fopen(path, "w");
+  if (!fp) return 0;
+  for (DIAGRAM *d = bifd; d; d = d->next) {
+    double par1 = d->par[d->icp1], par2 = par1;
+    if (d->icp2 < NAutoPar) par2 = d->par[d->icp2];
+    fprintf(fp, "%d %d %d %g %g %g ", get_bif_type(d->ibr, d->ntot, d->lab), d->ibr,
+            d->flag2, par1, par2, d->per);
+    for (int i = 0; i < NODE; i++) fprintf(fp, "%g ", d->uhi[i]);
+    for (int i = 0; i < NODE; i++) fprintf(fp, "%g ", d->ulo[i]);
+    for (int i = 0; i < NODE; i++) fprintf(fp, "%g %g ", d->evr[i], d->evi[i]);
+    fprintf(fp, "\n");
+  }
+  fclose(fp);
+  return 1;
+}
+
+/* AUTO File > Save diagram (save_auto in auto_nox.c), without its dialog:
+   loads back with File > Load diagram */
+static int write_auto_file(const char *path)
+{
+  FILE *fp = fopen(path, "w");
+  if (!fp) return 0;
+  save_auto_numerics(fp);
+  save_auto_graph(fp);
+  if (save_diagram(fp, NODE) == 1) save_q_file(fp);
+  fclose(fp);
+  return 1;
 }
 
 static int write_set(const char *path)
@@ -288,6 +345,13 @@ EMSCRIPTEN_KEEPALIVE int xw_export_session(const char *dir)
     snprintf(fn, sizeof fn, "%s/auto-diagram.ps", dir);
     if (ps_init(fn, PS_Color)) { draw_ps_axes(); auto_points(); ps_end(); n++; }
     set_normal_scale();
+    /* the files AUTO's File menu writes, under the names it suggests */
+    snprintf(fn, sizeof fn, "%s/diagram.dat", dir);
+    n += write_diagram_dat(fn);
+    snprintf(fn, sizeof fn, "%s/allinfo.dat", dir);
+    n += write_allinfo(fn);
+    snprintf(fn, sizeof fn, "%s/%s.auto", dir, basename(this_auto_file));
+    n += write_auto_file(fn);
   }
   snprintf(fn, sizeof fn, "%s/state.set", dir);
   n += write_set(fn);
