@@ -1261,6 +1261,7 @@ async function saveSession() {
     if (f === 'state.set') files.push({ name: `${odeName}.set`, data })
     else if (f === 'data.csv') files.push({ name: 'data.csv', data })
     else if (f === 'diagram.dat' || f === 'allinfo.dat' || f.endsWith('.auto')) files.push({ name: 'auto/' + f, data })
+    else if (f.endsWith('.dat')) files.push({ name: 'data/' + f, data })
     else files.push({ name: 'figures/' + f, data })
   }
   const imgs = session.windowImages()
@@ -1286,6 +1287,12 @@ async function saveSession() {
         `          every point with all variables and eigenvalues) and <model>.auto\n` +
         `          (Save diagram: load it back in AUTO with File -> Load diagram).\n` +
         `          AUTO's raw results (<model>.b .d .s), if any, are in files/\n` +
+        `data/     the plotted data, as XPP writes it: graph-N-curve.dat (Graphic stuff ->\n` +
+        `          Export data: x and each plotted y), graph-N-dirfield.dat (direction field\n` +
+        `          arrows: x y x_end y_end), graph-N-frozen-*.dat (frozen curves: x y),\n` +
+        `          nullclines.dat (Nullcline -> Save: short line pieces, two rows\n` +
+        `          "x y k" each, k = 1 for the x-nullcline, 2 for the y-nullcline) and\n` +
+        `          nullclines-frozen-K.dat (frozen sets)\n` +
         `SS/       screenshots of the XPP windows at the time of saving: one per window,\n` +
         `          00-all-windows.png with all of them as arranged on screen, and\n` +
         `          closed-*.png, the last picture of windows closed before saving\n` +

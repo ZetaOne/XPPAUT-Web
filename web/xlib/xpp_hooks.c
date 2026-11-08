@@ -216,6 +216,7 @@ EMSCRIPTEN_KEEPALIVE int xw_set_value(const char *name, double v, int ic)
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <libgen.h>
+#include <ctype.h>
 
 extern GRAPH graph[MAXPOP], *MyGraph;
 extern int current_pop, PS_Color, METHOD, MaxPoints;
@@ -313,6 +314,96 @@ static int write_set(const char *path)
   return 1;
 }
 
+#include "nullcline.h"
+#include <unistd.h>
+extern int NULL_HERE, num_x_n, num_y_n, n_nstore, DF_FLAG, DFSuppress, PltFmtFlag;
+extern float *X_n, *Y_n;
+extern NCLINES *ncperm;
+extern CURVE frz[MAXFRZ];
+
+static int empty_file(const char *path)
+{
+  struct stat st;
+  if (stat(path, &st) == 0 && st.st_size > 0) return 0;
+  unlink(path);
+  return 1;
+}
+
+/* the data of graph window i, as XPP writes it (the window must be the
+   current one): Graphic stuff > Export data, the direction field arrows
+   and the frozen curves */
+static int write_graph_data(const char *dir, int i)
+{
+  char fn[1024];
+  int n = 0;
+  FILE *fp;
+  /* Export data: x and each plotted y (x y z for a 3D view) */
+  snprintf(fn, sizeof fn, "%s/graph-%d-curve.dat", dir, i + 1);
+  if ((fp = fopen(fn, "w"))) {
+    export_data(fp);
+    fclose(fp);
+    if (!empty_file(fn)) n++;
+  }
+  /* direction field arrows "x y x_end y_end": XPP writes them to
+     dirfields.dat in the current folder, so do that inside dir */
+  if ((DF_FLAG == 1 || DF_FLAG == 4) && PltFmtFlag == 0) {
+    char cwd[1024];
+    if (getcwd(cwd, sizeof cwd) && chdir(dir) == 0) {
+      DFSuppress = 1;
+      redraw_dfield();
+      DFSuppress = 0; /* redraw_dfield leaves it set when the field does not apply */
+      snprintf(fn, sizeof fn, "graph-%d-dirfield.dat", i + 1);
+      if (rename("dirfields.dat", fn) == 0 && !empty_file(fn)) n++;
+      if (chdir(cwd) != 0) chdir("/");
+    }
+  }
+  /* frozen curves of this window: x y (x y z for 3D) */
+  for (int k = 0; k < MAXFRZ; k++) {
+    CURVE *c = &frz[k];
+    if (c->use != 1 || c->w != graph[i].w || c->len <= 0) continue;
+    char name[16];
+    int m = 0;
+    for (const char *s = c->name; *s && m < 10; s++)
+      name[m++] = (isalnum((unsigned char)*s) || *s == '-') ? *s : '_';
+    name[m] = 0;
+    snprintf(fn, sizeof fn, "%s/graph-%d-frozen-%02d%s%s.dat", dir, i + 1, k + 1, m ? "-" : "", name);
+    if (!(fp = fopen(fn, "w"))) continue;
+    for (int j = 0; j < c->len; j++) {
+      if (c->type > 0 && c->zv) fprintf(fp, "%g %g %g\n", c->xv[j], c->yv[j], c->zv[j]);
+      else fprintf(fp, "%g %g\n", c->xv[j], c->yv[j]);
+    }
+    fclose(fp);
+    n++;
+  }
+  return n;
+}
+
+/* Nullcline > Save (save_the_nullclines), without its dialogs: the current
+   nullclines, and each frozen set as nullclines-frozen-K.dat */
+static int write_nullclines(const char *dir)
+{
+  char fn[1024];
+  int n = 0;
+  FILE *fp;
+  if (!NULL_HERE) return 0;
+  snprintf(fn, sizeof fn, "%s/nullclines.dat", dir);
+  if ((fp = fopen(fn, "w"))) {
+    dump_clines(fp, X_n, num_x_n, Y_n, num_y_n);
+    fclose(fp);
+    if (!empty_file(fn)) n++;
+  }
+  if (n_nstore == 0) return n;
+  int k = 1;
+  for (NCLINES *z = ncperm; z && (z->nmx || z->nmy); z = z->n, k++) {
+    snprintf(fn, sizeof fn, "%s/nullclines-frozen-%d.dat", dir, k);
+    if (!(fp = fopen(fn, "w"))) break;
+    dump_clines(fp, z->xn, z->nmx, z->yn, z->nmy);
+    fclose(fp);
+    n++;
+  }
+  return n;
+}
+
 EMSCRIPTEN_KEEPALIVE int xw_export_session(const char *dir)
 {
   char fn[1024];
@@ -333,7 +424,11 @@ EMSCRIPTEN_KEEPALIVE int xw_export_session(const char *dir)
     get_draw_area();
     snprintf(fn, sizeof fn, "%s/graph-%d.ps", dir, i + 1);
     if (ps_init(fn, PS_Color)) { ps_restore(); n++; }
+    get_draw_area();
+    n += write_graph_data(dir, i);
   }
+  /* the nullclines (Nullcline > Save), current set and frozen ones */
+  n += write_nullclines(dir);
   draw_win = keep;
   MyGraph = &graph[cp];
   current_pop = cp;
