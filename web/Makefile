@@ -46,7 +46,7 @@ EMCC ?= emcc
 # called by the page (src/xpp.ts)
 XW_EXPORTS := _xw_render,_xw_toplevels,_xw_toplevel_dirty,_xw_title,_xw_toplevel_info,_xw_input_motion,_xw_input_button,_xw_input_key,_xw_input_configure,_xw_input_close,_xw_input_raise
 # touch controls (xlib/xpp_hooks.c)
-XW_EXPORTS := $(XW_EXPORTS),_xw_graph_xy,_xw_params,_xw_slider_setup,_xw_slider_where,_xw_slider_info,_xw_write_csv,_xw_set_value
+XW_EXPORTS := $(XW_EXPORTS),_xw_graph_xy,_xw_params,_xw_slider_setup,_xw_slider_where,_xw_slider_info,_xw_write_csv,_xw_set_value,_xw_export_session
 # XPP's event loops block in XNextEvent; the browser needs them to yield.
 # Asyncify instruments the code (works everywhere, ~1.5-2x slower); JSPI
 # lets the engine suspend wasm (native speed, needs WebAssembly.Suspending).

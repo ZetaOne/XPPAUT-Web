@@ -526,9 +526,10 @@ export class XppSession {
       let p = this.panels.get(id);
       const isNew = !p;
       if (!p) p = this.makePanel(id);
+      const title = m.UTF8ToString(m._xw_title(id)) || 'XPP';
+      if (p.mapped && !mapped) this.keepClosed(p, title);
       p.mapped = !!mapped;
       if (mapped) this.shown = true;
-      const title = m.UTF8ToString(m._xw_title(id)) || 'XPP';
       p.title.textContent = title;
       if (mapped && !p.placed) {
         // first time shown: keep the title bar on screen, cascade windows
@@ -563,6 +564,7 @@ export class XppSession {
     }
     for (const [id, p] of this.panels)
       if (!seen.has(id)) {
+        if (p.mapped) this.keepClosed(p, p.title.textContent || 'XPP');
         const w = p.popup;
         p.popup = null;
         w?.close();
@@ -1028,6 +1030,61 @@ export class XppSession {
 
   /** pictures of the windows at the moment XPP quit */
   private lastImages: WindowImage[] = [];
+
+  /** the last picture of each window XPP closed (AUTO, extra graph windows),
+      by title, for Save session */
+  private closedShots = new Map<string, WindowImage>();
+
+  private keepClosed(p: Panel, title: string): void {
+    // not XPP's small question boxes ("!!") or empty windows
+    if (!/[A-Za-z0-9]/.test(title) || p.canvas.width < 50 || p.canvas.height < 50) return;
+    const c = document.createElement('canvas');
+    c.width = p.canvas.width;
+    c.height = p.canvas.height;
+    c.getContext('2d')!.drawImage(p.canvas, 0, 0);
+    this.closedShots.set(title, { title, x: p.x, y: p.y, canvas: c });
+  }
+
+  /** pictures of windows that were closed and are not open now */
+  closedImages(): WindowImage[] {
+    const open = new Set(this.windowImages().map((w) => w.title));
+    return [...this.closedShots.values()].filter((w) => !open.has(w.title));
+  }
+
+  /** XPP's own exports into dir (graphs and AUTO diagram as SVG and
+      PostScript, state.set, data.csv; xw_export_session in
+      web/xlib/xpp_hooks.c). Resolves to the number of files, or -1 when XPP
+      did not get to it in time (busy computing). */
+  exportSession(dir: string): Promise<number> {
+    if (!this.running) return Promise.resolve(-1);
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => resolve(-1), 4000);
+      this.queue(() => {
+        const m = this.mod;
+        try {
+          for (const f of this.readDir(dir)) m.FS.unlink(dir + '/' + f);
+        } catch {
+          /* first time */
+        }
+        const buf = m._malloc(dir.length * 4 + 1);
+        m.stringToUTF8(dir, buf, dir.length * 4 + 1);
+        const n = m._xw_export_session(buf);
+        m._free(buf);
+        clearTimeout(timer);
+        resolve(n);
+      });
+    });
+  }
+
+  /** the files in a folder of XPP's file system (none if it does not exist) */
+  readDir(dir: string): string[] {
+    const FS = this.mod.FS;
+    try {
+      return FS.readdir(dir).filter((n: string) => n !== '.' && n !== '..' && FS.isFile(FS.stat(dir + '/' + n).mode));
+    } catch {
+      return [];
+    }
+  }
 
   private exited(status: number): void {
     // keep copies of what was on screen, for "Save session" after quitting

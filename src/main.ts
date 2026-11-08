@@ -81,7 +81,7 @@ app.innerHTML = `
           </label>
         </div>
       </details>
-      <button id="savesession" title="Download a .zip with everything XPP saved, screenshots of the open windows (SS folder) and XPP's output">Save session</button>
+      <button id="savesession" title="Download a .zip with everything XPP saved, its graphs and AUTO diagram (SVG, PostScript), screenshots of the windows, the state (.set), the data and XPP's output">Save session</button>
       <button id="restart">Restart</button>
     </div>
     <button type="button" class="install" id="install" hidden title="Install XPPAUT-Web as an app: its own window and icon, and it works offline">Install</button>
@@ -634,6 +634,8 @@ function exported(path: string) {
   // AUTO's scratch files (fort.3, fort.7, ...) and its working results
   // (<model>.b/.d/.s, appended to on every run) are not exports
   if (/^fort\.\d+$/.test(name) || [odeName + '.b', odeName + '.d', odeName + '.s'].includes(name)) return
+  // the figures and state Save session asks XPP for (xw_export_session)
+  if (path.startsWith('/xw-session')) return
   // XPP sometimes reopens a file to append; deliver once it settles
   clearTimeout(pendingExports.get(path))
   pendingExports.set(path, setTimeout(() => deliverExport(path), 250))
@@ -1170,7 +1172,7 @@ function askToSave(kind: 'leave' | 'quit'): Promise<'save' | 'discard' | 'cancel
   $('leavetitle').textContent = quit ? 'XPP has quit. Save this session?' : 'Save your session first?'
   $('leavetext').textContent =
     (quit ? '' : 'This session has work that has not been saved. ') +
-    "Saving downloads a .zip file with everything XPP saved, screenshots of the open windows (in a folder named SS), and XPP's output."
+    "Saving downloads a .zip file with everything XPP saved, its graphs and AUTO diagram (SVG and PostScript), screenshots of the windows, XPP's state as a .set file, the data, and XPP's output."
   $('leavecancel').hidden = quit
   $('leavediscard').textContent = quit ? "Don't save" : 'Continue without saving'
   $('leavesave').textContent = quit ? 'Save session' : 'Save and continue'
@@ -1246,12 +1248,28 @@ async function saveSession() {
       /* gone */
     }
   }
+  // XPP's own exports: every graph window and the AUTO diagram (SVG and
+  // PostScript), the state as a .set file, the data as CSV. While XPP runs it
+  // writes them now; after it quit, they were written just before quitting.
+  let dir = '/xw-session-quit'
+  if (session.running) {
+    dir = '/xw-session'
+    if ((await session.exportSession(dir)) < 0) notice('XPP is busy: figures from XPP left out, screenshots kept')
+  }
+  for (const f of session.readDir(dir)) {
+    const data = session.readFile(dir + '/' + f)
+    if (f === 'state.set') files.push({ name: `${odeName}.set`, data })
+    else if (f === 'data.csv') files.push({ name: 'data.csv', data })
+    else files.push({ name: 'figures/' + f, data })
+  }
   const imgs = session.windowImages()
   let n = 1
   // SS/: screenshots of the windows as they are now (or were when XPP quit)
   for (const i of imgs) files.push({ name: `SS/${String(n++).padStart(2, '0')}-${safe(i.title)}.png`, data: await canvasPng(i.canvas) })
   const screen = composite(imgs)
   if (screen) files.push({ name: 'SS/00-all-windows.png', data: await canvasPng(screen) })
+  // windows closed earlier (AUTO, extra graphs): their last picture
+  for (const i of session.closedImages()) files.push({ name: `SS/closed-${safe(i.title)}.png`, data: await canvasPng(i.canvas) })
   files.push({ name: 'output.txt', data: new TextEncoder().encode(terminal.text()) })
   const when = new Date()
   files.push({
@@ -1259,8 +1277,15 @@ async function saveSession() {
     data: new TextEncoder().encode(
       `XPPAUT-Web session\n\nModel: ${odeName}\nSaved: ${when.toString()}\nSite: ${location.origin + location.pathname}\n\n` +
         `files/    everything in XPP's working folder (the model, data, plots, .set files, AUTO results)\n` +
+        `figures/  made by XPP itself when saving: graph-1 is the main window, graph-2... the\n` +
+        `          windows from Makewindow; auto-diagram is AUTO's bifurcation diagram. SVG\n` +
+        `          (vector, opens in a browser or Inkscape) and PostScript (.ps) of each\n` +
         `SS/       screenshots of the XPP windows at the time of saving: one per window,\n` +
-        `          and 00-all-windows.png with all of them as arranged on screen\n` +
+        `          00-all-windows.png with all of them as arranged on screen, and\n` +
+        `          closed-*.png, the last picture of windows closed before saving\n` +
+        `${odeName}.set  XPP's state (parameters, initial conditions, numerics, graphics):\n` +
+        `          load it in XPP with File -> Read set\n` +
+        `data.csv  the data XPP holds (as in its Data Viewer)\n` +
         `output.txt XPP's terminal output\n`,
     ),
   })

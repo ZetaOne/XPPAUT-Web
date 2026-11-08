@@ -1129,6 +1129,12 @@ while(1)
 void bye_bye()
 {
    int i;
+#ifdef __EMSCRIPTEN__
+   { /* XPPAUT-Web: export figures, AUTO diagram and state for the page */
+     void xw_before_quit(void);
+     if (Xup) xw_before_quit();
+   }
+#endif
    yes_reset_auto();
    XUnloadFont(display,big_font->fid);
    XUnloadFont(display,small_font->fid);

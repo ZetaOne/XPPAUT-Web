@@ -41,8 +41,10 @@ Last). Click a preview to play the full 2-minute video.*
   separate browser window. Windows are also easier to close than on the desktop.
 - **Exports**: PostScript, SVG, data and `.set` files download automatically,
   or go to a folder you choose.
-- **Save session**: one `.zip` with all files, screenshots of every window and
-  XPP's output, offered before you restart or quit.
+- **Save session**: one `.zip` with all files, every graph window and the AUTO
+  diagram as SVG and PostScript (made by XPP itself), screenshots of every
+  window (also ones you closed), XPP's state as a `.set` file, the data as CSV
+  and XPP's output; offered before you restart or quit.
 - **Phones**: detected automatically, with touch controls
   (see [below](#phones)).
 - **Install as an app**: its own icon and window, works offline, and offers

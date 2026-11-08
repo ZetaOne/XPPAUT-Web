@@ -192,3 +192,115 @@ EMSCRIPTEN_KEEPALIVE int xw_set_value(const char *name, double v, int ic)
   redraw_ics();
   return 1;
 }
+
+/* ---- everything for the page's "Save session" ----------------------------
+ * XPP's own exports, written without its file dialogs into `dir`: each graph
+ * window as SVG and PostScript (as Graphic stuff -> SVG / Postscript would),
+ * the AUTO diagram as SVG and PostScript (as AUTO's File -> SVG / Postscript),
+ * the state as a .set file (File -> Write set) and the data as CSV. Called
+ * from the page's input queue (XPP waiting for events), and from bye_bye()
+ * just before XPP quits, while the windows and the AUTO diagram still exist.
+ * Returns the number of files written. */
+#include "struct.h"
+#include "graphics.h"
+#include "many_pops.h"
+#include "my_svg.h"
+#include "my_ps.h"
+#include "autevd.h"
+#include "lunch-new.h"
+#include "adj2.h"
+#include "arrayplot.h"
+#include "integrate.h"
+#include "load_eqn.h"
+#include <time.h>
+#include <sys/stat.h>
+
+extern GRAPH graph[MAXPOP], *MyGraph;
+extern int current_pop, PS_Color, METHOD, MaxPoints;
+extern DIAGRAM *bifd;
+void draw_svg_axes(void);
+void draw_ps_axes(void);
+void set_normal_scale(void);
+void add_ps_point(double *par, double per, double *uhigh, double *ulow, double *ubar,
+                  double a, int type, int flg, int lab, int npar, int icp1, int icp2,
+                  int flag2, double *evr, double *evi);
+
+static void auto_points(void)
+{
+  for (DIAGRAM *d = bifd; d; d = d->next) {
+    int type = get_bif_type(d->ibr, d->ntot, d->lab);
+    add_ps_point(d->par, d->per, d->uhi, d->ulo, d->ubar, d->norm, type, d->ntot != 1,
+                 d->lab, d->nfpar, d->icp1, d->icp2, d->flag2, d->evr, d->evi);
+  }
+}
+
+static int write_set(const char *path)
+{
+  FILE *fp = fopen(path, "w");
+  if (!fp) return 0;
+  time_t t = time(0);
+  fprintf(fp, "## Set file for %s on %s", this_file, ctime(&t));
+  io_int(&NEQ, fp, 0, "Number of equations and auxiliaries");
+  io_int(&NUPAR, fp, 0, "Number of parameters");
+  io_numerics(0, fp);
+  if (METHOD == 6) io_int(&MaxPoints, fp, 0, "Max points for volterra"); /* VOLTERRA */
+  io_exprs(0, fp);
+  io_graph(0, fp);
+  dump_transpose_info(fp, 0);
+  dump_h_stuff(fp, 0);
+  dump_aplot(fp, 0);
+  dump_torus(fp, 0);
+  dump_range(fp, 0);
+  dump_eqn(fp);
+  fclose(fp);
+  return 1;
+}
+
+EMSCRIPTEN_KEEPALIVE int xw_export_session(const char *dir)
+{
+  char fn[1024];
+  int n = 0;
+  mkdir(dir, 0777);
+  /* graph windows: make each the current one in turn, as XPP's expose
+     handler does, then put everything back */
+  int cp = current_pop;
+  Window keep = draw_win;
+  for (int i = 0; i < MAXPOP; i++) {
+    if (!graph[i].Use) continue;
+    current_pop = i;
+    MyGraph = &graph[i];
+    draw_win = graph[i].w;
+    get_draw_area();
+    snprintf(fn, sizeof fn, "%s/graph-%d.svg", dir, i + 1);
+    if (svg_init(fn, PS_Color)) { svg_restore(); n++; }
+    get_draw_area();
+    snprintf(fn, sizeof fn, "%s/graph-%d.ps", dir, i + 1);
+    if (ps_init(fn, PS_Color)) { ps_restore(); n++; }
+  }
+  draw_win = keep;
+  MyGraph = &graph[cp];
+  current_pop = cp;
+  get_draw_area();
+  /* the AUTO diagram, if AUTO has computed anything */
+  if (bifd && bifd->next) {
+    snprintf(fn, sizeof fn, "%s/auto-diagram.svg", dir);
+    if (svg_init(fn, PS_Color)) { draw_svg_axes(); auto_points(); svg_end(); n++; }
+    snprintf(fn, sizeof fn, "%s/auto-diagram.ps", dir);
+    if (ps_init(fn, PS_Color)) { draw_ps_axes(); auto_points(); ps_end(); n++; }
+    set_normal_scale();
+  }
+  snprintf(fn, sizeof fn, "%s/state.set", dir);
+  n += write_set(fn);
+  snprintf(fn, sizeof fn, "%s/data.csv", dir);
+  if (xw_write_csv(fn) >= 0) n++;
+  return n;
+}
+
+/* bye_bye() calls this first (xppaut/main.c): the page's Save session after
+   quitting still gets the figures, the AUTO diagram and the state */
+void xw_before_quit(void)
+{
+  extern int Xup;
+  if (!Xup) return;
+  xw_export_session("/xw-session-quit");
+}
