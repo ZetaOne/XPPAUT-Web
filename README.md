@@ -129,13 +129,13 @@ shows **Update** when a new version is published.
 
 ## Android app (in development)
 
-[**Download XPPAUT-1.2-dev.apk**](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.2-dev/XPPAUT-1.2-dev.apk)
+[**Download XPPAUT-1.3-dev.apk**](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.3-dev/XPPAUT-1.3-dev.apk)
 (13 MB, Android 10 or newer). Open it on the phone and allow installing from
 that app when Android asks. It updates an earlier version in place.
 
-The file is **12,729,159 bytes**, SHA-256
-`ebe004ace31135e7e36a1c70f1a59d2b74bc0e282d9168162c6c19085e947fe4`
-([checksum file](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.2-dev/XPPAUT-1.2-dev.apk.sha256)).
+The file is **12,734,555 bytes**, SHA-256
+`c500340749c093cc8b27e466b7e3a3110dc16b33c0f396c868e148f9c29e39cc`
+([checksum file](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.3-dev/XPPAUT-1.3-dev.apk.sha256)).
 If Android says *"package appears to be invalid"*, the download is usually
 incomplete: compare the size (Files app → Details) and download it again,
 then open it from the Files app.
@@ -147,7 +147,9 @@ then open it from the Files app.
 The website in an app, working offline, plus:
 
 - **Open with XPPAUT** for `.ode` files from other apps; files and session
-  `.zip`s are saved in **Downloads/XPPAUT**, with Share.
+  `.zip`s are saved in **Downloads/XPPAUT**, with Share. Save session there
+  holds the same as on the website: figures, AUTO's diagram and data, the
+  plotted data (curves, nullclines, direction field) and XPP's state.
 - **Back** = Esc, and the screen stays on while XPP computes.
 - **.ode editor** that checks the model with XPP's own parser as you type.
 - **Voice control (🎤)**: XPP's commands, setting values ("set gk to 2.5"),
