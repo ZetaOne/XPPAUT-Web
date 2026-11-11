@@ -163,13 +163,13 @@ shows **Update** when a new version is published.
 
 ## Android app (in development)
 
-[**Download XPPAUT-1.3-dev.apk**](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.3-dev/XPPAUT-1.3-dev.apk)
+[**Download XPPAUT-1.4-dev.apk**](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.4-dev/XPPAUT-1.4-dev.apk)
 (13 MB, Android 10 or newer). Open it on the phone and allow installing from
 that app when Android asks. It updates an earlier version in place.
 
-The file is **12,734,555 bytes**, SHA-256
-`c500340749c093cc8b27e466b7e3a3110dc16b33c0f396c868e148f9c29e39cc`
-([checksum file](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.3-dev/XPPAUT-1.3-dev.apk.sha256)).
+The file is **12,794,808 bytes**, SHA-256
+`a143d4a6254673ac6adf983ba0958df3051a215196701ee5a2d07f3863794f84`
+([checksum file](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.4-dev/XPPAUT-1.4-dev.apk.sha256)).
 If Android says *"package appears to be invalid"*, the download is usually
 incomplete: compare the size (Files app → Details) and download it again,
 then open it from the Files app.
@@ -178,7 +178,7 @@ then open it from the Files app.
 > **Voice commands are not very advanced yet**: expect some phrases to be
 > misheard or not understood.
 
-The website in an app, working offline, plus:
+The website in an app, working offline, with XPPAUT 8.1, plus:
 
 - **Open with XPPAUT** for `.ode` files from other apps; files and session
   `.zip`s are saved in **Downloads/XPPAUT**, with Share. Save session there
