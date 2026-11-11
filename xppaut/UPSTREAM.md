@@ -1,7 +1,9 @@
 # Upstream source
 
 This directory is the official XPPAUT 8.0 source release by Bard Ermentrout,
-kept unmodified so web-specific changes stay visible in git history.
+updated to XPPAUT 8.1 with the source Bard sent in November 2026 (see
+"XPPAUT 8.1" below). Upstream files are kept unmodified apart from the
+patches listed here, so web-specific changes stay visible in git history.
 
 - Source: https://sites.pitt.edu/~phase/bard/bardware/xpp/xppaut8.0.tgz
 - Archive date: 2023-11-22
@@ -56,3 +58,31 @@ fixed-point `stdfix.h` hides this, other compilers fail), hand-written
 `printf` in AUTO, and a moved `dump_params` (same as the fix above).
 
 The AUTO fix and the close handling are deliberate behaviour differences from the unpatched desktop build.
+
+### XPPAUT 8.1 (Bard Ermentrout, November 2026)
+
+Bard sent the XPPAUT 8.1 source (`xpp8p1src.tgz`, SHA-256
+450042e2cf2e88493721654c02353dfc5c028b340d2c394c1eab59a19f405194). It was merged three-way
+(XPPAUT 8.0 as imported → this directory → 8.1), so the patches above stay.
+
+New files: `periodic_ic.c` (Initialconds → Periodic), `phase_red.c`,
+`phase_red.h` (phase reduction: adjoint, isostable response, Floquet
+eigenfunction, correction B, H2), `hopf_l1.c` (first Lyapunov coefficient on
+two-parameter Hopf curves, GH points). Changed: `adj2.c`, `menudrive.c`,
+`menudrive.h`, `menus.h`, `kbs.h` (menus), `integrate.c`, `auto_nox.c`
+(Hopf colouring, GH), `gogoauto.c` (`dump_params` moved up), `auto_f2c.h`
+(no `abs` macro), `Makefile` (the new files; also `web/objects.txt`).
+
+Not taken from it, as before: `#include "stdfix.h"` instead of
+`<stdlib.h>` (its `stdfix.h` declares `malloc`, `abs`, `exit` without
+prototypes), hand-written libc declarations in `simplenet.c` and
+`delay_handle.c`, debug `printf`s (one in `auto_nox.c` printed on every AUTO
+run), and comment-only changes. Where 8.1 has a 2025 fix that is already here
+(`gogoauto.c` starting routines, `itp2`, `do_auto(...,cls,...)`), the annotated
+version here was kept.
+
+Checked: `scripts/compare-batch.sh` gives 144 SAME, 9 NOOUT (the batch results
+are unchanged); in the browser, Periodic (T = 63.7247632515 for
+`examples/xpp81/periodic-phase.ode`, as the desktop build), the adjoint and
+isostable checks it prints (Z.f = 1 to 1e-7), and the Hopf curve with two GH
+points for `examples/xpp81/hopf-gh.ode`.

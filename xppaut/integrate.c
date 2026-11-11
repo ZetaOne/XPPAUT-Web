@@ -226,6 +226,8 @@ void save_batch_shoot();
 
 int (*solver)();
 
+int periodic_ic_prepare(void);   /* periodic_ic.c */
+
 void init_ar_ic()
 {
   int i;
@@ -1262,6 +1264,14 @@ void do_init_data(int com)
   if(com==M_ID){      /* dont want to wipe out everything! */
     get_new_guesses();
     return;
+  }
+
+  if(com==M_IP){      /* (P)eriodic needs the stored trajectory, so it comes before the data are cleared */
+    if(periodic_ic_prepare()==0){
+      MyStart=oldstart;
+      return;
+    }
+    com=M_IG;         /* new initial data and total are in place: go on as for (G)o */
   }
 
  data_back();

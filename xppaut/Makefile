@@ -148,7 +148,7 @@ SOURCES = abort.c  cabs.c  delay_handle.c graf_par.c my_ps.c  simplenet.c \
 	  autlib4.c cvdiag.c eispack.c llnlmath.c pow_di.c volterra2.c \
 	  autlib5.c cvode.c  extra.c  load_eqn.c pow_ii.c worker2.c \
 	  auto_nox.c cvspgmr.c fftn.c  lunch-new.c pp_shoot.c z_abs.c \
-	  auto_x11.c d_imag.c flags.c  main.c  r_lg10.c z_exp.c \
+	  auto_x11.c d_imag.c flags.c  main.c  r_lg10.c z_exp.c periodic_ic.c hopf_l1.c phase_red.c \
 	  autpp.c  d_lg10.c form_ode.c many_pops.c read_dir.c z_log.c \
 	  axes2.c  d_sign.c gear.c  markov.c rubber.c \
 	  band.c  dae_fun.c ggets.c  menu.c  scrngif.c \
@@ -171,7 +171,7 @@ OBJECTS = abort.o  cabs.o  delay_handle.o graf_par.o my_ps.o  simplenet.o \
 	  autlib4.o cvdiag.o eispack.o llnlmath.o pow_di.o volterra2.o \
 	  autlib5.o cvode.o  extra.o  load_eqn.o pow_ii.o worker2.o \
 	  auto_nox.o cvspgmr.o fftn.o  lunch-new.o pp_shoot.o z_abs.o \
-	  auto_x11.o d_imag.o flags.o  main.o  r_lg10.o z_exp.o \
+	  auto_x11.o d_imag.o flags.o  main.o  r_lg10.o z_exp.o periodic_ic.o hopf_l1.o phase_red.o \
 	  autpp.o  d_lg10.o form_ode.o many_pops.o read_dir.o z_log.o \
 	  axes2.o  d_sign.o gear.o  markov.o rubber.o \
 	  band.o  dae_fun.o ggets.o  menu.o  scrngif.o \

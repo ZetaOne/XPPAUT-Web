@@ -144,7 +144,8 @@ char *ic_hint[]={
 "Read init data from file",
 "Type in function of 't' for t^th equation",
 "Repeated ICs using mouse ","Guess new values for DAE",
-"Integrate backwards"
+"Integrate backwards",
+"Find the period of the current orbit; start at the peak of the x-axis variable and set total to the period"
 };
 
 char *wind_hint[]={
@@ -240,12 +241,16 @@ char *bvp_hint[]={
 }; 
 
 char *adj_hint[]={
-"Compute a new adjoint function",
+"Adjoint and isostable quantities of the stable cycle through the initial conditions, with period Total",
 "Compute averaging interaction function",
-"Load computed adjoint",
-"Load computed orbit",
+"Load computed adjoint Z",
+"Load the isostable response I (the gradient of the amplitude coordinate)",
+"Load the Floquet eigenfunction rho of the slowest decaying direction",
+"Load the correction B to the phase response away from the orbit",
+"Load the orbit on the grid of the adjoint",
 "Load computed interaction function",
-"Adjoint numerical parameters",
+"Second-order interaction function H2 of two coupled cells (uses the coupling of Make H; needs I, rho and B)",
+"Grid steps for the adjoint",
 "Range over stuff to computte many adjoints"
 };
 

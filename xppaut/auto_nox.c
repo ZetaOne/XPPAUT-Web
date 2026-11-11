@@ -152,6 +152,9 @@ int LPc=20;
 int LPP_color=0;
 int LPE_color=20;
 int HB_color=28;
+int HB_sub_color=29;  /* two-parameter Hopf curve where the first Lyapunov coefficient is positive (subcritical): purple. Supercritical keeps HB_color */
+int hopf_curve_point(int first,const double *par,const double *u,int icp1,int icp2,const char *name1,const char *name2,int *sign,double *frac);
+int hopf_curve_sign(const double *par,const double *u,int icp1,int icp2);
 int TR_color=26;
 int PD_color=23;
 int BR_color=27;
@@ -1143,7 +1146,7 @@ void add_ps_point(par,per,uhigh,ulow,ubar,a,type,flg,lab,npar,icp1,icp2,flag2,
 
     if(PS_Color){
       set_linestyle(1);
-      if(flag2>0)pscolset2(flag2);
+      if(flag2>0){pscolset2(flag2);if(flag2==HB2&&METHOD!=DISCRETE&&hopf_curve_sign(par,ubar,icp1,icp2)>0)set_linestyle(HB_sub_color-19);}
     }
     else 
       set_linestyle(8);
@@ -1158,7 +1161,7 @@ void add_ps_point(par,per,uhigh,ulow,ubar,a,type,flg,lab,npar,icp1,icp2,flag2,
     else
       {
 	pscolset2(flag2);
-      
+	if(flag2==HB2&&METHOD!=DISCRETE&&hopf_curve_sign(par,ubar,icp1,icp2)>0)set_linestyle(HB_sub_color-19);
       }
     line_abs((float)x,(float)y1,(float)Auto.lastx,(float)Auto.lasty);
     break;
@@ -1242,6 +1245,8 @@ void add_point(par,per,uhigh,ulow,ubar,a,type,flg,lab,npar,icp1,icp2,icp3,icp4,f
 {
   double x,y1,y2,par1,par2=0;
   int ix,iy1,iy2,type1=type;
+  int hbsign=0,hbgh=0;   /* first Lyapunov coefficient on a two-parameter Hopf curve: its sign, and whether it changed sign here (GH) */
+  double hbfrac=0.0;
   char bob[5];
   sprintf(bob,"%d",lab);
   par1=par[icp1];
@@ -1269,6 +1274,8 @@ if(flag2>0&&Auto.plot!=P_P){ /* two parameter and not in two parameter plot, jus
 
  if((flag2>0)&&(Auto.plot==P_P))
    type1=CSEQ;
+ if(flag2==HB2&&Auto.plot==P_P&&METHOD!=DISCRETE&&icp1==Auto.icp1&&Auto.icp2==icp2)
+   hbgh=hopf_curve_point(flg==0,par,ubar,icp1,icp2,upar_names[AutoPar[icp1]],upar_names[AutoPar[icp2]],&hbsign,&hbfrac);
  switch(type1){
   
   case CSEQ:
@@ -1277,7 +1284,7 @@ if(flag2>0&&Auto.plot!=P_P){ /* two parameter and not in two parameter plot, jus
     if(flag2>0&&Auto.icp2!=icp2)break;
     LineWidth(2);
     colset(type);
-    if(flag2>0)colset2(flag2);
+    if(flag2>0){colset2(flag2);if(hbsign>0)autocol(HB_sub_color);}
     auto_line(x,y1,Auto.lastx,Auto.lasty);
     autobw();
     break;
@@ -1287,7 +1294,7 @@ if(flag2>0&&Auto.plot!=P_P){ /* two parameter and not in two parameter plot, jus
     if(flag2>0&&Auto.icp2!=icp2)break;
     LineWidth(1);
         colset(type);
-	if(flag2>0)colset2(flag2);
+	if(flag2>0){colset2(flag2);if(hbsign>0)autocol(HB_sub_color);}
     auto_line(x,y1,Auto.lastx,Auto.lasty);
     autobw();
     break;
@@ -1296,7 +1303,7 @@ if(flag2>0&&Auto.plot!=P_P){ /* two parameter and not in two parameter plot, jus
     if(flag2>0&&Auto.icp2!=icp2)break;
     LineWidth(1);
         colset(type);
-	if(flag2>0)colset2(flag2);
+	if(flag2>0){colset2(flag2);if(hbsign>0)autocol(HB_sub_color);}
     if(chk_auto_bnds(ix,iy1))Circle(ix,iy1,3);
     if(chk_auto_bnds(ix,iy2))Circle(ix,iy2,3);
     autobw();
@@ -1306,7 +1313,7 @@ if(flag2>0&&Auto.plot!=P_P){ /* two parameter and not in two parameter plot, jus
     if(flag2>0&&Auto.icp2!=icp2)break;
     LineWidth(1);
         colset(type);
-	if(flag2>0)colset2(flag2);
+	if(flag2>0){colset2(flag2);if(hbsign>0)autocol(HB_sub_color);}
     if(chk_auto_bnds(ix,iy1))FillCircle(ix,iy1,3);
     if(chk_auto_bnds(ix,iy2))FillCircle(ix,iy2,3);
     autobw();
@@ -1327,6 +1334,16 @@ if(flag2>0&&Auto.plot!=P_P){ /* two parameter and not in two parameter plot, jus
     }
   }
 
+  if(hbgh){   /* a generalised Hopf point lies between the previous point and this one */
+    double xm=Auto.lastx+hbfrac*(x-Auto.lastx),ym=Auto.lasty+hbfrac*(y1-Auto.lasty);
+    int ixm=IXVal(xm),iym=IYVal(ym);
+    if(chk_auto_bnds(ixm,iym)){
+      LineWidth(1);
+      autocol(0);
+      FillCircle(ixm,iym,4);
+      ATEXT(ixm+8,iym-8,"GH");
+    }
+  }
   Auto.lastx=x;
   Auto.lasty=y1;
    plot_stab(evr,evi,NODE);

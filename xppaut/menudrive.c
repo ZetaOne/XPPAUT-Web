@@ -388,7 +388,7 @@ void run_the_commands(int com)
   
   
   if(com>=M_V2&&com<=M_VT)change_view_com(com-M_V2);
-  if(com>=M_UAN&&com<=M_UAR)make_adj_com(com-M_UAN);
+  if((com>=M_UAN&&com<=M_UAR)||(com>=M_UAI&&com<=M_UAB)||com==M_UA2)make_adj_com(com-M_UAN);
   if(com>=M_UCN&&com<=M_UCA)set_col_par_com(com-M_UCN);
   if(com>=M_UPN&&com<=M_UPP)get_pmap_pars_com(com-M_UPN);
   if(com>=M_UHN&&com<=M_UH2)do_stochast_com(com-M_UHN);
@@ -448,15 +448,17 @@ void set_col_par()
 void make_adj()
 {
  Window temp=main_win;
- static char *n[]={"(N)ew adj","(M)ake H","(A)djoint","(O)rbit","(H)fun","(P)arameters","(R)ange"};
- static char key[]="nmaohpr";
+ /* shown in this order; the command number is the position of the key in cmdkey (as the keyboard shortcuts in kbs.h expect) */
+ static char *n[]={"(N)ew adj","(M)ake H","(A)djoint","(I)sostable","(F)loquet rho","(B)correction","(O)rbit","(H)fun","(2) H2","(P)arameters","(R)ange"};
+ static char key[]="nmaifboh2pr";
+ static char cmdkey[]="nmaohprifb   2";   /* index = command number - M_UAN; the blanks are numbers used by other menus */
  char ch;
  int i;
- ch=(char)pop_up_list(&temp,"Adjoint",n,key,7,10,0,10,11*DCURY+8,adj_hint,
+ ch=(char)pop_up_list(&temp,"Adjoint",n,key,11,13,0,10,11*DCURY+8,adj_hint,
 		      info_pop,info_message);
- for(i=0;i<7;i++)
-   if(ch==key[i])break;
- if(i>=0&&i<7)
+ for(i=0;i<14;i++)
+   if(ch!=' '&&ch==cmdkey[i])break;
+ if(i>=0&&i<14)
    run_the_commands(M_UAN+i);
 }
 
@@ -834,16 +836,16 @@ void ini_data_menu()
 Window temp=main_win;
  static char *n[]={"(R)ange","(2)par range","(L)ast","(O)ld","(G)o","(M)ouse","(S)hift","(N)ew",
 		    "s(H)oot","(F)ile","form(U)la","m(I)ce","DAE guess",
-  "(B)ackward"};
-  static char key[]="r2logmsnhfuidb";
+  "(B)ackward","(P)eriodic"};
+  static char key[]="r2logmsnhfuidbp";
   char ch;
-  ch= (char)pop_up_list(&temp,"Integrate",n,key,14,13,3,10,3*DCURY+8,
+  ch= (char)pop_up_list(&temp,"Integrate",n,key,15,13,3,10,3*DCURY+8,
 			ic_hint,info_pop,info_message);
 
  if(ch==27)
     return;
    
-  for(i=0;i<14;i++){
+  for(i=0;i<15;i++){
     if(ch==key[i])
       break;
   }

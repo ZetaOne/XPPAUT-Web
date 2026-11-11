@@ -9,7 +9,7 @@ up to date when a step is finished or a decision is made.
 
 Conventions:
 
-- `xppaut/` is upstream XPPAUT 8.0. Keep edits minimal, mark each with an
+- `xppaut/` is upstream XPPAUT 8.1 (8.0 plus Bard's 8.1 source). Keep edits minimal, mark each with an
   `XPPAUT-Web:` comment, and list it in the Patches table in
   `xppaut/UPSTREAM.md`.
 - Check any change to the C build with
