@@ -58,6 +58,30 @@ interface Panel {
   x: number; // XPP's idea of the window's position (root coordinates)
   y: number;
   popup: Window | null; // separate browser window, when popped out
+  text: string; // what a small result window says (see noteText)
+}
+
+/** XPP's small windows that show results: messages (period, errors, ...)
+    and the Equilibria window of Sing pts */
+const RESULT_WINDOW = /^(!!|Equilibria)$/
+const TEXT_MAX = 16384
+
+/** the window's text without the labels of its buttons (OK, Close, ...);
+    XPP draws buttons a pixel or two off the text's baseline, so they can end
+    up anywhere in a line */
+function withoutButtons(text: string): string {
+  return text
+    .split('\n')
+    .map((line) => line.replace(/(^|\s)(OK|Ok|Close|Import|Cancel|YES|NO)(?=\s|$)/g, '$1').replace(/^\s+|\s+$/g, ''))
+    .filter((line) => line)
+    .join('\n')
+}
+
+/** a result window's text, as logged for summary.txt */
+export interface ResultText {
+  time: Date
+  title: string
+  text: string
 }
 
 /** Which WebAssembly build this browser should run: JSPI where the engine
@@ -499,7 +523,43 @@ export class XppSession {
       }
       const data = new ImageData(new Uint8ClampedArray(m.HEAPU8.buffer, ptr, w * h * 4).slice(), w, h);
       p.ctx.putImageData(data, 0, 0);
+      const title = p.title.textContent || ''
+      if (RESULT_WINDOW.test(title)) {
+        if (!this.textPtr) this.textPtr = m._malloc(TEXT_MAX)
+        const n = m._xw_window_text(p.id, this.textPtr, TEXT_MAX)
+        this.noteText(p, title, n > 0 ? withoutButtons(m.UTF8ToString(this.textPtr, n)) : '')
+      }
     }
+  }
+
+  // ---- what XPP's small result windows said (summary.txt) ---------------
+
+  private textPtr = 0
+  private results: ResultText[] = []
+
+  /** A result window shows text: keep its latest version. A version that
+      only adds to the previous one replaces it (XPP was still writing);
+      different text logs the previous version first (the window was reused,
+      as Equilibria is for every Sing pts). */
+  private noteText(p: Panel, title: string, text: string): void {
+    if (!text || text === p.text) return
+    if (p.text && !text.startsWith(p.text)) this.logText(title, p.text)
+    p.text = text
+  }
+
+  private logText(title: string, text: string): void {
+    const last = this.results[this.results.length - 1]
+    if (last && last.title === title && last.text === text) return
+    this.results.push({ time: new Date(), title: title === '!!' ? 'Message' : title, text })
+  }
+
+  /** everything the result windows said, oldest first, including the
+      windows open now */
+  resultTexts(): ResultText[] {
+    const open = [...this.panels.values()]
+      .filter((p) => p.mapped && p.text)
+      .map((p) => ({ time: new Date(), title: p.title.textContent === '!!' ? 'Message' : p.title.textContent || '', text: p.text }))
+    return [...this.results, ...open]
   }
 
   private drainInput(): void {
@@ -528,6 +588,7 @@ export class XppSession {
       if (!p) p = this.makePanel(id);
       const title = m.UTF8ToString(m._xw_title(id)) || 'XPP';
       if (p.mapped && !mapped) this.keepClosed(p, title);
+      if (p.mapped && !mapped && p.text) { this.logText(title, p.text); p.text = '' }
       p.mapped = !!mapped;
       if (mapped) this.shown = true;
       p.title.textContent = title;
@@ -565,6 +626,7 @@ export class XppSession {
     for (const [id, p] of this.panels)
       if (!seen.has(id)) {
         if (p.mapped) this.keepClosed(p, p.title.textContent || 'XPP');
+        if (p.mapped && p.text) this.logText(p.title.textContent || '', p.text);
         const w = p.popup;
         p.popup = null;
         w?.close();
@@ -619,7 +681,7 @@ export class XppSession {
     this.world.append(el);
     const p: Panel = {
       id, el, title, canvas, grip, ctx: canvas.getContext('2d')!,
-      placed: false, mapped: false, x: 0, y: 0, popup: null,
+      placed: false, mapped: false, x: 0, y: 0, popup: null, text: '',
     };
     this.panels.set(id, p);
 
@@ -1036,8 +1098,10 @@ export class XppSession {
   private closedShots = new Map<string, WindowImage>();
 
   private keepClosed(p: Panel, title: string): void {
-    // not XPP's small question boxes ("!!") or empty windows
-    if (!/[A-Za-z0-9]/.test(title) || p.canvas.width < 50 || p.canvas.height < 50) return;
+    // XPP's message boxes ("!!") are kept as "Message" (the last one); not
+    // empty windows
+    if (title === '!!') title = 'Message';
+    if (!/[A-Za-z0-9]/.test(title) || p.canvas.width < 20 || p.canvas.height < 20) return;
     const c = document.createElement('canvas');
     c.width = p.canvas.width;
     c.height = p.canvas.height;

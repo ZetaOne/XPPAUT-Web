@@ -31,10 +31,10 @@ Last). Click a preview to play the full 2-minute video.*
 
 ## Features
 
-- **The real XPPAUT 8**: its C code compiled to WebAssembly. Windows match the
-  desktop version pixel for pixel.
+- **The real XPPAUT 8.1**: its C code compiled to WebAssembly. Windows match the
+  desktop version pixel for pixel. See [what is new in 8.1](#new-in-xppaut-81).
 - **AUTO** for steady states, periodic orbits and bifurcation diagrams.
-- **212 example models** from the XPPAUT release, or your own `.ode` file with
+- **214 example models** from the XPPAUT release and for the new 8.1 features, or your own `.ode` file with
   its `.ani`, `.tab` and `.dat` files (pick them together, or drag and drop
   them onto the page; a model whose table file is missing asks for it).
 - **Window panels**: drag, resize, close, save as PNG, or pop out into a
@@ -46,8 +46,10 @@ Last). Click a preview to play the full 2-minute video.*
   (`diagram.dat`, `allinfo.dat` and the `.auto` file, as its File menu writes
   them), the plotted data (each graph's curves, frozen curves, nullclines and
   direction field), screenshots of every window (also ones you closed), XPP's
-  state as a `.set` file, the data as CSV and XPP's output; offered before you
-  restart or quit.
+  state as a `.set` file, the data as CSV, XPP's output, and `summary.txt` with
+  what XPP's result windows said (messages such as the period, the Equilibria
+  window of Sing pts) and the results it printed; offered before you restart
+  or quit.
 - **Phones**: detected automatically, with touch controls
   (see [below](#phones)).
 - **Install as an app**: its own icon and window, works offline, and offers
@@ -56,6 +58,38 @@ Last). Click a preview to play the full 2-minute video.*
   **ten colour themes**.
 - **Fast and private**: about 0.5 MB, near-native speed, and nothing leaves
   your browser.
+
+## New in XPPAUT 8.1
+
+XPPAUT-Web runs XPPAUT 8.1, Bard Ermentrout's newest version (November 2026).
+Pick the examples under **New in XPPAUT 8.1** in the Model list to try it;
+their comments give the steps.
+
+- **Periodic orbits made easy**: **Initialconds → (P)eriodic** finds the period
+  of the cycle a run has settled onto, accurately (not limited by the stored
+  points), starts at the peak of the variable on the x-axis, and sets Total to
+  one period.
+- **Phase reduction** (**nUmerics → Averaging**): besides the adjoint (the
+  infinitesimal phase response curve), New adj now computes the **isostable
+  response** I, the slowest **Floquet eigenfunction** ρ and multiplier, and the
+  **correction B** to the phase response away from the cycle. Each can be
+  loaded and plotted, and **(2) H2** gives the second-order interaction
+  function of two coupled cells (Wilson & Ermentrout, *Phys. Rev. Lett.* 123,
+  164101, 2019).
+- **Hopf bifurcations in AUTO**: on a two-parameter Hopf curve, subcritical
+  parts are drawn in **purple** and supercritical parts in the usual colour,
+  from the first Lyapunov coefficient; **GH** marks the generalised Hopf
+  (Bautin) points where it changes sign.
+- AUTO's two-parameter fold and Hopf continuations start from the fold and
+  Hopf conditions themselves, and a few fixes.
+
+<p>
+  <img src="docs/hopf-gh.png" width="60%" alt="AUTO in XPPAUT 8.1: the Hopf curve of the Morris-Lecar model in the (i, phi) plane, purple where the Hopf bifurcation is subcritical and blue where it is supercritical, with the two generalised Hopf points marked GH">
+</p>
+
+*The Hopf curve of Morris–Lecar (`hopf-gh.ode`) in the (i, φ) plane, computed
+in XPPAUT-Web: subcritical in purple, supercritical in blue, and the two GH
+points.*
 
 ## Quick start
 

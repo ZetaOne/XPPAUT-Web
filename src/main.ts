@@ -1238,7 +1238,10 @@ function composite(imgs: WindowImage[]): HTMLCanvasElement | null {
 
 async function saveSession() {
   if (!session) return
-  const safe = (t: string) => t.replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '') || 'window'
+  // XPP's message boxes are titled "!!", its yes/no questions "!!!!"
+  const safe = (t: string) =>
+    (t === '!!' ? 'Message' : t === '!!!!' ? 'Question' : t).replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '') ||
+    'window'
   const files: Array<{ name: string; data: Uint8Array }> = []
   for (const f of session.listFiles()) files.push({ name: 'files/' + f.name, data: session.readFile(f.name) })
   for (const p of savedElsewhere) {
@@ -1273,6 +1276,22 @@ async function saveSession() {
   // windows closed earlier (AUTO, extra graphs): their last picture
   for (const i of session.closedImages()) files.push({ name: `SS/closed-${safe(i.title)}.png`, data: await canvasPng(i.canvas) })
   files.push({ name: 'output.txt', data: new TextEncoder().encode(terminal.text()) })
+  // summary.txt: what XPP's small result windows said (messages such as the
+  // period, the Equilibria window of Sing pts), oldest first
+  const results = session.resultTexts()
+  const hhmmss = (d: Date) => d.toTimeString().slice(0, 8)
+  files.push({
+    name: 'summary.txt',
+    data: new TextEncoder().encode(
+      `XPPAUT-Web session summary: the text of XPP's result windows\nModel: ${odeName}\n\n` +
+        (results.length
+          ? results.map((r) => `== ${hhmmss(r.time)}  ${r.title} ==\n${r.text}\n`).join('\n')
+          : '(XPP showed no result windows in this session)\n') +
+        // what XPP printed after starting (eigenvalues of Sing pts, the
+        // period, the adjoint's checks, AUTO's messages); all of it is in output.txt
+        `\n== XPP's printed results (its terminal after start-up) ==\n${printedResults(terminal.text())}`,
+    ),
+  })
   const when = new Date()
   files.push({
     name: 'README.txt',
@@ -1299,7 +1318,11 @@ async function saveSession() {
         `${odeName}.set  XPP's state (parameters, initial conditions, numerics, graphics):\n` +
         `          load it in XPP with File -> Read set\n` +
         `data.csv  the data XPP holds (as in its Data Viewer)\n` +
-        `output.txt XPP's terminal output\n`,
+        `output.txt XPP's terminal output\n` +
+        `summary.txt the text of XPP's result windows (messages such as the period of\n` +
+        `          Initialconds -> Periodic, the Equilibria window of Sing pts), oldest\n` +
+        `          first; SS/ has a picture of the last of each (closed-Message.png,\n` +
+        `          closed-Equilibria.png)\n`,
     ),
   })
   const p2 = (n: number) => String(n).padStart(2, '0')
@@ -1307,6 +1330,18 @@ async function saveSession() {
   download(`${odeName.replace(/\.ode$/, '')}-session-${stamp}.zip`, makeZip(files))
   unsaved = false
   notice('Session saved')
+}
+
+/** XPP's terminal output after its start-up lines (the model summary and
+    the copyright and colour lines) */
+function printedResults(text: string): string {
+  const lines = text.split('\n')
+  let start = 0
+  lines.forEach((l, i) => {
+    if (/^XPPAUT [\d.]+ Copyright|colormap|TrueColor visual/.test(l.trim())) start = i + 1
+  })
+  const rest = lines.slice(start).join('\n').trim()
+  return rest ? rest + '\n' : '(nothing)\n'
 }
 
 $('savesession').addEventListener('click', () => void saveSession())

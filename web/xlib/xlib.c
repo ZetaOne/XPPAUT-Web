@@ -78,7 +78,106 @@ static void free_drawable(xw_drawable *d)
   free(d->children);
   free(d->title);
   free(d->bg_tile);
+  free(d->texts);
   free(d);
+}
+
+/* ---- text kept per window, so the page can read what a window says ------- */
+
+static void text_remember(xw_drawable *w, int x, int y, int cw, const char *s, int n)
+{
+  if (n <= 0) return;
+  if (n >= (int)sizeof w->texts[0].s) n = (int)sizeof w->texts[0].s - 1;
+  xw_text_item *t = NULL;
+  for (int i = 0; i < w->ntexts; i++) /* redrawn at the same place: replace */
+    if (w->texts[i].x == x && w->texts[i].y == y) { t = &w->texts[i]; break; }
+  if (!t) {
+    if (w->ntexts >= 400) return;
+    if (w->ntexts == w->cap_texts) {
+      w->cap_texts = w->cap_texts ? 2 * w->cap_texts : 8;
+      w->texts = realloc(w->texts, (size_t)w->cap_texts * sizeof *w->texts);
+    }
+    t = &w->texts[w->ntexts++];
+  }
+  t->x = (short)x;
+  t->y = (short)y;
+  t->cw = (short)cw;
+  memcpy(t->s, s, n);
+  t->s[n] = 0;
+}
+
+static void text_forget(xw_drawable *w, int x, int y, int width, int height)
+{
+  if (width <= 0) width = w->width - x;
+  if (height <= 0) height = w->height - y;
+  int k = 0;
+  for (int i = 0; i < w->ntexts; i++) {
+    xw_text_item *t = &w->texts[i];
+    int inside = t->x >= x && t->x < x + width && t->y - 2 >= y && t->y - 2 < y + height;
+    if (!inside) w->texts[k++] = *t;
+  }
+  w->ntexts = k;
+}
+
+typedef struct { int x, y, cw; const char *s; } text_at;
+
+static void text_collect(xw_drawable *w, int ox, int oy, text_at **a, int *n, int *cap)
+{
+  if (!w->mapped) return;
+  for (int i = 0; i < w->ntexts; i++) {
+    if (*n == *cap) {
+      *cap = *cap ? 2 * *cap : 64;
+      *a = realloc(*a, (size_t)*cap * sizeof **a);
+    }
+    (*a)[(*n)++] = (text_at){ox + w->texts[i].x, oy + w->texts[i].y, w->texts[i].cw, w->texts[i].s};
+  }
+  for (int i = 0; i < w->nchildren; i++) {
+    xw_drawable *c = w->children[i];
+    text_collect(c, ox + c->x + c->border_width, oy + c->y + c->border_width, a, n, cap);
+  }
+}
+
+static int text_cmp(const void *p, const void *q)
+{
+  const text_at *a = p, *b = q;
+  if (a->y != b->y) return a->y - b->y;
+  return a->x - b->x;
+}
+
+/* The text shown in top-level window win, as lines (strings on about the same
+   baseline form a line, placed at their columns). Returns the length. */
+int xw_window_text(Window win, char *out, int max)
+{
+  xw_drawable *w = xw_lookup(win);
+  int len = 0;
+  if (max > 0) out[0] = 0;
+  if (!w || !w->is_window || max < 2) return 0;
+  text_at *a = NULL;
+  int n = 0, cap = 0;
+  text_collect(w, 0, 0, &a, &n, &cap);
+  qsort(a, n, sizeof *a, text_cmp);
+  for (int i = 0; i < n;) {
+    int y = a[i].y, col = 0, j = i;
+    char line[1024];
+    int ll = 0;
+    for (; j < n && a[j].y - y <= 3; j++) { /* one line, by x */
+      int want = a[j].cw > 0 ? a[j].x / a[j].cw : 0;
+      if (ll > 0 && want <= col) want = col + 1; /* keep words apart */
+      while (col < want && ll < (int)sizeof line - 1) { line[ll++] = ' '; col++; }
+      for (const char *s = a[j].s; *s && ll < (int)sizeof line - 1; s++) { line[ll++] = *s; col++; }
+    }
+    int start = 0;
+    while (start < ll && line[start] == ' ') start++;
+    if (len + (ll - start) + 2 < max && ll > start) {
+      memcpy(out + len, line + start, ll - start);
+      len += ll - start;
+      out[len++] = '\n';
+      out[len] = 0;
+    }
+    i = j;
+  }
+  free(a);
+  return len;
 }
 
 static void resize_buffer(xw_drawable *d, int w, int h)
@@ -1132,7 +1231,10 @@ int XClearWindow(Display *d, Window win)
   if (tracing()) fprintf(stderr, "xlib: XClearWindow 0x%lx\n", win);
   (void)d;
   xw_drawable *w = xw_lookup(win);
-  if (w && w->is_window) xw_clear_area(w, 0, 0, 0, 0);
+  if (w && w->is_window) {
+    xw_clear_area(w, 0, 0, 0, 0);
+    w->ntexts = 0;
+  }
   return 1;
 }
 
@@ -1144,6 +1246,7 @@ int XClearArea(Display *d, Window win, int x, int y, unsigned int width, unsigne
   xw_drawable *w = xw_lookup(win);
   if (!w || !w->is_window) return 1;
   xw_clear_area(w, x, y, width, height);
+  text_forget(w, x, y, (int)width, (int)height);
   if (exposures) {
     int ww = width ? (int)width : w->width - x, hh = height ? (int)height : w->height - y;
     send_expose(w, x, y, ww, hh);
@@ -1798,6 +1901,11 @@ int XDrawString(Display *d, Drawable dr, GC gc, int x, int y, const char *s, int
       memcpy(dd->label, s, m);
       dd->label[m] = 0;
     }
+  }
+  if (dd->is_window && gc->v.function != GXxor) {
+    int m = n;
+    while (m > 0 && s[m - 1] == ' ') m--;
+    text_remember(dd, x, y, xw_font_for(gc->v.font)->width, s, m);
   }
   if (tracing())
     fprintf(stderr, "xlib: XDrawString 0x%lx (%d,%d) fn=%d \"%.*s\"\n", dr, x, y, gc->v.function, n, s);

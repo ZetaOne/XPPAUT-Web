@@ -63,7 +63,15 @@ struct xw_drawable {
   int min_width, min_height;
   int pos_hint; /* program supplied a position */
   char label[24]; /* last text drawn into the window (finds Close buttons) */
+  struct xw_text_item *texts; /* text drawn and not cleared since (xw_window_text) */
+  int ntexts, cap_texts;
 };
+
+/* one string drawn into a window: baseline position, character width */
+typedef struct xw_text_item {
+  short x, y, cw;
+  char s[120];
+} xw_text_item;
 
 /* ---- GC ------------------------------------------------------------------ */
 struct _XGC {
@@ -78,6 +86,7 @@ struct _XGC {
 extern Display *xw_display;
 extern int xw_bare_x; /* set by the platform; see xlib.c */
 xw_drawable *xw_lookup(XID id);
+int xw_window_text(Window win, char *out, int max);
 xw_drawable *xw_root(void);
 xw_drawable *xw_toplevel_of(xw_drawable *w);
 int xw_viewable(xw_drawable *w);
