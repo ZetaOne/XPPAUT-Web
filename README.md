@@ -80,8 +80,12 @@ their comments give the steps.
   parts are drawn in **purple** and supercritical parts in the usual colour,
   from the first Lyapunov coefficient; **GH** marks the generalised Hopf
   (Bautin) points where it changes sign.
+- **GIFs say how they were made**: every animated GIF (Kinescope, animations,
+  array plots) includes the model, its parameters, the numerics and what it
+  shows, as a comment (read by image tools) and as text at its end.
 - AUTO's two-parameter fold and Hopf continuations start from the fold and
-  Hopf conditions themselves, and a few fixes.
+  Hopf conditions themselves; the Fourier transform and histograms work on any
+  data in the browser (such as the adjoint); and a few fixes.
 
 <p>
   <img src="docs/hopf-gh.png" width="60%" alt="AUTO in XPPAUT 8.1: the Hopf curve of the Morris-Lecar model in the (i, phi) plane, purple where the Hopf bifurcation is subcritical and blue where it is supercritical, with the two generalised Hopf points marked GH">

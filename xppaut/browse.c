@@ -176,6 +176,16 @@ int get_maxrow_browser()
   return my_browser.maxrow;
 }
 
+/* The number of rows of the data now in the browser. The stored solution has storind rows, but other data sets (the adjoint,
+   the interaction functions, a Fourier transform, ...) have their own length, so anything that works on the browser's columns
+   must use this and not storind. */
+int get_browser_rows()
+{
+  extern int storind;
+  if(my_browser.data==storage)return storind;
+  return my_browser.maxrow;
+}
+
 
 void write_mybrowser_data(FILE *fp)
 {

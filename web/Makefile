@@ -17,7 +17,7 @@ XLIB    := xlib.o draw.o fonts_data.o colors_data.o
 # Same feature set as the upstream Makefile, minus HAVEDLL (no dlopen in the
 # browser).
 DEFINES := -DNOERRNO -DNON_UNIX_STDIO -DAUTO -DCVODE_YES \
-           -DMYSTR1=8.0 -DMYSTR2=1
+           -DMYSTR1=8.1 -DMYSTR2=1
 INCLUDES := -I$(CURDIR)/include
 
 CFLAGS  ?= -O2

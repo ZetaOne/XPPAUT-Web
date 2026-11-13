@@ -86,3 +86,23 @@ are unchanged); in the browser, Periodic (T = 63.7247632515 for
 `examples/xpp81/periodic-phase.ode`, as the desktop build), the adjoint and
 isostable checks it prints (Z.f = 1 to 1e-7), and the Hopf curve with two GH
 points for `examples/xpp81/hopf-gh.ode`.
+
+### XPPAUT 8.1 update (Bard Ermentrout, 13 November 2026)
+
+`update_xppsrc8.1.tgz` (SHA-256 a9adfb2c0c4e743decd6f2b93d257bec316e67740d204cf15d6bbf8dcdab3a71), merged
+three-way on top of the 8.1 source above (one conflict, whitespace in an
+include line of `scrngif.c`). Nine files: `scrngif.c`, `scrngif.h`,
+`kinescope.c`, `aniparse.c`, `arrayplot.c` (every GIF carries the model, the
+parameters, date, numerics and a note on its contents, as a GIF comment and as
+text after the end marker; GIF89a; the array plot's time range includes the
+transient), `browse.c`, `browse.h`, `histogram.c` (`get_browser_rows()`: the
+Fourier transform and histograms use the length of the data shown in the
+browser, not of the stored solution, so they work on the adjoint, H, ...),
+`Makefile` (version 8.1, `extras` and `srconly` targets).
+
+The version passed to the compiler is now `MYSTR1=8.1 MYSTR2=1` (as in
+Bard's Makefile; `web/Makefile`), so windows show "XPP Ver 8.1.1" and GIFs
+"XPPAUT 8.1.1".
+
+Checked: batch 144 SAME, 9 NOOUT; in the browser a Kinescope GIF (GIF89a,
+comment read by Pillow) and Fourier on the adjoint data.

@@ -30,6 +30,7 @@ int ks_speed=50;
 extern char *info_message,*kin_hint[];
 extern int screen;
 extern int mov_ind;
+extern int GifFrameDelay;
 typedef struct {
 		unsigned int h,w;
 		Pixmap xi;
@@ -205,6 +206,11 @@ void make_anigif()
    }
  }
  fp=fopen("anim.gif","wb");
+ {
+   char note[200];
+   sprintf(note," %%%% Kinescope: %d frames of %d x %d pixels, frame delay %d/100 s\n",mov_ind,(int)w,(int)h,GifFrameDelay);
+   gif_set_note(note);
+ }
  set_global_map(1);
   for(i=0;i<mov_ind;i++){
     XCopyArea(display,movie[i].xi,draw_win,gc_graph,0,0,w,h,0,0);
@@ -259,6 +265,11 @@ void save_movie(basename,fmat)
  XCopyArea(display,draw_win,xi,gc_graph,0,0,w,h,0,0); 
      
      fp=fopen(file,"wb");
+     {
+       char note[200];
+       sprintf(note," %%%% Kinescope: frame %d of %d\n",i,mov_ind);
+       gif_set_note(note);
+     }
      screen_to_gif(xi,fp);
      fclose(fp);
    }

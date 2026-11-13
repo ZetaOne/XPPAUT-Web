@@ -62,6 +62,10 @@
 #define MAX_LEN_SBOX 25
 #define FIRSTCOLOR 30
 #define FIX_MIN_SIZE 2
+extern int NJMP;
+extern double TRANS,DELTA_T;
+
+
 extern int COLOR;
 extern unsigned int GrFore,GrBack;
 /*extern char this_file[100];*/
@@ -352,7 +356,7 @@ void create_arrayplot(ap,wname,iname)
   ap->alive=1;
   aplot_gc=XCreateGC(display,ap->wplot,valuemask,&values);
 }
- 
+
 void print_aplot(ap)
      APLOT *ap;
 {
@@ -374,6 +378,9 @@ void print_aplot(ap)
   jb=row0+ap->nskip*(ap->ndown-1);
   if(jb>=nrows)jb=nrows-1;
   if(jb>=0)thi=my_browser.data[0][jb];
+  tlo=TRANS+(row0)*NJMP*DELTA_T;
+  thi=tlo+((ap->ndown-1)*NJMP*DELTA_T*ap->nskip);
+  
   sprintf(values[0],"%s",ap->filename);
   sprintf(values[1],"%s",ap->xtitle);
   sprintf(values[2],"%s",ap->ytitle);
@@ -564,10 +571,48 @@ sprintf(values[8],"%d",ap->ncskip);
  }
    return 1;
 }
+/* the note at the end of the GIF of an array plot: what is shown, and the range of time along the vertical axis.
+   With step = nout*dt (NJMP*DELTA_T), Row 1 = R, NRows = N and RowSkip = S, the rows shown are R, R+S, ..., R+(N-1)S
+   and the time runs from tstart = step*R to tend = tstart + (N-1)*S*step, plus the transient: XPP does not store the first TRANS
+   units of time, and the stored times are the real ones, so the times are read from the stored solution. */
+extern int NJMP,NEQ,storind;
+extern double DELTA_T,TRANS;
+static void aplot_gif_note(APLOT *ap)
+{
+  char note[2000],n0[40],n1[40];
+  int r0=ap->nstart,rl=ap->nstart+ap->nskip*(ap->ndown-1),a=r0,b=rl;
+  double step=NJMP*DELTA_T,ts,te;
+  strcpy(n0,(ap->index0>=1&&ap->index0<=NEQ)?uvar_names[ap->index0-1]:"?");
+  strcpy(n1,(ap->indexn>=1&&ap->indexn<=NEQ)?uvar_names[ap->indexn-1]:"?");
+  if(storind>0){
+    if(a>storind-1)a=storind-1;
+    if(b>storind-1)b=storind-1;
+    ts=storage[0][a];
+    te=storage[0][b];
+  }
+  else {
+    ts=step*r0;
+    te=ts+(ap->ndown-1)*ap->nskip*step;
+  }
+  sprintf(note," %%%% Array plot: columns %s (%d) ... %s (%d), %d across, column skip %d\n"
+	  " %%%% Rows: Row 1 = %d, NRows = %d, RowSkip = %d (last row %d)\n"
+	  " %%%% Time along the vertical axis: tstart = %.10g, tend = %.10g  (output step nout*dt = %.10g; stored times, they include the transient TRANS = %g)\n"
+	  " %%%% Color range: %.8g to %.8g\n",
+	  n0,ap->index0,n1,ap->indexn,ap->nacross,ap->ncskip,r0,ap->ndown,ap->nskip,rl,ts,te,step,TRANS,ap->zmin,ap->zmax);
+  if(aplot_still==0){
+    if(aplot_range_count>0)sprintf(note+strlen(note)," %%%% Range animation: %d frames (the parameter value of each frame is in its tag, if tags are on)\n",aplot_range_count);
+    else sprintf(note+strlen(note)," %%%% Range animation (the parameter value of each frame is in its tag, if tags are on)\n");
+  }
+  gif_set_note(note);
+}
+
 void close_aplot_files()
 {
-  if(aplot_still==0)
+  if(aplot_still==0){
+    aplot_gif_note(&aplot);
+    end_ani_gif(ap_fp);
     fclose(ap_fp);
+  }
 }
 void gif_aplot_all(char *filename,int still)
 {
@@ -591,6 +636,7 @@ void gif_aplot_all(char *filename,int still)
 		      DefaultDepth(display,screen));
      XCopyArea(display,aplot.wplot,xi,aplot_gc,0,0,w,h,0,0); 
      
+     if(aplot_range_count==0)aplot_gif_note(&aplot);
      add_ani_gif(xi,ap_fp,aplot_range_count);
      XFreePixmap(display,xi);
      return;
@@ -610,6 +656,7 @@ void gif_aplot_all(char *filename,int still)
  /*  XFlush(display); */
   
   /* screen_to_gif(aplot.wplot,fp); */  
+  aplot_gif_note(&aplot);
   screen_to_gif(xi,ap_fp);  
   fclose(ap_fp);
   XFreePixmap(display,xi);
@@ -658,6 +705,8 @@ void redraw_aplot(ap)
   jb=row0+ap.nskip*(ap.ndown-1);
   if(jb>=nrows)jb=nrows-1;
   if(jb>=0)thi=my_browser.data[0][jb];
+  tlo=TRANS+(row0)*NJMP*DELTA_T;
+  thi=tlo+((ap.ndown-1)*NJMP*DELTA_T*ap.nskip);
   sprintf(bob, " %g < t < %g ",tlo,thi);
    XDrawString(display,ap.wtime,small_gc,0,CURY_OFFs,bob,strlen(bob));
   dx=(double)ap.plotw/(double)(ap.nacross/ap.ncskip);

@@ -861,6 +861,12 @@ void ani_flip()
  /* check avi_flags for initialization */
  if(mpeg.aviflag==1){
   angiffile=fopen("anim.gif","wb");
+  {
+    char note[400];
+    if(use_ani_file)sprintf(note," %%%% Animation window (Toon), script %s\n",anifile);
+    else sprintf(note," %%%% Animation window (Toon)\n");
+    gif_set_note(note);
+  }
   set_global_map(1);
  }
  count=0;  

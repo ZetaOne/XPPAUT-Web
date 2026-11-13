@@ -8,8 +8,8 @@ MANDIR = /usr/local/man/man1
 # End Debian Edit
 #################################
 #
-VERSION=8.0
-MAJORVER=8.0
+VERSION=8.1
+MAJORVER=8.1
 MINORVER=1
 
 ODES=ode/*.ode ode/*.ani canonical/*.* tstauto/*.ode
@@ -200,6 +200,11 @@ xppaut: $(OBJECTS)
 ####  You have previously installed the sundials
 	 #$(CC) -DAUTO -o xppaut $(OBJECTS) $(AUTOOBJ) $(LDFLAGS) $(LIBS) $(AUTLIBS) ./libf2cm.a
 	 $(CC) -DAUTO -o xppaut $(OBJECTS) $(LDFLAGS) $(LIBS) 
+extras:
+	tar zcvf xppextra.tgz default.opt xpp_doc.tex README ode/*.* tstauto/*.ode canonical/*.* xpp_doc.pdf xpp_sum.tex xpp_sum.pdf tree.tex tree.pdf help/*.html help/odes/*.ode
+
+srconly:
+	tar zcvf xppsrc$(VERSION).tgz *.c *.h *.bitmap Makefile
 tarfile:
 	tar zcvf xppaut$(VERSION).tgz $(SOURCES) $(HEADERS) $(BITMAPS) default.opt \
 	 xpp_doc.tex README Makefile.old Makefile Makefile.64 Makefile.nice  Makefile.lib Makefile.avi Makefile.old Makefile.w7b \
