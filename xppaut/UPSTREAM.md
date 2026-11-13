@@ -33,12 +33,12 @@ Changes to upstream files are marked with `XPPAUT-Web:` comments.
 | `eispack.c` | `get_qp`: `iv1`/`ier` declared `integer` (long) instead of `int` | Passed to `rg()`, which writes `long`s: a real overflow on 64-bit. Unused debug code (only caller is commented out), but newer clang refuses to compile it |
 | `nullcline.c`, `diagram.c`, `auto_nox.c`, `auto_x11.c`, `auto.h`, `parserslow2.c`, `load_eqn.c` | Corrected return types in local declarations of `user_set_color_par`, `refresh_browser`, `go_go_auto`, `sleep`, `do_auto_win`, `nsrand48` | They disagreed with the definitions. Harmless natively, but in WebAssembly a call through a mismatched signature traps |
 
-| `main.c`, `many_pops.c` | Handle `WM_DELETE_WINDOW` for graph windows made with Makewindow: `close_graph_window()` destroys that graph | The handler was commented out, so the window manager's close button did nothing; the web page's close button now works on every window (other windows are closed by pressing their own Close button) |
 
 | `menudrive.c` | WebAssembly build only: `xpp_hlp` opens the bundled HTML help (`help/xpphelp.html`) in a browser tab | The desktop version needs XPPHELP/XPPBROWSER and fork/exec, which a browser cannot do |
 
 | `init_conds.c` | WebAssembly build only: the file dialog keeps the file name when you change folder (`fs_keep_name`) | Upstream replaces the File field with just the folder, so Ok after navigating writes nothing |
 | `main.c` | WebAssembly build only: `bye_bye` first calls `xw_before_quit()` (web/xlib/xpp_hooks.c), which writes the graphs and AUTO diagram (SVG, PostScript), a .set file and the data to `/xw-session-quit` | Quitting resets AUTO and closes the windows; the page's Save session after quitting needs them |
+| `arrayplot.c` | `aplot_gif_note()`: set `indexn` (last column drawn) before writing the GIF note | Upstream never sets it, so the note named the last column "? (0)" |
 
 ### Fixes from Bard Ermentrout (2025)
 
@@ -57,7 +57,9 @@ fixed-point `stdfix.h` hides this, other compilers fail), hand-written
 `malloc`/`free` declarations in `simplenet.c` and `delay_handle.c`, a debug
 `printf` in AUTO, and a moved `dump_params` (same as the fix above).
 
-The AUTO fix and the close handling are deliberate behaviour differences from the unpatched desktop build.
+The AUTO fix is a deliberate behaviour difference from the unpatched desktop build.
+(Until 13 November 2026 a patch here also handled the window manager's close
+button on Makewindow graphs; XPPAUT 8.1 now does that itself, see below.)
 
 ### XPPAUT 8.1 (Bard Ermentrout, November 2026)
 
@@ -106,3 +108,30 @@ Bard's Makefile; `web/Makefile`), so windows show "XPP Ver 8.1.1" and GIFs
 
 Checked: batch 144 SAME, 9 NOOUT; in the browser a Kinescope GIF (GIF89a,
 comment read by Pillow) and Fourier on the adjoint data.
+
+### XPPAUT 8.1 source of 13 November 2026 (Bard Ermentrout)
+
+`xppsrc11_13.tgz` (SHA-256 a8044564581b9afe2e462275727b4ad5c84a9d9d8be7585ddc74401ff5ce6e9a), merged
+three-way on top of the update above. 21 files changed; one conflict in
+`main.c`, where Bard's handling of the window manager's close button
+replaced ours (our `close_graph_window()` patch in `main.c` and
+`many_pops.c` is gone; `destroy_graph_window()` in `many_pops.c` does it).
+
+- Close button of the window manager on every window (`pop_list.c`:
+  `wm_register_close`, `xpp_next_event` in place of `XNextEvent`): it presses
+  the window's own Close/Cancel button; on the main window it asks
+  "Are you sure?"; on a Makewindow graph it destroys that graph.
+- Buttons made with `make_button()` get a light/dark bevel and a hover
+  colour; button labels "Ok"/"Okay" are now "OK", "Kill" (text viewer) and
+  "Quit" (calculator) are "Close".
+- An X error handler that ignores BadWindow/BadDrawable/BadPixmap
+  (a request on a window that was just destroyed no longer exits XPP).
+- `integrate.c`: the progress bar and the Esc check run about 50 times a
+  second instead of at every output point (faster long runs).
+
+The web Xlib layer gained `XDrawSegments`, `XSetErrorHandler` and
+`XGetErrorText` for it (web/xlib/xlib.c).
+
+Patch on top of it: `arrayplot.c` `aplot_gif_note()` sets `indexn` (the last
+column drawn) before writing the note; upstream never sets it, so the GIF note
+read "columns U1 (1) ... ? (0)".

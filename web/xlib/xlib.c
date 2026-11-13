@@ -1728,6 +1728,11 @@ int XQueryColors(Display *d, Colormap cm, XColor *defs, int n)
   return 1;
 }
 
+int XQueryColor(Display *d, Colormap cm, XColor *def)
+{
+  return XQueryColors(d, cm, def, 1);
+}
+
 /* ------------------------------------------------------------------------ */
 /* keyboard                                                                 */
 
@@ -1840,6 +1845,28 @@ int XDrawLine(Display *d, Drawable dr, GC gc, int x1, int y1, int x2, int y2)
             gc->v.function, gc->v.line_width, gc->v.line_style);
   xw_line(dd, gc, x1, y1, x2, y2);
   return 1;
+}
+
+/* XPPAUT 8.1 (13 Nov 2026) draws button bevels with it */
+int XDrawSegments(Display *d, Drawable dr, GC gc, XSegment *s, int n)
+{
+  for (int i = 0; i < n; i++) XDrawLine(d, dr, gc, s[i].x1, s[i].y1, s[i].x2, s[i].y2);
+  return 1;
+}
+
+/* There is no X server to send errors: requests on a destroyed window are
+   ignored by this layer, so an error handler is never called. */
+XErrorHandler XSetErrorHandler(XErrorHandler h)
+{
+  (void)h;
+  return NULL;
+}
+
+int XGetErrorText(Display *d, int code, char *buf, int len)
+{
+  (void)d;
+  if (buf && len > 0) snprintf(buf, (size_t)len, "X error %d", code);
+  return 0;
 }
 
 int XDrawPoint(Display *d, Drawable dr, GC gc, int x, int y)

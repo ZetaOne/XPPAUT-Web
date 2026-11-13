@@ -241,7 +241,7 @@ void redraw_txtview(Window w)
   if(w==txtview.pgdn)
     xds("PgDn");
   if(w==txtview.kill)
-    xds("Kill");
+    xds("Close");
   if(w==txtview.home)
     xds("Home");  
   if(w==txtview.end)
@@ -318,15 +318,16 @@ void make_txtview()
   XSetWMProperties(display,base,&winname,&iconname,
 		   NULL,0,&size_hints,NULL,NULL);
   make_icon((char*)txtview_bits,txtview_width,txtview_height,base);
-  txtview.up=make_window(base,DCURXs,2,8*DCURXs,DCURYs,1);
-  txtview.down=make_window(base,DCURXs+ww,2,8*DCURXs,DCURYs,1);
-  txtview.pgup=make_window(base,DCURXs+2*ww,2,8*DCURXs,DCURYs,1);
-  txtview.pgdn=make_window(base,DCURXs+3*ww,2,8*DCURXs,DCURYs,1);
-  txtview.kill=make_window(base,DCURXs+4*ww,2,8*DCURXs,DCURYs,1);
-  txtview.home=make_window(base,DCURXs,2+hh,8*DCURXs,DCURYs,1);
-  txtview.end=make_window(base,DCURXs+ww,2+hh,8*DCURXs,DCURYs,1);
-  txtview.src=make_window(base,DCURXs+2*ww,2+hh,8*DCURXs,DCURYs,1);
-  txtview.action=make_window(base,DCURXs+3*ww,2+hh,8*DCURXs,DCURYs,1);
+  txtview.up=make_button(base,DCURXs,2,8*DCURXs,DCURYs,1);
+  txtview.down=make_button(base,DCURXs+ww,2,8*DCURXs,DCURYs,1);
+  txtview.pgup=make_button(base,DCURXs+2*ww,2,8*DCURXs,DCURYs,1);
+  txtview.pgdn=make_button(base,DCURXs+3*ww,2,8*DCURXs,DCURYs,1);
+  txtview.kill=make_button(base,DCURXs+4*ww,2,8*DCURXs,DCURYs,1);
+  wm_register_close(base,txtview.kill);
+  txtview.home=make_button(base,DCURXs,2+hh,8*DCURXs,DCURYs,1);
+  txtview.end=make_button(base,DCURXs+ww,2+hh,8*DCURXs,DCURYs,1);
+  txtview.src=make_button(base,DCURXs+2*ww,2+hh,8*DCURXs,DCURYs,1);
+  txtview.action=make_button(base,DCURXs+3*ww,2+hh,8*DCURXs,DCURYs,1);
   txtview.text=make_plain_window(base,2,3*DCURYs+5,minwid-4,10*DCURY,1);
   txtview.here=1;
   txtview.nlines=10;

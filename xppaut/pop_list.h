@@ -167,4 +167,25 @@ void draw_pop_up(POP_UP p, Window w);
 Window make_unmapped_icon_window(Window root,int x,int y,int width,int height,int bw,int icx,int icy,unsigned char* icdata);
 Window make_icon_window(Window root,int x,int y,int width,int height,int bw,int icx,int icy,unsigned char* icdata);
 
+
+/* window-manager close-tab support (see pop_list.c) */
+void wm_register_close(Window top,Window btn);
+void wm_forget_close(Window top);
+void wm_accept_close(Window top);
+int  is_wm_delete(XEvent *ev);
+void xpp_next_event(XEvent *ev);
+
+/* button bevels (see pop_list.c) */
+void wm_register_button(Window w,int wd,int ht);
+Window make_button(Window root,int x,int y,int width,int height,int bw);
+void draw_button_bevel(Window w);
+
+void install_xpp_error_handler(void);
+
+void wm_button_hover_event(XEvent *ev);
+void draw_button_hover(Window w);
+
+void xpp_set_border(Display *d,Window w,unsigned int bw);
+#define XSetWindowBorderWidth(d,w,b) xpp_set_border(d,w,b)
+
 #endif

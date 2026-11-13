@@ -293,7 +293,7 @@ int pos,col;
 {
  int i,flag;
  
- if(w==sb.ok){XDrawString(display,w,gc,5,CURY_OFF,"Ok",2);return;}
+ if(w==sb.ok){XDrawString(display,w,gc,5,CURY_OFF,"OK",2);return;}
  if(w==sb.cancel){XDrawString(display,w,gc,5,CURY_OFF,"Cancel",6);
 		   return; 
                  }
@@ -384,7 +384,7 @@ int s_box_event_loop(sb,pos,col,scrb)
  char *s;
  s=sb->value[ihot];
   
- XNextEvent(display,&ev);
+ xpp_next_event(&ev);
  switch(ev.type){
  	case ConfigureNotify:
 	case Expose:
@@ -529,8 +529,9 @@ STRING_BOX *sb;
   
  ypos=height-2*DCURY;
   xpos=(width-16*DCURX)/2;
-  (sb->ok)=make_window(base,xpos,ypos,8*DCURX,DCURY,1);
-  (sb->cancel)=make_window(base,xpos+8*DCURX+4,ypos,8*DCURX,DCURY,1);
+  (sb->ok)=make_button(base,xpos,ypos,8*DCURX,DCURY,1);
+  (sb->cancel)=make_button(base,xpos+8*DCURX+4,ypos,8*DCURX,DCURY,1);
+  wm_register_close(base,sb->cancel);
   XRaiseWindow(display,base);
  }
 
@@ -1031,10 +1032,268 @@ Window make_icon_window(root,x,y,width,height,bw,icx,icy,icdata)
 	 Window win;
          win=make_unmapped_icon_window(root,x,y,width,height,bw,icx,icy,icdata);
 	 if(root==RootWindow(display,screen)) 
-          XSetWMProtocols(display, win, &deleteWindowAtom, 1);	  
+          wm_accept_close(win);
 	 XMapWindow(display,win);
          return(win);
          }
+
+/* ------------------------------------------------------------------
+   Window-manager "close" (the X in the title bar) support.
+
+   Every top-level window advertises WM_DELETE_WINDOW.  When the user
+   clicks the close tab the WM sends us a ClientMessage rather than
+   killing us.  Each top-level window registers the button that
+   dismisses it (Close, Cancel, ...) and xpp_next_event() turns the
+   close request into a click on that button, so all existing logic
+   (saving state, destroying sub-windows, etc.) is reused unchanged.
+   ------------------------------------------------------------------ */
+#define MAX_WM_CLOSE 128
+static struct { Window top,btn; } wm_close_tab[MAX_WM_CLOSE];
+
+void wm_forget_close(Window top)
+{
+  int i;
+  for(i=0;i<MAX_WM_CLOSE;i++)
+    if(wm_close_tab[i].top==top){wm_close_tab[i].top=0;wm_close_tab[i].btn=0;}
+}
+
+void wm_register_close(Window top,Window btn)
+{
+  int i,free_slot=-1;
+  for(i=0;i<MAX_WM_CLOSE;i++){
+    if(wm_close_tab[i].top==top){wm_close_tab[i].btn=btn;return;}
+    if(free_slot<0&&wm_close_tab[i].top==0)free_slot=i;
+  }
+  if(free_slot>=0){
+    wm_close_tab[free_slot].top=top;
+    wm_close_tab[free_slot].btn=btn;
+  }
+}
+
+/* make sure a hand-made top-level window tells the WM that we handle
+   WM_DELETE_WINDOW ourselves (otherwise the WM may kill the program) */
+void wm_accept_close(Window top)
+{
+  wm_forget_close(top);
+  XSetWMProtocols(display,top,&deleteWindowAtom,1);
+}
+
+int is_wm_delete(XEvent *ev)
+{
+  return (ev->type==ClientMessage &&
+	  ev->xclient.format==32 &&
+	  (Atom)ev->xclient.data.l[0]==deleteWindowAtom);
+}
+
+/* A request that names a window that has just been destroyed raises
+   BadWindow, and Xlib's default handler then exits the program.  Report
+   and carry on for those harmless errors; anything else gets the default
+   behaviour.  Set XPP_XDEBUG in the environment to see what was ignored. */
+static int (*xpp_old_xerror)(Display *,XErrorEvent *)=NULL;
+static int xpp_xerror(Display *d,XErrorEvent *e)
+{
+  if(e->error_code==BadWindow||e->error_code==BadDrawable||
+     e->error_code==BadPixmap){
+    if(getenv("XPP_XDEBUG")){
+      char msg[200];
+      XGetErrorText(d,e->error_code,msg,200);
+      fprintf(stderr,"xpp: ignored X error %s (request %d.%d, resource 0x%lx)\n",
+	      msg,e->request_code,e->minor_code,e->resourceid);
+    }
+    return 0;
+  }
+  if(xpp_old_xerror)return xpp_old_xerror(d,e);
+  return 0;
+}
+void install_xpp_error_handler(void)
+{
+  xpp_old_xerror=XSetErrorHandler(xpp_xerror);
+}
+
+/* drop-in replacement for XNextEvent.  A close request for a window with
+   a registered dismiss button comes back as a ButtonPress on that button.
+   Other close requests (main window, graph windows) are passed through
+   as ClientMessage for xpp_events() to handle; modal loops ignore them. */
+void xpp_next_event(XEvent *ev)
+{
+  int i;
+  XNextEvent(display,ev);
+  wm_button_hover_event(ev);
+  if(!is_wm_delete(ev))return;
+  for(i=0;i<MAX_WM_CLOSE;i++){
+    if(wm_close_tab[i].top!=0&&wm_close_tab[i].top==ev->xclient.window){
+      XButtonEvent b;
+      memset(&b,0,sizeof(b));
+      b.type=ButtonPress;
+      b.display=display;
+      b.window=wm_close_tab[i].btn;
+      b.root=RootWindow(display,screen);
+      b.subwindow=None;
+      b.time=CurrentTime;
+      b.x=b.y=1;
+      b.button=Button1;
+      b.same_screen=True;
+      *ev=*((XEvent *)&b);
+      return;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------
+   Button bevels.  Buttons made with make_button() are remembered (with
+   their size) in a small hash table; draw_button_bevel() is called at the
+   end of do_expose() and adds a light top/left and dark bottom/right
+   edge.  Cost: two XDrawSegments per button per expose, no round trips
+   (the size is cached, colors and GCs are made once).
+   ------------------------------------------------------------------ */
+#define BTN_HASH 1024
+static int btn_lookup(Window w,int *wd,int *ht);
+static struct { Window w; int wd,ht; } btn_tab[BTN_HASH];
+static GC bevel_hi_gc=0,bevel_lo_gc=0,hover_gc=0;
+static Window hover_win=0;
+static int bevel_ok=0,bevel_tried=0;
+
+static unsigned long bevel_shade(XColor base,double f)
+{
+  XColor c=base;
+  /* f>0 lightens toward white, f<0 darkens toward black */
+  if(f>0){
+    c.red=(unsigned short)(base.red+(65535-base.red)*f);
+    c.green=(unsigned short)(base.green+(65535-base.green)*f);
+    c.blue=(unsigned short)(base.blue+(65535-base.blue)*f);
+  } else {
+    c.red=(unsigned short)(base.red*(1+f));
+    c.green=(unsigned short)(base.green*(1+f));
+    c.blue=(unsigned short)(base.blue*(1+f));
+  }
+  if(!XAllocColor(display,DefaultColormap(display,screen),&c))
+    return base.pixel;
+  return c.pixel;
+}
+
+static void init_bevel(void)
+{
+  XColor base;
+  XGCValues v;
+  bevel_tried=1;
+  base.pixel=MyBackColor;
+  XQueryColor(display,DefaultColormap(display,screen),&base);
+  v.foreground=bevel_shade(base,0.75);
+  bevel_hi_gc=XCreateGC(display,RootWindow(display,screen),GCForeground,&v);
+  v.foreground=bevel_shade(base,-0.45);
+  bevel_lo_gc=XCreateGC(display,RootWindow(display,screen),GCForeground,&v);
+  /* hover colour: a light background gets a pale blue tint (a lighter
+     shade of an already light gray would hardly show); a dark background
+     is simply lightened */
+  {
+    XColor h=base;
+    double lum=(0.3*base.red+0.59*base.green+0.11*base.blue)/65535.0;
+    if(lum>0.5){
+      h.red=(unsigned short)(base.red*0.62+ 0.38*0x7800);
+      h.green=(unsigned short)(base.green*0.62+0.38*0xAA00);
+      h.blue=(unsigned short)(base.blue*0.62+0.38*0xEB00);
+      if(!XAllocColor(display,DefaultColormap(display,screen),&h))
+        h.pixel=base.pixel;
+      v.foreground=h.pixel;
+    } else
+      v.foreground=bevel_shade(base,0.3);
+    hover_gc=XCreateGC(display,RootWindow(display,screen),GCForeground,&v);
+  }
+  bevel_ok=1;
+}
+
+#undef XSetWindowBorderWidth
+/* Replacement for XSetWindowBorderWidth (pop_list.h redirects all calls
+   here).  Buttons used to grow their border on hover; that shifts the
+   window by a pixel and leaves a gray ghost behind when it shrinks.  The
+   hover fill replaces it, so for registered buttons the call is ignored. */
+void xpp_set_border(Display *d,Window w,unsigned int bw)
+{
+  int wd,ht;
+  if(btn_lookup(w,&wd,&ht))return;
+  XSetWindowBorderWidth(d,w,bw);
+}
+#define XSetWindowBorderWidth(d,w,b) xpp_set_border(d,w,b)
+
+void wm_register_button(Window w,int wd,int ht)
+{
+  int i=(int)(w&(BTN_HASH-1)),k;
+  for(k=0;k<8;k++){
+    int j=(i+k)&(BTN_HASH-1);
+    if(btn_tab[j].w==0||btn_tab[j].w==w){i=j;break;}
+  }
+  btn_tab[i].w=w;btn_tab[i].wd=wd;btn_tab[i].ht=ht;
+  if(hover_win==w)hover_win=0;
+}
+
+/* a button: a window made by make_window() that gets a bevel */
+Window make_button(Window root,int x,int y,int width,int height,int bw)
+{
+  Window w=make_window(root,x,y,width,height,bw);
+  wm_register_button(w,width,height);
+  return w;
+}
+
+static int btn_lookup(Window w,int *wd,int *ht)
+{
+  int i=(int)(w&(BTN_HASH-1)),k;
+  for(k=0;k<8;k++){
+    int j=(i+k)&(BTN_HASH-1);
+    if(btn_tab[j].w==w){*wd=btn_tab[j].wd;*ht=btn_tab[j].ht;return 1;}
+    if(btn_tab[j].w==0)return 0;
+  }
+  return 0;
+}
+
+/* Called for every Enter/Leave event.  Marks the button under the pointer
+   and asks the server to repaint it (XClearArea with exposures restores
+   the normal background, including any gradient, and generates an Expose
+   that redraws the label).  The hover fill itself is painted by
+   draw_button_hover() at the start of do_expose(), under the label. */
+void wm_button_hover_event(XEvent *ev)
+{
+  Window w;
+  int wd,ht;
+  if(ev->type!=EnterNotify&&ev->type!=LeaveNotify)return;
+  if(ev->xcrossing.mode!=NotifyNormal)return;
+  w=ev->xcrossing.window;
+  if(!btn_lookup(w,&wd,&ht))return;
+  if(ev->type==EnterNotify)hover_win=w;
+  else if(hover_win==w)hover_win=0;
+  XClearArea(display,w,0,0,0,0,True);
+}
+
+void draw_button_hover(Window w)
+{
+  int wd,ht;
+  if(w==0||w!=hover_win)return;
+  if(!btn_lookup(w,&wd,&ht))return;
+  if(!bevel_tried)init_bevel();
+  if(!bevel_ok)return;
+  XFillRectangle(display,w,hover_gc,0,0,wd,ht);
+}
+
+void draw_button_bevel(Window w)
+{
+  int i=(int)(w&(BTN_HASH-1)),k;
+  for(k=0;k<8;k++){
+    int j=(i+k)&(BTN_HASH-1);
+    if(btn_tab[j].w==w){
+      int wd=btn_tab[j].wd,ht=btn_tab[j].ht;
+      XSegment hi[2],lo[2];
+      if(!bevel_tried)init_bevel();
+      if(!bevel_ok||wd<6||ht<6)return;
+      hi[0].x1=0;hi[0].y1=0;hi[0].x2=wd-2;hi[0].y2=0;
+      hi[1].x1=0;hi[1].y1=0;hi[1].x2=0;hi[1].y2=ht-2;
+      lo[0].x1=0;lo[0].y1=ht-1;lo[0].x2=wd-1;lo[0].y2=ht-1;
+      lo[1].x1=wd-1;lo[1].y1=0;lo[1].x2=wd-1;lo[1].y2=ht-1;
+      XDrawSegments(display,w,bevel_hi_gc,hi,2);
+      XDrawSegments(display,w,bevel_lo_gc,lo,2);
+      return;
+    }
+    if(btn_tab[j].w==0)return;
+  }
+}
 
 Window make_window(root,x,y,width,height,bw)
 	Window root;
@@ -1043,7 +1302,7 @@ Window make_window(root,x,y,width,height,bw)
 	 Window win;
          win=make_unmapped_window(root,x,y,width,height,bw);
 	 if(root==RootWindow(display,screen)) 
-          XSetWMProtocols(display, win, &deleteWindowAtom, 1);	  
+          wm_accept_close(win);
 	 XMapWindow(display,win);
          return(win);
          }
@@ -1055,7 +1314,7 @@ Window make_plain_window(root,x,y,width,height,bw)
 	 Window win;
          win=make_plain_unmapped_window(root,x,y,width,height,bw);
 	 if(root==RootWindow(display,screen)) 
-          XSetWMProtocols(display, win, &deleteWindowAtom, 1);	  
+          wm_accept_close(win);
 	 XMapWindow(display,win);
          return(win);
          }
@@ -1088,7 +1347,8 @@ void respond_box(button,message)
        DisplayHeight/2,width*DCURX,height,4);
        make_icon((char*)alert_bits,alert_width,alert_height,wmain);
        wm=make_plain_window(wmain,((width-l1)*DCURX)/2,DCURY/2,l1*DCURX,DCURY,0);
-       wb=make_window(wmain,((width-l2)*DCURX)/2,2*DCURY,l2*DCURX,DCURY,1);
+       wb=make_button(wmain,((width-l2)*DCURX)/2,2*DCURY,l2*DCURX,DCURY,1);
+       wm_register_close(wmain,wb);
        
 	
             ping();
@@ -1096,7 +1356,7 @@ void respond_box(button,message)
       XSelectInput(display,wb,BUT_MASK);
        while(!done)
        {
-	XNextEvent(display,&ev);
+	xpp_next_event(&ev);
         switch(ev.type){
 			case Expose:
 			case MapNotify:
@@ -1188,8 +1448,9 @@ int two_choice(choice1,choice2,string,key,x,y,w,title)
 	make_icon((char*)alert_bits,alert_width,alert_height,base);
 	
 	
-	c1=make_window(base,x1,3*DCURY,l1+DCURX,DCURY+4,1);
-        c2=make_window(base,x2,3*DCURY,l2+DCURX,DCURY+4,1);
+	c1=make_button(base,x1,3*DCURY,l1+DCURX,DCURY+4,1);
+        c2=make_button(base,x2,3*DCURY,l2+DCURX,DCURY+4,1);
+	wm_register_close(base,c2);
 	  XSelectInput(display,c1,BUT_MASK);
  	 XSelectInput(display,c2,BUT_MASK);
 	
@@ -1209,7 +1470,7 @@ int two_choice(choice1,choice2,string,key,x,y,w,title)
          }
   
         while(not_done){
-        XNextEvent(display,&ev);
+        xpp_next_event(&ev);
 		switch(ev.type){
 		case Expose:
 		case MapNotify:
@@ -1304,7 +1565,7 @@ Window *root,hwin;
 
   while(!done)
        {
-	XNextEvent(display,&ev);
+	xpp_next_event(&ev);
         switch(ev.type){
 			case Expose:
 			case MapNotify:
@@ -1408,7 +1669,7 @@ Window *root;
         draw_pop_list(w,title,list,n,width,def);
         while(not_done)
         {
-	 XNextEvent(display,&ev);
+	 xpp_next_event(&ev);
 	 switch(ev.type) {
 		case ConfigureNotify:
 		case Expose:

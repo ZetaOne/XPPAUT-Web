@@ -531,7 +531,7 @@ FILESEL f;
  
  char t[256]; 
  if(f.here!=1)return;
- if(f.ok==w)XDrawString(display,w,small_gc,5,CURY_OFFs,"Ok",2);
+ if(f.ok==w)XDrawString(display,w,small_gc,5,CURY_OFFs,"OK",2);
   if(f.cancel==w)XDrawString(display,w,small_gc,5,CURY_OFFs,"Cancel",6);
  if(f.up==w)
  {
@@ -781,7 +781,7 @@ int do_file_select_events()
  XEvent ev;
  /* plintf("Xup=%d\n",Xup); */
  while(1){
-   XNextEvent(display,&ev);
+   xpp_next_event(&ev);
    switch(ev.type){
    case ConfigureNotify:
    case Expose:
@@ -863,10 +863,10 @@ void create_file_selector(title,file,wild)
  XSetWMProperties(display,base,&winname,NULL,NULL,0,&size_hints,NULL,&class_hints);
  
  /*
- filesel.up=make_window(base,DCURXs,2+4*hgt,3*DCURXs+5,DCURYs,1);
- filesel.dn=make_window(base,DCURXs,2+5*hgt,3*DCURXs+5,DCURYs,1);
+ filesel.up=make_button(base,DCURXs,2+4*hgt,3*DCURXs+5,DCURYs,1);
+ filesel.dn=make_button(base,DCURXs,2+5*hgt,3*DCURXs+5,DCURYs,1);
  filesel.pgup=make_plain_window(base,DCURXs,2+7*hgt,3*DCURXs+5,DCURYs,1);
- filesel.pgdn=make_window(base,DCURXs,2+8*hgt,3*DCURXs+5,DCURYs,1);
+ filesel.pgdn=make_button(base,DCURXs,2+8*hgt,3*DCURXs+5,DCURYs,1);
  */
  
  filesel.up=make_icon_window(base,DCURXs,2+3*hgt+72+15,32,24,1,0,0,lineup_bits);
@@ -889,8 +889,9 @@ void create_file_selector(title,file,wild)
    filesel.w[i]=make_plain_window(base,6*DCURXs+5,2+(3+i)*hgt,width-6*DCURXs-10,DCURYs,0);
 } 
 
-  filesel.ok=make_window(base,width/2-7*DCURXs-3,height-hgt,7*DCURXs,DCURYs,1);
-  filesel.cancel=make_window(base,width/2+3,height-hgt,7*DCURXs,DCURYs,1);
+  filesel.ok=make_button(base,width/2-7*DCURXs-3,height-hgt,7*DCURXs,DCURYs,1);
+  filesel.cancel=make_button(base,width/2+3,height-hgt,7*DCURXs,DCURYs,1);
+  wm_register_close(base,filesel.cancel);
   /*  XSelectInput(display,filesel.wild,BOXEVENT);
       XSelectInput(display,filesel.file,BOXEVENT); */
   filesel.here=1;
@@ -1790,23 +1791,24 @@ int nrow,n;
  xb3=xb2+7*DCURXs+14;
  xb4=xb3+7*DCURXs+14;
  /*
- b->close=make_window(base,2,5,5*DCURXs,DCURYs,1);
- b->ok=make_window(base,xb1,5,2*DCURXs,DCURYs,1);
- b->def=make_window(base,xb2,5,7*DCURXs,DCURYs,1);
- b->cancel=make_window(base,xb3,5,6*DCURXs,DCURYs,1);
-  b->go=make_window(base,xb4,5,2*DCURXs,DCURYs,1);
+ b->close=make_button(base,2,5,5*DCURXs,DCURYs,1);
+ b->ok=make_button(base,xb1,5,2*DCURXs,DCURYs,1);
+ b->def=make_button(base,xb2,5,7*DCURXs,DCURYs,1);
+ b->cancel=make_button(base,xb3,5,6*DCURXs,DCURYs,1);
+  b->go=make_button(base,xb4,5,2*DCURXs,DCURYs,1);
   */
-  b->close=make_window(base,2,5,7*DCURXs+10,DCURYs,1);
- b->ok=make_window(base,xb1,5,7*DCURXs+10,DCURYs,1);
- b->def=make_window(base,xb2,5,7*DCURXs+10,DCURYs,1);
- b->cancel=make_window(base,xb3,5,7*DCURXs+10,DCURYs,1);
-  b->go=make_window(base,xb4,5,7*DCURXs+10,DCURYs,1);
+  b->close=make_button(base,2,5,7*DCURXs+10,DCURYs,1);
+ wm_register_close(base,b->close);
+ b->ok=make_button(base,xb1,5,7*DCURXs+10,DCURYs,1);
+ b->def=make_button(base,xb2,5,7*DCURXs+10,DCURYs,1);
+ b->cancel=make_button(base,xb3,5,7*DCURXs+10,DCURYs,1);
+  b->go=make_button(base,xb4,5,7*DCURXs+10,DCURYs,1);
   xb1=DCURXs+wid1+wid2+12;
   /*
-  b->up=make_window(base,xb1,2*DCURYs,3*DCURXs,DCURYs,1);
-  b->dn=make_window(base,xb1,2*DCURYs+DCURYs+4,3*DCURXs,DCURYs,1);
-  b->pgup=make_window(base,xb1,2*DCURYs+2*DCURYs+8,3*DCURXs,DCURYs,1);
-  b->pgdn=make_window(base,xb1,2*DCURYs+3*DCURYs+12,3*DCURXs,DCURYs,1);
+  b->up=make_button(base,xb1,2*DCURYs,3*DCURXs,DCURYs,1);
+  b->dn=make_button(base,xb1,2*DCURYs+DCURYs+4,3*DCURXs,DCURYs,1);
+  b->pgup=make_button(base,xb1,2*DCURYs+2*DCURYs+8,3*DCURXs,DCURYs,1);
+  b->pgdn=make_button(base,xb1,2*DCURYs+3*DCURYs+12,3*DCURXs,DCURYs,1);
 */
 
   b->up=make_icon_window(base,xb1,1.75*DCURYs+24+3,32,24,1,0,0,lineup_bits);
@@ -2032,7 +2034,7 @@ Window w;
  if(b.go==w)XDrawString(display,w,small_gc,5,CURY_OFFs,
 	"Go",2);
  if(b.ok==w)XDrawString(display,w,small_gc,5,CURY_OFFs,
-	"Ok",2);
+	"OK",2);
  if(b.cancel==w)XDrawString(display,w,small_gc,5,CURY_OFFs,
 	"Cancel",6);
 if(b.def==w)XDrawString(display,w,small_gc,5,CURY_OFFs,

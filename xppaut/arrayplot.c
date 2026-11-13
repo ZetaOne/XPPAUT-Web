@@ -343,6 +343,7 @@ void create_arrayplot(ap,wname,iname)
   ap->wedit=br_button(base,0,1,"Edit",0);
   ap->wprint=br_button(base,0,2,"Print",0);
   ap->wclose=br_button(base,0,3,"Close",0);
+  wm_register_close(base,ap->wclose);
   ap->wfit=br_button(base,0,4,"Fit",0);
   ap->wrange=br_button(base,0,5,"Range",0);
   ap->wgif=br_button(base,1,0,"GIF",0);
@@ -583,6 +584,9 @@ static void aplot_gif_note(APLOT *ap)
   int r0=ap->nstart,rl=ap->nstart+ap->nskip*(ap->ndown-1),a=r0,b=rl;
   double step=NJMP*DELTA_T,ts,te;
   strcpy(n0,(ap->index0>=1&&ap->index0<=NEQ)?uvar_names[ap->index0-1]:"?");
+  /* XPPAUT-Web: indexn is never set (always 0), so the note said "... ? (0)";
+     the last column drawn is index0+(nacross/ncskip-1)*ncskip, as in the plot */
+  ap->indexn=ap->index0+(ap->ncskip>0?(ap->nacross/ap->ncskip-1)*ap->ncskip:ap->nacross-1);
   strcpy(n1,(ap->indexn>=1&&ap->indexn<=NEQ)?uvar_names[ap->indexn-1]:"?");
   if(storind>0){
     if(a>storind-1)a=storind-1;

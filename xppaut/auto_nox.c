@@ -2258,7 +2258,7 @@ void auto_extend_ss()
   
   if (isinf(grabpt.per))
   {
-  	respond_box("Okay","Can't continue infinite period Hopf!");
+  	respond_box("OK","Can't continue infinite period Hopf!");
   	return;
   } 
   
@@ -2433,7 +2433,7 @@ void auto_new_per() /* same for extending periodic  */
   
   if (isinf(grabpt.per))
   {
-  	respond_box("Okay","Can't continue infinite period Hopf.");
+  	respond_box("OK","Can't continue infinite period Hopf.");
   	return;
   } 	
       TypeOfCalc=PE1;
@@ -2646,7 +2646,7 @@ void auto_2p_hopf()
   
   if (isinf(grabpt.per))
   {
-  	respond_box("Okay","Can't continue infinite period Hopf.");
+  	respond_box("OK","Can't continue infinite period Hopf.");
   	return;
   } 
   
@@ -2765,7 +2765,7 @@ void save_auto()
   /* XGetInputFocus(display,&w,&rev); */
   
   sprintf(filename,"%s.auto",basename(this_auto_file));
-  /* status=get_dialog("Save Auto","Filename",filename,"Ok","Cancel",60);
+  /* status=get_dialog("Save Auto","Filename",filename,"OK","Cancel",60);
   XSetInputFocus(display,w,rev,CurrentTime);
   */
   status=file_selector("Save Auto",filename,"*.auto");

@@ -50,7 +50,7 @@ void do_movie_com(int c)
  switch(c){
 
 	     case 0: if(film_clip()==0)
-	 respond_box("Okay","Out of film!");
+	 respond_box("OK","Out of film!");
 			break;
 	      case 1: reset_film();
 	                break;
@@ -364,7 +364,7 @@ void  auto_play()
 
 void too_small()
  {
-  respond_box("Okay","Window too small for film!");
+  respond_box("OK","Window too small for film!");
   }
 
  

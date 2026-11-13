@@ -279,7 +279,7 @@ void data_del_col(b)  /*  this only works with storage  */
   err_msg("Sorry - not working very well yet...");
   return;
   strcpy(var,"");
-  status=get_dialog("Delete","Name",var,"Ok","Cancel",20);
+  status=get_dialog("Delete","Name",var,"OK","Cancel",20);
    if(status!=0)
     del_stor_col(var,b); 
 }
@@ -295,7 +295,7 @@ BROWSER *b;
   XGetInputFocus(display,&w,&rev);
   strcpy(var,"");
   strcpy(form,"");
-  status=get_dialog("Add Column","Name",var,"Ok","Cancel",20);
+  status=get_dialog("Add Column","Name",var,"OK","Cancel",20);
   if(status!=0){
     status=get_dialog("Add Column","Formula:",form,"Add it","Cancel",80);
      if(status!=0)
@@ -810,7 +810,7 @@ int row,col,iflag;
   if(iflag==1)dcol=14*DCURXs;
    x=dcol*col+4;
    y=drow*row+4;
-   win=make_window(root,x,y,width+5,DCURYs+1,1);
+   win=make_button(root,x,y,width+5,DCURYs+1,1);
   XSelectInput(display,win,MYMASK);
  return(win);
  }
@@ -829,7 +829,7 @@ int row,col,iflag;
   if(iflag==1)dcol=14*DCURXs;
    x=dcol*col+4;
    y=drow*row+4;
-   win=make_window(root,x,y,width+5,DCURYs+1,1);
+   win=make_button(root,x,y,width+5,DCURYs+1,1);
   XSelectInput(display,win,MYMASK);
  return(win);
  }
@@ -908,6 +908,7 @@ XStringListToTextProperty(&iname,1,&iconname);
  b->addcol=br_button(base,2,4,"addcol",0);
  b->delcol=br_button(base,2,5,"delcol",0);
  b->close=br_button(base,2,6,"close",0);
+ wm_register_close(base,b->close);
  b->time=br_button(base,5,0,"time ",1);
  b->hint=make_window(base,0,4*drow,width-17,drow-3,1);
   XSelectInput(display,b->time,SIMPMASK);
@@ -1053,7 +1054,7 @@ XEvent ev;
       if(XPending(display)>0)
 	  {
 	   
-          XNextEvent(display,&zz);
+          xpp_next_event(&zz);
           switch(zz.type){
 	  case ButtonRelease:
 	    done=0;
@@ -1296,7 +1297,7 @@ BROWSER *b;
  XGetInputFocus(display,&w,&rev);
 strcpy(var,uvar_names[0]);
 strcpy(form,uvar_names[0]);
-status=get_dialog("Replace","Variable:",var,"Ok","Cancel",20);
+status=get_dialog("Replace","Variable:",var,"OK","Cancel",20);
 if(status!=0){
  status=get_dialog("Replace","Formula:",form,"Replace","Cancel",80);
  if(status!=0)replace_column(var,form,b->data,b->maxrow);
@@ -1402,7 +1403,7 @@ void open_write_file(fp,fil,ok)
 
 			*fp=fopen(fil,"w");
 			if(*fp==NULL){
-				      respond_box("Ok",
+				      respond_box("OK",
 					"Cannot open file");
 				      *ok=0;
 				     }
@@ -1429,14 +1430,14 @@ BROWSER *b;
  
  strcpy(fil,"test.dat");
  /*  XGetInputFocus(display,&w,&rev);
- status=get_dialog("Load","Filename:",fil,"Ok","Cancel",40);
+ status=get_dialog("Load","Filename:",fil,"OK","Cancel",40);
  XSetInputFocus(display,w,rev,CurrentTime);
  */
  status=file_selector("Load data",fil,"*.dat");
 if(status==0)return;
  fp=fopen(fil,"r");
  	if(fp==NULL){
-				      respond_box("Ok",
+				      respond_box("OK",
 					"Cannot open file");
 				     return;
 				     }
@@ -1508,7 +1509,7 @@ XGetInputFocus(display,&w,&rev);
  strcpy(fil,"test.dat");
  new_string("Write to:",fil);
 */
- /* status=get_dialog("Write","Filename:",fil,"Ok","Cancel",40);
+ /* status=get_dialog("Write","Filename:",fil,"OK","Cancel",40);
 
     XSetInputFocus(display,w,rev,CurrentTime); */
   status=file_selector("Write data",fil,"*.dat");

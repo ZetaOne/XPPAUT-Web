@@ -78,6 +78,22 @@ NOTE: except for the structure MyGraph, it is "x-free" so it
 extern GRAPH *MyGraph;
 #include "menudrive.h"
 #include "arrayplot.h"
+
+#include <time.h>
+/* true if at least ~20 ms of wall-clock time has passed since the last
+   time it returned true */
+static int xpp_poll_due(void)
+{
+  static struct timespec last={0,0};
+  struct timespec now;
+  double dt;
+  clock_gettime(CLOCK_MONOTONIC,&now);
+  dt=(now.tv_sec-last.tv_sec)+1e-9*(now.tv_nsec-last.tv_nsec);
+  if(dt<0.02)return 0;
+  last=now;
+  return 1;
+}
+
 #define MSWTCH(u,v) memcpy((void *)(u),(void *)(v),xpv.node*sizeof(double))
 
 #define READEM 1
@@ -2256,15 +2272,15 @@ if(Xup) cwidth=get_command_width();
            }
 	                
         /*   This is where the progresser goes   */
-	   if(Xup){ plot_command(nit,icount,cwidth); 
-	   esc=my_abort();
-	
-       
+	   if(Xup&&(icount==0||xpp_poll_due())){
+	     /* progress bar + check for Esc / expose events.  XPending()
+	        flushes the X connection, so doing this at every output point
+	        costs a system call each time; poll about 50 times a second. */
+	     plot_command(nit,icount,cwidth); 
+	     esc=my_abort();
            {
-            
              if(esc==ESCAPE) break;
 	     if(esc=='/'){rval=1;ENDSING=1;break;}
-	    
            }
 	}        
 	if(STOP_FLAG==1){STOP_FLAG=0;break;}

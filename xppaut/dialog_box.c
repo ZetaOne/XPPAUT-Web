@@ -1,4 +1,5 @@
 #include "dialog_box.h"
+#include "pop_list.h"
 
 #include "many_pops.h"
 #include "ggets.h"
@@ -73,12 +74,16 @@ int max;
  
  XSetWMProperties(display,d.base,&winname,NULL,NULL,0,NULL,NULL,&class_hints);
  
+ wm_accept_close(d.base);
  d.mes=XCreateSimpleWindow(display,d.base,5,5,lm,DCURY+8,1,MyBackColor,MyBackColor);
  d.input=XCreateSimpleWindow(display,d.base,10+lm,5,lv,DCURY+8,1,MyBackColor,MyBackColor);
  d.ok=XCreateSimpleWindow(display,d.base,5,10+DCURY,lo+4,DCURY+8,1,MyForeColor,MyBackColor);
  d.cancel=XCreateSimpleWindow(display,d.base,
 	5+lo+10,10+DCURY,lc+4,DCURY+8,1,MyForeColor,MyBackColor);
  
+	wm_register_close(d.base,d.cancel);
+	wm_register_button(d.ok,lo+4,DCURY+8);
+	wm_register_button(d.cancel,lc+4,DCURY+8);
 	XSelectInput(display,d.base,EV_MASK);
 	XSelectInput(display,d.input,EV_MASK);
 	XSelectInput(display,d.mes,EV_MASK);
@@ -122,7 +127,7 @@ DIALOG *d;
  int ch;
  XEvent ev;
 
- XNextEvent(display,&ev);
+ xpp_next_event(&ev);
  
   switch(ev.type){
 	case ConfigureNotify:
@@ -201,7 +206,7 @@ double *value;
  int status;
  sprintf(tvalue,"%.16g",*value);
  
- status=get_dialog(name,name,tvalue,"Ok","Cancel",30);
+ status=get_dialog(name,name,tvalue,"OK","Cancel",30);
  if(status==FORGET_ALL||strlen(tvalue)==0)return;
  if(tvalue[0]=='%')
   {
@@ -219,7 +224,7 @@ int *value;
  char tvalue[100];
  int status;
  sprintf(tvalue,"%d",*value);
- status=get_dialog(name,name,tvalue,"Ok","Cancel",30);
+ status=get_dialog(name,name,tvalue,"OK","Cancel",30);
  if(status==FORGET_ALL||strlen(tvalue)==0)return;
  *value=atoi(tvalue);
  }

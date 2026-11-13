@@ -203,7 +203,6 @@ OptionsSet notAlreadySet;
 
 XFontStruct *big_font,*small_font;
 void draw_many_lines();
-void close_graph_window(Window w); /* XPPAUT-Web */
 void set_colorization_stuff();
 void silent_equilibria();
 void silent_dfields();
@@ -993,16 +992,17 @@ void xpp_events(XEvent report,int min_wid,int min_hgt)
    do_ani_events(report);
    top_button_events(report);
  switch(report.type){
- case ClientMessage: /* XPPAUT-Web: window manager close on a graph window */
-   if((Atom)report.xclient.data.l[0]==deleteWindowAtom)
-     close_graph_window(report.xany.window);
+ case ClientMessage:
+   /* the window manager's close tab.  Windows with a Close/Cancel button
+      were already turned into a click on that button by xpp_next_event */
+   if(is_wm_delete(&report)){
+     if(report.xclient.window==main_win){
+       if(yes_no_box())bye_bye();
+     }
+     else
+       destroy_graph_window(report.xclient.window);
+   }
    break;
- /* case ClientMessage:
-	  if(report.xclient.data.l[0]==deleteWindowAtom){
-        
-	  break;
-	  }
-	  break; */
  
  case ConfigureNotify: /* this needs to be fixed!!! */
    /*    printf("CN %ld \n",report.xany.window); */
@@ -1120,7 +1120,7 @@ unsigned int min_wid,min_hgt;
 while(1)
 {
 /*  put_command("Command:");  */
- XNextEvent(display,&report);
+ xpp_next_event(&report);
  xpp_events(report,min_wid,min_hgt);
  } /* end while */
 }
@@ -1448,6 +1448,7 @@ XKeyEvent createKeyEvent(Window win,
 /*   Remove after debugging is done */   
  /* XSynchronize(display,1); */
  screen=DefaultScreen(display);
+ install_xpp_error_handler();
  if (!deleteWindowAtom) {
 	deleteWindowAtom = XInternAtom(display,"WM_DELETE_WINDOW", 0);
     }

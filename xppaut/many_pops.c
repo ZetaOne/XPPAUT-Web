@@ -889,17 +889,23 @@ int nc;
 
 void destroy_a_pop()
  {
-  int i;
   if(draw_win==graph[0].w)
   {
-   respond_box("Okay","Can't destroy big window!");
-   /*respond_box(main_win,0,0,"Okay","Can't destroy big window!");*/
+   respond_box("OK","Can't destroy big window!");
    return;
   }
+  destroy_graph_window(draw_win);
+ }
+
+/* destroy a secondary graph window; used by "Makewindow/Destroy" and
+   by the window-manager close tab.  Returns 1 if w was such a window. */
+int destroy_graph_window(Window w)
+ {
+  int i;
   for(i=1;i<MAXPOP;i++)
-   if(graph[i].w==draw_win)break;
-  if(i>=MAXPOP)return;
-   select_window(graph[0].w);
+   if(graph[i].w==w)break;
+  if(i>=MAXPOP)return 0;
+  if(draw_win==w)select_window(graph[0].w);
   graph[i].Use=0;
   destroy_label(graph[i].w);
   destroy_grob(graph[i].w);
@@ -907,22 +913,8 @@ void destroy_a_pop()
   XDestroySubwindows(display,graph[i].w);
   XDestroyWindow(display,graph[i].w);
   num_pops--;
+  return 1;
   }
-
-
-/* XPPAUT-Web: the window manager asked to close graph window w (made with
-   Makewindow); destroy it as Makewindow/Destroy would. The main graph is
-   not a top-level window, so it never gets here. */
-void close_graph_window(Window w)
-{
-  int i;
-  for(i=1;i<MAXPOP;i++)
-    if(graph[i].Use&&graph[i].w==w){
-      select_window(w);
-      destroy_a_pop();
-      return;
-    }
-}
 
 
 void init_grafs(x,y,w,h)
@@ -1093,6 +1085,7 @@ void do_expose(ev)
   Window temp;
   
   temp=draw_win;
+  if(ev.type==Expose||ev.type==MapNotify)draw_button_hover(ev.xany.window);
   top_button_draw(ev.xany.window);
   expose_aplot(ev.xany.window); 
   /* redraw_txtview(ev.xany.window);  */
@@ -1155,6 +1148,7 @@ void do_expose(ev)
    get_draw_area();
    BaseCol();
    SmallBase();
+   draw_button_bevel(ev.xany.window);
  }
 
 
@@ -1198,14 +1192,15 @@ void create_a_pop()
   if(graph[i].Use==0)break;
   if(i>=MAXPOP)
   {
-   /*respond_box(main_win,0,0,"Okay","Too many windows!");*/
-   respond_box("Okay","Too many windows!");
+   /*respond_box(main_win,0,0,"OK","Too many windows!");*/
+   respond_box("OK","Too many windows!");
    return;
   }
 index=i;
 
 
 graph[index].w=XCreateSimpleWindow(display,RootWindow(display,screen),0,0,MINI_W,MINI_H,2,GrFore,GrBack);
+wm_forget_close(graph[index].w);
  graph[index].w_info=make_window(graph[index].w,10,0,40*DCURXs,DCURYs,0);
   XSetWindowBackground(display,graph[i].w,MyDrawWinColor);
   

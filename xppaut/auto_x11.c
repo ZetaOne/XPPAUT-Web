@@ -322,7 +322,7 @@ void traverse_diagram()
   traverse_out(d,&ix,&iy,1);
   
   while(done==0){
-    XNextEvent(display,&ev);
+    xpp_next_event(&ev);
     if(ev.type==ButtonPress)
     {
   
@@ -648,7 +648,7 @@ int byeauto_(iflag)
   if(Auto.exist==0)return(1);
   *iflag=0;
  while(XPending(display)>0){
- XNextEvent(display,&event);
+ xpp_next_event(&event);
  switch(event.type){
 	case Expose: do_expose(event);
 	  	     break;
@@ -797,7 +797,7 @@ void auto_scroll_window()
    KeyPressMask|ButtonPressMask|ButtonReleaseMask|
 		PointerMotionMask|ButtonMotionMask|ExposureMask);
   while(!alldone){
-   XNextEvent(display,&ev);
+   xpp_next_event(&ev);
    switch(ev.type){
    case KeyPress:
      alldone=1;
@@ -934,7 +934,7 @@ Window lil_button(root,x,y,name)
   /*int width=strlen(name)*DCURX+5;
   */
   int width=12*DCURX;
-  win=make_window(root,x,y,width,DCURY+1,1);
+  win=make_button(root,x,y,width,DCURY+1,1);
   XSelectInput(display,win,MYMASK);
   return(win);
 }
@@ -1010,6 +1010,7 @@ void make_auto(wname,iname)  /* this makes the auto window  */
  Auto.x0=10*DCURXs;
  Auto.y0=2*DCURYs;
  AutoW.kill=lil_button(base,2,2,"Close");
+ wm_register_close(base,AutoW.kill);
  AutoW.param=lil_button(base,x,y,"Parameter");
  y+=dely;
  AutoW.axes=lil_button(base,x,y,"Axes");
