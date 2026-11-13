@@ -167,13 +167,13 @@ shows **Update** when a new version is published.
 
 ## Android app (in development)
 
-[**Download XPPAUT-1.4-dev.apk**](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.4-dev/XPPAUT-1.4-dev.apk)
+[**Download XPPAUT-1.5-dev.apk**](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.5-dev/XPPAUT-1.5-dev.apk)
 (13 MB, Android 10 or newer). Open it on the phone and allow installing from
 that app when Android asks. It updates an earlier version in place.
 
-The file is **12,794,808 bytes**, SHA-256
-`a143d4a6254673ac6adf983ba0958df3051a215196701ee5a2d07f3863794f84`
-([checksum file](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.4-dev/XPPAUT-1.4-dev.apk.sha256)).
+The file is **12,797,868 bytes**, SHA-256
+`629a9d99547d11851ae9b18d9331c5ed0f143d8c890250cd167a681f1b43363e`
+([checksum file](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.5-dev/XPPAUT-1.5-dev.apk.sha256)).
 If Android says *"package appears to be invalid"*, the download is usually
 incomplete: compare the size (Files app → Details) and download it again,
 then open it from the Files app.
