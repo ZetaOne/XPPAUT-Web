@@ -13,7 +13,7 @@ const app = document.querySelector<HTMLDivElement>('#app')!
 
 app.innerHTML = `
   <header class="bar">
-    <strong class="brand">XPPAUT-Web</strong>
+    <strong class="brand"><img class="brand-icon" src="./icon-192.png" alt="" width="22" height="22">XPPAUT-Web</strong>
     <button type="button" class="menubtn" id="menubtn" aria-label="Menu" aria-expanded="false">☰</button>
     <div class="start" id="start">
       <label>Example

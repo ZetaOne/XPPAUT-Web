@@ -297,6 +297,17 @@ body {
 
 .brand {
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Bard's icon picture beside the name */
+.brand-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  flex: none;
 }
 
 .start,

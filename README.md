@@ -1,11 +1,15 @@
 # XPPAUT-Web
 
+<img src="docs/xpp-icon.png" width="128" align="right" alt="The XPPAUT icon: a pink and grey cockatoo with orange, green and blue phase-plane curves drawn over it">
+
 **Author:** Jeevan Kumar Gochhayat
 
 XPPAUT, the dynamical-systems tool by Bard Ermentrout, running in the browser.
 Same program, same interface, nothing to install.
 
 **→ https://zetaone.github.io/XPPAUT-Web/**
+
+*Icon: picture by Bard Ermentrout, from the XPPAUT apps for iPad and iPhone.*
 
 This page as a PDF, to print or pass on: [**XPPAUT-Web-README.pdf**](https://zetaone.github.io/XPPAUT-Web/XPPAUT-Web-README.pdf)
 
