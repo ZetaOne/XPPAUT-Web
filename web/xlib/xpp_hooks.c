@@ -18,6 +18,7 @@
 #include "autlim.h"
 #include "auto_nox.h"
 #include "auto_x11.h"
+#include "struct.h"
 
 #define PARAMBOX 1 /* init_conds.c */
 #define ICBOX 2
@@ -43,6 +44,8 @@ void redraw_ics(void);
 extern double last_ic[MAXODE];
 
 int xw_slider_where(int k, int *out);
+
+extern GRAPH graph[MAXPOP];
 
 static const char *axis_name(int i)
 {
@@ -84,20 +87,29 @@ EMSCRIPTEN_KEEPALIVE int xw_graph_xy(int top, int rx, int ry, double *out, char 
       return 1;
     }
   }
-  xw_drawable *w = xw_lookup(draw_win);
-  if (!w || !xw_viewable(w) || !xw_inside(w, (XID)top)) return 0;
-  xw_root_origin(w, &ox, &oy);
-  int i = rx - ox, j = ry - oy;
-  if (i < 0 || j < 0 || i >= w->width || j >= w->height) return 0;
-  get_draw_area();
-  /* DBottom is the larger pixel row (y grows downwards) */
-  if (i < DLeft || i > DRight || j < DTop || j > DBottom) return 0;
-  float x, y;
-  scale_to_real(i, j, &x, &y);
-  out[0] = x;
-  out[1] = y;
-  snprintf(names, nlen, "%s\t%s", axis_name(IXPLT), axis_name(IYPLT));
-  return 1;
+  /* any of XPP's graph windows (the main one and those from Makewindow),
+     each with its own scale and axes: get_draw_area and scale_to_real
+     (graphics.c) for that window, without making it the current graph */
+  extern int DCURXs, DCURYs;
+  for (int g = 0; g < MAXPOP; g++) {
+    GRAPH *gr = &graph[g];
+    if (gr->Use != 1 || gr->ThreeDFlag) continue;
+    xw_drawable *w = xw_lookup(gr->w);
+    if (!w || !xw_viewable(w) || !xw_inside(w, (XID)top)) continue;
+    xw_root_origin(w, &ox, &oy);
+    int i = rx - ox, j = ry - oy;
+    if (i < 0 || j < 0 || i >= w->width || j >= w->height) continue;
+    int hc = DCURXs, vc = DCURYs, htic = w->width / 150 > 1 ? w->width / 150 : 1;
+    int left = 12 * hc, right = w->width - 3 * hc - htic;
+    int bottom = w->height - 1 - vc * 7 / 2, topr = vc * 5 / 2 + 1;
+    /* bottom is the larger pixel row (y grows downwards) */
+    if (right <= left || bottom <= topr || i < left || i > right || j < topr || j > bottom) return 0;
+    out[0] = (gr->xhi - gr->xlo) * (float)(i - left) / (float)(right - left) + gr->xlo;
+    out[1] = (gr->yhi - gr->ylo) * (float)(j - bottom) / (float)(topr - bottom) + gr->ylo;
+    snprintf(names, nlen, "%s\t%s", axis_name(gr->xv[0]), axis_name(gr->yv[0]));
+    return 1;
+  }
+  return 0;
 }
 
 /* "name=value\n" for every parameter, then "@name=value\n" for variables */
