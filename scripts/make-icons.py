@@ -4,10 +4,10 @@
 Run from the project root:  python3 scripts/make-icons.py
 - public/favicon-16.png, favicon-32.png, apple-touch-icon.png (180),
   icon-192.png, icon-512.png: the picture itself, scaled
-- public/icon-maskable-512.png: the picture at 80% on its grey, so a
+- public/icon-maskable-512.png: the picture at about 68% on its grey, so a
   circular mask (the "safe zone") does not cut it
 - android/.../mipmap-*/ic_launcher_fg.png: adaptive-icon foreground, the
-  picture in the visible 72 of the 108 dp, on its grey
+  picture in the middle 60 of the 108 dp (the launcher shows about 72, often as a circle), on its grey
 """
 import os
 from PIL import Image
@@ -36,11 +36,11 @@ for name, size in [("favicon-16.png", 16), ("favicon-32.png", 32),
     if name == "apple-touch-icon.png":
         im = im.convert("RGB")  # iOS wants no transparency
     im.save(os.path.join(pub, name), optimize=True)
-on_grey(512, 410).save(os.path.join(pub, "icon-maskable-512.png"), optimize=True)
+on_grey(512, 350).save(os.path.join(pub, "icon-maskable-512.png"), optimize=True)
 
 res = os.path.join(ROOT, "android", "app", "src", "main", "res")
 for dpi, px in [("mdpi", 108), ("hdpi", 162), ("xhdpi", 216),
                 ("xxhdpi", 324), ("xxxhdpi", 432)]:
-    on_grey(px, round(px * 72 / 108)).save(
+    on_grey(px, round(px * 60 / 108)).save(
         os.path.join(res, "mipmap-" + dpi, "ic_launcher_fg.png"), optimize=True)
 print("icons written")
