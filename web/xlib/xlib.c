@@ -844,6 +844,8 @@ Display *XOpenDisplay(const char *name)
   return xw_display;
 }
 
+int xw_no_yield = 0;
+
 int XCloseDisplay(Display *d) { (void)d; return 0; }
 int XFlush(Display *d) { (void)d; xw_platform_poll(); return 1; }
 int (*XSynchronize(Display *d, Bool onoff))(Display *)
@@ -1851,6 +1853,55 @@ int XDrawLine(Display *d, Drawable dr, GC gc, int x1, int y1, int x2, int y2)
 int XDrawSegments(Display *d, Drawable dr, GC gc, XSegment *s, int n)
 {
   for (int i = 0; i < n; i++) XDrawLine(d, dr, gc, s[i].x1, s[i].y1, s[i].x2, s[i].y2);
+  return 1;
+}
+
+/* XPPAUT 8.2: the surface plot of the array plot draws with these */
+int XDrawLines(Display *d, Drawable dr, GC gc, XPoint *p, int n, int mode)
+{
+  int x = n > 0 ? p[0].x : 0, y = n > 0 ? p[0].y : 0;
+  for (int i = 1; i < n; i++) {
+    int nx = mode == CoordModePrevious ? x + p[i].x : p[i].x;
+    int ny = mode == CoordModePrevious ? y + p[i].y : p[i].y;
+    XDrawLine(d, dr, gc, x, y, nx, ny);
+    x = nx;
+    y = ny;
+  }
+  return 1;
+}
+
+int XFillPolygon(Display *d, Drawable dr, GC gc, XPoint *p, int n, int shape, int mode)
+{
+  (void)d; (void)shape;
+  DRAWABLE(dr);
+  if (n < 3) return 1;
+  XPoint *q = malloc(sizeof(XPoint) * (size_t)n);
+  if (!q) return 0;
+  for (int i = 0; i < n; i++) {
+    q[i] = p[i];
+    if (mode == CoordModePrevious && i > 0) {
+      q[i].x = (short)(q[i - 1].x + p[i].x);
+      q[i].y = (short)(q[i - 1].y + p[i].y);
+    }
+  }
+  xw_fill_polygon(dd, gc, q, n);
+  free(q);
+  return 1;
+}
+
+/* Nothing to wait for: drawing is done when the call returns.  It must not
+   yield to the page (as XFlush does): Save session calls code that uses it
+   and reads the files as soon as that code returns. */
+int XSync(Display *d, Bool discard)
+{
+  (void)d; (void)discard;
+  return 1;
+}
+
+Status XGetGCValues(Display *d, GC gc, unsigned long mask, XGCValues *v)
+{
+  (void)d; (void)mask;
+  *v = gc->v;
   return 1;
 }
 

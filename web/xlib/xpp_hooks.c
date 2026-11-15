@@ -315,6 +315,7 @@ static int write_set(const char *path)
 }
 
 #include "nullcline.h"
+#include "surface.h"
 #include <unistd.h>
 extern int NULL_HERE, num_x_n, num_y_n, n_nstore, DF_FLAG, DFSuppress, PltFmtFlag;
 extern float *X_n, *Y_n;
@@ -408,6 +409,7 @@ EMSCRIPTEN_KEEPALIVE int xw_export_session(const char *dir)
 {
   char fn[1024];
   int n = 0;
+  xw_no_yield = 1; /* the page reads the files as soon as this returns */
   mkdir(dir, 0777);
   /* graph windows: make each the current one in turn, as XPP's expose
      handler does, then put everything back */
@@ -433,6 +435,8 @@ EMSCRIPTEN_KEEPALIVE int xw_export_session(const char *dir)
   MyGraph = &graph[cp];
   current_pop = cp;
   get_draw_area();
+  /* the surface view of the array plot (XPPAUT 8.2), if it is open */
+  n += surface_export(dir);
   /* the AUTO diagram, if AUTO has computed anything */
   if (bifd && bifd->next) {
     snprintf(fn, sizeof fn, "%s/auto-diagram.svg", dir);
@@ -452,6 +456,7 @@ EMSCRIPTEN_KEEPALIVE int xw_export_session(const char *dir)
   n += write_set(fn);
   snprintf(fn, sizeof fn, "%s/data.csv", dir);
   if (xw_write_csv(fn) >= 0) n++;
+  xw_no_yield = 0;
   return n;
 }
 

@@ -21,6 +21,7 @@
 #include "form_ode.h"
 #include "pop_list.h"
 #include "arrayplot.h"
+#include "surface.h"
 #include "menu.h"
 #include "userbut.h"
 #include "color.h"
@@ -988,6 +989,7 @@ void xpp_events(XEvent report,int min_wid,int min_hgt)
 /*  put_command("Command:");  */
  
    do_array_plot_events(report);
+   do_surface_events(report);
    txt_view_events(report);
    do_ani_events(report);
    top_button_events(report);

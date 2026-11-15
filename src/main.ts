@@ -1301,6 +1301,7 @@ async function saveSession() {
         `figures/  made by XPP itself when saving: graph-1 is the main window, graph-2... the\n` +
         `          windows from Makewindow; auto-diagram is AUTO's bifurcation diagram. SVG\n` +
         `          (vector, opens in a browser or Inkscape) and PostScript (.ps) of each\n` +
+        `          surface.svg/.ps/.gif: the Surface view of the array plot, if it was open\n` +
         `auto/     AUTO's data, written as its File menu would: diagram.dat (Write pts:\n` +
         `          x y1 y2 type branch two-par-flag, as plotted), allinfo.dat (All info:\n` +
         `          every point with all variables and eigenvalues) and <model>.auto\n` +

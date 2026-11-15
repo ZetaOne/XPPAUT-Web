@@ -31,10 +31,12 @@ Last). Click a preview to play the full 2-minute video.*
 
 ## Features
 
-- **The real XPPAUT 8.1**: its C code compiled to WebAssembly. Windows match the
-  desktop version pixel for pixel. See [what is new in 8.1](#new-in-xppaut-81).
-- **AUTO** for steady states, periodic orbits and bifurcation diagrams.
-- **214 example models** from the XPPAUT release and for the new 8.1 features, or your own `.ode` file with
+- **The real XPPAUT 8.2**: its C code compiled to WebAssembly. Windows match the
+  desktop version pixel for pixel. See what is new in [8.2](#new-in-xppaut-82)
+  and [8.1](#new-in-xppaut-81).
+- **AUTO** for steady states, periodic orbits and bifurcation diagrams, now also
+  of delay equations.
+- **223 example models** from the XPPAUT release and for the new 8.1 and 8.2 features, or your own `.ode` file with
   its `.ani`, `.tab` and `.dat` files (pick them together, or drag and drop
   them onto the page; a model whose table file is missing asks for it).
 - **Window panels**: drag, resize, close, save as PNG, or pop out into a
@@ -59,11 +61,43 @@ Last). Click a preview to play the full 2-minute video.*
 - **Fast and private**: about 0.5 MB, near-native speed, and nothing leaves
   your browser.
 
+## New in XPPAUT 8.2
+
+XPPAUT-Web runs XPPAUT 8.2, Bard Ermentrout's newest version (November 2026).
+Pick the examples under **New in XPPAUT 8.2** in the Model list to try it;
+their comments give the steps and the values to expect.
+
+- **Bifurcation analysis of delay equations** in AUTO. Steady states and their
+  stability (from the delay equation's own characteristic equation), Hopf
+  points, periodic orbits started from a Hopf point or from a simulation,
+  their stability (Floquet multipliers), period doublings and the
+  period-doubled branch, and two-parameter curves of Hopf points, period
+  doublings, folds and torus bifurcations. The examples are Mackey–Glass,
+  Hutchinson, a Wilson–Cowan pair, two coupled neurons, delay-coupled
+  Stuart–Landau oscillators, and equations with two delays. Delay equations
+  are also integrated in a new way, so their simulations can differ slightly
+  from XPPAUT 8.1.
+- **Surface plot** of an array plot: the **Surface** button shows the array
+  plot's data as a 3-D surface. Drag to rotate, use the wheel (or + and −) to
+  zoom, and save it as GIF, PostScript or SVG. Save session puts it in
+  `figures/` while the Surface window is open.
+- **Window close buttons**: the × on every XPP window works (it presses the
+  window's own Close or Cancel button; on the main window it asks first).
+  Buttons look raised and light up under the mouse.
+
+<p>
+  <img src="docs/delay-auto.png" width="49%" alt="AUTO in XPPAUT 8.2 on the Mackey-Glass delay equation: the steady state loses stability at a Hopf point near beta = 1.337; the periodic orbits that start there are stable (green) up to a period doubling near beta = 1.555 and unstable (open circles) after it">
+  <img src="docs/surface-plot.png" width="45%" alt="The Surface view of an array plot in XPPAUT 8.2: a pulse travelling along a cable of 40 cells, drawn as a coloured 3-D surface of cell index, time and voltage">
+</p>
+
+*Left: Mackey–Glass (`mg.ode`) in AUTO: the Hopf point at β = 1.337 and the
+periodic orbits from it, stable up to the period doubling at β = 1.5554491.
+Right: the Surface view of `surface-cable.ode`. Both computed in XPPAUT-Web.*
+
 ## New in XPPAUT 8.1
 
-XPPAUT-Web runs XPPAUT 8.1, Bard Ermentrout's newest version (November 2026).
-Pick the examples under **New in XPPAUT 8.1** in the Model list to try it;
-their comments give the steps.
+XPPAUT 8.1 (November 2026) added the following. The examples under
+**New in XPPAUT 8.1** in the Model list show them; their comments give the steps.
 
 - **Periodic orbits made easy**: **Initialconds → (P)eriodic** finds the period
   of the cycle a run has settled onto, accurately (not limited by the stored

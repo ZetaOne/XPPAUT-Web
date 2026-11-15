@@ -112,6 +112,9 @@ int xw_queue_length(void);
 
 /* ---- drawing (draw.c) ---------------------------------------------------- */
 void xw_fill_rect(xw_drawable *d, GC gc, int x, int y, int w, int h);
+void xw_fill_polygon(xw_drawable *d, GC gc, const XPoint *pts, int n);
+/* set while Save session exports: XFlush/XPending must not yield to the page */
+extern int xw_no_yield;
 void xw_line(xw_drawable *d, GC gc, int x0, int y0, int x1, int y1);
 void xw_point(xw_drawable *d, GC gc, int x, int y);
 void xw_arc(xw_drawable *d, GC gc, int x, int y, int w, int h, int a1, int a2, int fill);

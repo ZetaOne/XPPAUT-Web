@@ -1956,7 +1956,7 @@ if(Xup) cwidth=get_command_width();
  }
  if(dt<0.0)tscal=-tend;
  if(tscal==0.0)tscal=1.0;
- stor_delay(x);
+ stor_delay(x,*t);
 
  while(1)
  {
@@ -1976,7 +1976,7 @@ if(Xup) cwidth=get_command_width();
 	       gear(nodes,t,tout,xpv.x,HMIN,HMAX,TOLER,2,error,&kflag,start,WORK,IWORK); 
 	       
 	       MSWTCH(x,xpv.x);
-	       stor_delay(x);
+	       stor_delay(x,*t);
 	       if(DelayErr){
 		 DelayErr=0;
 		 LastTime=*t;
@@ -2016,7 +2016,7 @@ if(Xup) cwidth=get_command_width();
 	     MSWTCH(xpv.x,x);
 	     cvode(start,xpv.x,t,nodes,tout,&kflag,&TOLER,&ATOLER);
 	     MSWTCH(x,xpv.x);
-	     stor_delay(x);
+	     stor_delay(x,*t);
 	       if(DelayErr){
 		 DelayErr=0;
 		 err_dae();
@@ -2049,7 +2049,7 @@ if(Xup) cwidth=get_command_width();
 	     MSWTCH(xpv.x,x);
 	     dp(start,xpv.x,t,nodes,tout,&TOLER,&ATOLER,METHOD-DP5,&kflag);
 	     MSWTCH(x,xpv.x);
-	     stor_delay(x);
+	     stor_delay(x,*t);
 	       if(DelayErr){
 		 DelayErr=0;
 		 err_dae();
@@ -2079,7 +2079,7 @@ if(Xup) cwidth=get_command_width();
 	     MSWTCH(xpv.x,x);
 	     rb23(xpv.x,t,tout,start,nodes,WORK,&kflag);
 	     MSWTCH(x,xpv.x);
-              stor_delay(x);
+              stor_delay(x,*t);
 	       if(DelayErr){
 		 DelayErr=0;
 		 err_dae();
@@ -2111,7 +2111,7 @@ if(Xup) cwidth=get_command_width();
 	     adaptive(xpv.x,nodes,t,tout,TOLER,&hguess,
 		      HMIN,WORK,&kflag,NEWT_ERR,METHOD,start);
 	     MSWTCH(x,xpv.x);
-	     stor_delay(x);
+	     stor_delay(x,*t);
 	       if(DelayErr){
 		 DelayErr=0;
 		 err_dae();

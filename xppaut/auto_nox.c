@@ -632,10 +632,73 @@ void open_auto(flg) /* compatible with new auto */
 
 /* MAIN Running routine  Assumes that Auto structure is set up */
 
+extern int DelayFlag;
+int dde_po_run(void);
+int dde_po_hopf_run(void);
+int dde_po_extend_run(void);
+int dde_po_pd_run(void);
+int dde_po_fold2_run(void);
+int dde_po_pd2_run(void);
+int dde_po_tr2_run(void);
+int dde_po_get_orbit(int ibr,int lab,double per,int maxrows,int *nrow,double **ts,double **us);
+extern int MAXSTOR;
 void do_auto(iold,isave,itp)
      int iold,isave;
      int itp;
 {
+      /* AUTO evaluates delayed arguments as the steady state x(t-tau)=x(t)
+         (see func() in autpp.c).  That is right for equilibria and their
+         fold curves, but periodic orbits, BVPs and homoclinics of a delay
+         equation need genuine delayed arguments, which AUTO's collocation
+         code does not provide (yet). */
+      if(DelayFlag&&Auto.ips!=1){
+        /* periodic orbits of a delay equation, started from the last simulation:
+           dde_po.c / dde_po_xpp.c (not AUTO's collocation) */
+        /* a grabbed Hopf point of a steady state branch (Auto.irs is its label) */
+        if(Auto.ips==2&&AutoTwoParam==0&&Auto.irs>0&&
+           (Auto.itp%10==3||abs(Auto.itp/10)==3)){
+          dde_po_hopf_run();
+          redraw_params();
+          return;
+        }
+        /* Two-parameter continuation of a fold (LP) of cycles */
+        if(Auto.ips==2&&AutoTwoParam==LPP2&&Auto.irs>0&&grabpt.ibr<0&&grabpt.itp%10==5){
+          dde_po_fold2_run();
+          redraw_params();
+          return;
+        }
+        /* Two-parameter continuation of a torus (TR) point of cycles */
+        if(Auto.ips==2&&AutoTwoParam==TR2&&Auto.irs>0&&grabpt.ibr<0&&grabpt.itp%10==8){
+          dde_po_tr2_run();
+          redraw_params();
+          return;
+        }
+        /* Two-parameter continuation of a period doubling (PD) of cycles */
+        if(Auto.ips==2&&AutoTwoParam==PD2&&Auto.irs>0&&grabpt.ibr<0&&grabpt.itp%10==7){
+          dde_po_pd2_run();
+          redraw_params();
+          return;
+        }
+        /* Run -> Doubling on a PD point: follow the period-doubled branch */
+        if(Auto.ips==2&&AutoTwoParam==0&&Auto.irs>0&&grabpt.ibr<0&&Auto.isw==-1){
+          dde_po_pd_run();
+          redraw_params();
+          return;
+        }
+        /* Extend from a labeled point of a delay periodic branch (its orbit is kept in memory) */
+        if(Auto.ips==2&&AutoTwoParam==0&&Auto.irs>0&&grabpt.ibr<0){
+          dde_po_extend_run();
+          redraw_params();
+          return;
+        }
+        if(Auto.ips==2&&NewPeriodFlag==1&&Auto.irs==0&&AutoTwoParam==0){
+          dde_po_run();
+          redraw_params();
+          return;
+        }
+        err_msg("AUTO cannot yet continue this kind of solution of a delay equation (only Start -> Periodic from a simulation or a Hopf point of a steady state, and Extend or Doubling of such a branch)");
+        return;
+      }
       redraw_auto_menus();
       
     set_auto(); /* this sets up all the continuation initialization 
@@ -2709,6 +2772,32 @@ void load_auto_orbit()
    
   if((ibr>0&&(Auto.ips!=4)&&(Auto.ips!=3)&&(Auto.ips!=9))||flag==0)return; 
    /* either nothing grabbed or just a fixed point and that is already loaded */
+  if(ibr<0&&DelayFlag){
+    /* periodic orbits of a delay equation are not in AUTO's file (labels would point to other
+       orbits): the delay periodic orbit solver keeps its own copies */
+    double *ts=NULL,*us=NULL;
+    int nr=0;
+    if(!dde_po_get_orbit(ibr,lab,per,MAXSTOR-1,&nr,&ts,&us)){
+      auto_err("The orbit of this point is not stored (delay periodic orbits are kept for the current session only)");
+      return;
+    }
+    x=&MyData[0];
+    for(i=0;i<nr;i++){
+      storage[0][i]=ts[i]*per;
+      for(j=0;j<NODE;j++){
+	storage[j+1][i]=us[i*NODE+j];
+	x[j]=us[i*NODE+j];
+      }
+      extra(x,(double)storage[0][i],NODE,NEQ);
+      for(j=NODE;j<NEQ;j++)storage[j+1][i]=(float)x[j];
+    }
+    storind=nr;
+    refresh_browser(nr);
+    if(load_all_labeled_orbits==2)clr_all_scrns();
+    drw_all_scrns();
+    free(ts);free(us);
+    return;
+  }
   sprintf(string,"%s.s",this_auto_file);
   fp=fopen(string,"r");
   if(fp==NULL){

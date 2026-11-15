@@ -17,6 +17,7 @@
  */
 
 #include <stdio.h>
+extern int DelayFlag;
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -346,12 +347,17 @@ static double hl_printed[40][2];
 static int hl_nprinted = 0;
 
 /* first = 1 for the first point of a curve. Returns 1 if l1 changed sign between the previous point and this one. */
+extern int DelayFlag;
 int hopf_curve_point(int first, const double *par, const double *u, int icp1, int icp2,
                      const char *name1, const char *name2, int *sign, double *frac)
 {
-  HLENT *e = hl_find(par, u, icp1, icp2);
+  HLENT *e;
   int gh = 0, i;
   *sign = 0; *frac = 0.0;
+  /* the first Lyapunov coefficient is computed from the ODE right-hand side
+     (Taylor coefficients, no delayed arguments): it is not valid for DDEs */
+  if (DelayFlag) { hl_have = 0; return 0; }
+  e = hl_find(par, u, icp1, icp2);
   if (first) hl_have = 0;
   if (hl_good(e)) {
     *sign = e->l1 > 0.0 ? 1 : -1;
@@ -373,7 +379,9 @@ int hopf_curve_point(int first, const double *par, const double *u, int icp1, in
 /* just the sign of l1 at a point of a Hopf curve (for the PostScript drawing): -1, +1, or 0 if there is none */
 int hopf_curve_sign(const double *par, const double *u, int icp1, int icp2)
 {
-  HLENT *e = hl_find(par, u, icp1, icp2);
+  HLENT *e;
+  if (DelayFlag) return 0;
+  e = hl_find(par, u, icp1, icp2);
   if (!hl_good(e)) return 0;
   return e->l1 > 0.0 ? 1 : -1;
 }

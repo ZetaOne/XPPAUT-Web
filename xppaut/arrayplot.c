@@ -1,5 +1,6 @@
 #include "arrayplot.h"
 #include "array_print.h"
+#include "surface.h"
 
 #include <stdlib.h> 
 #include <string.h>
@@ -85,6 +86,7 @@ extern Window draw_win;
 int plot3d_auto_redraw=0;
 FILE *ap_fp;
 GC aplot_gc;
+static Window aplot_wsurf;
 int first_aplot_press;
 int do_range(double *, int);
 extern double MyData[MAXODE];
@@ -291,13 +293,14 @@ void wborder(w,i,ap)
      APLOT ap;
 {
  /* if(w==ap.wedit||w==ap.wprint||w==ap.wkill||w==ap.wstyle||w==ap.wredraw) */
-  if(w==ap.wedit||w==ap.wprint||w==ap.wclose||w==ap.wredraw||w==ap.wgif||w==ap.wrange||w==ap.wfit)
+  if(w==ap.wedit||w==ap.wprint||w==ap.wclose||w==ap.wredraw||w==ap.wgif||w==ap.wrange||w==ap.wfit||w==aplot_wsurf)
     XSetWindowBorderWidth(display,w,i);
 }
 
 void destroy_aplot()
 {
   aplot.alive=0;
+  surface_close();
   waitasec(ClickTime);
   XDestroySubwindows(display,aplot.base);
     XDestroyWindow(display,aplot.base);
@@ -347,6 +350,7 @@ void create_arrayplot(ap,wname,iname)
   ap->wfit=br_button(base,0,4,"Fit",0);
   ap->wrange=br_button(base,0,5,"Range",0);
   ap->wgif=br_button(base,1,0,"GIF",0);
+  aplot_wsurf=br_button(base,1,3,"Surface",0);
   ap->wmax=make_window(base,10,45,10*DCURXs,DCURYs,1);
   ap->wmin=make_window(base,10,51+DCURYs+color_total,10*DCURXs,DCURYs,1);
   ap->wscale=make_window(base,10+4*DCURXs,48+DCURYs,2*DCURXs,color_total,0);
@@ -428,6 +432,9 @@ void apbutton(w)
   }
   if(w==aplot.wgif){
     gif_aplot();
+  }
+  if(w==aplot_wsurf){
+    surface_create();
   }
 }
 
@@ -740,6 +747,7 @@ void redraw_aplot(ap)
 	}
       }
     }
+    surface_redraw();
     XFlush(display);
 }
 void tag_aplot(char *bob)
@@ -804,6 +812,10 @@ if(w==ap.wfit){
  }
 if(w==ap.wrange){
    XDrawString(display,w,small_gc,0,CURY_OFFs,"Range",5);
+   return;
+ }
+if(w==aplot_wsurf){
+   XDrawString(display,w,small_gc,0,CURY_OFFs,"Surface",7);
    return;
  }
   if(w==ap.wprint){

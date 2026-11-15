@@ -1,4 +1,6 @@
 #include "auto_f2c.h"
+extern int DelayFlag;
+int auto_delay_eigen(integer ndm, doublereal *u, doublereal *par, doublecomplex *ev, integer *nev);
 #include "auto_c.h"
 #include "xAuto.h"
 extern XAUTO xAuto;
@@ -1864,11 +1866,11 @@ fnhbae(iap_type *iap, rap_type *rap, doublereal *par, integer *icp, logical *chn
   doublecomplex *ev;
   doublereal rp;
 
-  integer iid, ibr, ndm, ier, loc=0, ips;
+  integer iid, ibr, ndm, ier, loc=0, ips, nev, nunst=0;
   doublereal rev;
   integer isw;
 
-  ev = (doublecomplex *)malloc(sizeof(doublecomplex)*(iap->ndim));
+  ev = (doublecomplex *)malloc(sizeof(doublecomplex)*(iap->ndim+64));
 
 
   /* Local */
@@ -1897,7 +1899,18 @@ fnhbae(iap_type *iap, rap_type *rap, doublereal *par, integer *icp, logical *chn
 
   /* Compute the eigenvalues of the Jacobian */
 
-  eig(iap, &ndm, &ndim, dfdu, ev, &ier);
+  /* For delay equations the eigenvalues of df/du are meaningless (it is
+     A_0+A_1+...): use the roots of the characteristic equation instead. */
+  nev = ndm;
+  ier = 1;
+  if (DelayFlag && abs(ips) == 1) {
+    /* returns nev>=ndm of the rightmost roots, sorted by real part */
+    ier = auto_delay_eigen(ndm, u, par, ev, &nev);
+  }
+  if (ier != 0) {
+    nev = ndm;
+    eig(iap, &ndm, &ndim, dfdu, ev, &ier);
+  }
   if (ips == -1) {
     for (i = 0; i < ndm; ++i) {
       if (ev[i].r != -1. || d_imag(&ev[i]) != 0.) {
@@ -1914,9 +1927,9 @@ fnhbae(iap_type *iap, rap_type *rap, doublereal *par, integer *icp, logical *chn
   send_eigen(ibr,ntot+1,ndim,(doublecomplex*)&ev[0]);
   /* Order the eigenvalues by real part. */
 
-  for (i = 0; i < ndm - 1; ++i) {
+  for (i = 0; i < nev - 1; ++i) {
     rmax = -RLARGE;
-    for (j = i; j < ndm; ++j) {
+    for (j = i; j < nev; ++j) {
       rp = ev[j].r;
       if (rp >= rmax) {
 	rmax = rp;
@@ -1935,7 +1948,7 @@ fnhbae(iap_type *iap, rap_type *rap, doublereal *par, integer *icp, logical *chn
   rimhb = 0.;
   arev = RLARGE;
   rev = 0.;
-  for (i = 0; i < ndm; ++i) {
+  for (i = 0; i < nev; ++i) {
     if (d_imag(&ev[i]) != 0.) {
       ar = fabs(ev[i].r);
       if (ar <= arev) {
@@ -1953,19 +1966,20 @@ fnhbae(iap_type *iap, rap_type *rap, doublereal *par, integer *icp, logical *chn
 
   nins1 = 0;
   if (isw != 2) {
-    for (i = 0; i < ndm; ++i) {
+    for (i = 0; i < nev; ++i) {
       if (ev[i].r <= 0.) {
 	++nins1;
       }
     }
   } else {
-    for (i = 0; i < ndm; ++i) {
+    for (i = 0; i < nev; ++i) {
       if (ev[i].r <= HMACH) {
 	++nins1;
       }
     }
   }
 
+  nins1 -= (nev - ndm);   /* = ndm - (#unstable roots) */
   if (isw == 2) {
     ret_val = 0.;
   } else {
@@ -1991,13 +2005,13 @@ fnhbae(iap_type *iap, rap_type *rap, doublereal *par, integer *icp, logical *chn
   if (iap->mynode == 0) {
     fprintf(fp9,"%4li%6li        Eigenvalues:                                 Stable:%3li\n",abs(ibr),ntop,nins);	
     if (ips == -1) {
-      for (i = 0; i < ndm; ++i) {
+      for (i = 0; i < nev; ++i) {
 	doublecomplex tmp;
 	z_exp(&tmp, &ev[i]);
 	fprintf(fp9,"%4li%6li        Eigenvalue%3li %14.6E%14.6E\n",abs(ibr),ntop,i+1,tmp.r,tmp.i);	
       }
     } else {
-      for (i = 0; i < ndm; ++i) {
+      for (i = 0; i < nev; ++i) {
 	fprintf(fp9,"%4li%6li        Eigenvalue%3li %14.6E%14.6E\n",abs(ibr),ntop,i+1,ev[i].r,ev[i].i);
       }
     }

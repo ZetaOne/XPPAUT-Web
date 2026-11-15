@@ -53,6 +53,7 @@ void xw_platform_poll(void)
 {
   /* XPending/XFlush are called constantly during long computations; let
      the browser paint and take input about 30 times a second */
+  if (xw_no_yield) return; /* Save session is writing files */
   if (emscripten_get_now() - last_yield > 33) {
     js_busy(1); /* XPP is computing and only polling for input */
     yield(0);

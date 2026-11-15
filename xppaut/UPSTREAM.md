@@ -1,8 +1,8 @@
 # Upstream source
 
 This directory is the official XPPAUT 8.0 source release by Bard Ermentrout,
-updated to XPPAUT 8.1 with the source Bard sent in November 2026 (see
-"XPPAUT 8.1" below). Upstream files are kept unmodified apart from the
+updated to XPPAUT 8.1 and 8.2 with the source Bard sent in November 2026 (see
+"XPPAUT 8.1" and "XPPAUT 8.2" below). Upstream files are kept unmodified apart from the
 patches listed here, so web-specific changes stay visible in git history.
 
 - Source: https://sites.pitt.edu/~phase/bard/bardware/xpp/xppaut8.0.tgz
@@ -39,6 +39,8 @@ Changes to upstream files are marked with `XPPAUT-Web:` comments.
 | `init_conds.c` | WebAssembly build only: the file dialog keeps the file name when you change folder (`fs_keep_name`) | Upstream replaces the File field with just the folder, so Ok after navigating writes nothing |
 | `main.c` | WebAssembly build only: `bye_bye` first calls `xw_before_quit()` (web/xlib/xpp_hooks.c), which writes the graphs and AUTO diagram (SVG, PostScript), a .set file and the data to `/xw-session-quit` | Quitting resets AUTO and closes the windows; the page's Save session after quitting needs them |
 | `arrayplot.c` | `aplot_gif_note()`: set `indexn` (last column drawn) before writing the GIF note | Upstream never sets it, so the note named the last column "? (0)" |
+| `dde_po_xpp.c` | Declare `redraw_auto_menus()` as `void`, as `auto_x11.c` defines it | Declared `int` there: harmless on the desktop, but in WebAssembly a call through the wrong signature traps ("unreachable"), so Run -> Periodic on a delay equation crashed |
+| `surface.c` | `<stdlib.h>` instead of `stdfix.h`; new `surface_export()` | `stdfix.h` declares libc without prototypes (as before); `surface_export()` lets Save session write the Surface view (web/xlib/xpp_hooks.c) |
 
 ### Fixes from Bard Ermentrout (2025)
 
@@ -135,3 +137,37 @@ The web Xlib layer gained `XDrawSegments`, `XSetErrorHandler` and
 Patch on top of it: `arrayplot.c` `aplot_gif_note()` sets `indexn` (the last
 column drawn) before writing the note; upstream never sets it, so the GIF note
 read "columns U1 (1) ... ? (0)".
+
+### XPPAUT 8.2 (Bard Ermentrout, 15 November 2026)
+
+`xppsrc8.2.tgz` (SHA-256 4b5dea682b00909ab2da8f1b3368d322afc3b5615b1cd9dfed9e6d5e8ca5b38a), merged
+three-way on top of the 13 November source; no conflicts. Example delay
+equations came with it (`deltstode.tgz`, SHA-256
+38ea147a8558a07f55e49b22f778dcacbbca98a59e48836437f7f0ab9f8a1195); they are in
+`examples/xpp82/` with `surface-cable.ode`.
+
+- New files: `dde_po.c`, `dde_po.h`, `dde_po_xpp.c` (periodic orbits of delay
+  equations: from a simulation or a Hopf point, Floquet multipliers, period
+  doubling, two-parameter Hopf, PD, fold and torus curves), `del_spec.c`
+  (spectrum of delay equations), `surface.c`, `surface.h` (Surface view of
+  the array plot: rotate, zoom, GIF/PS/SVG). Also in `web/objects.txt`.
+- Changed: `delay_handle.c/.h`, `del_stab.c/.h`, `odesol2.c`, `gear.c`,
+  `volterra2.c`, `integrate.c` (delay handling), `auto_nox.c`, `autpp.c`,
+  `autlib1.c`, `autlib3.c`, `hopf_l1.c` (AUTO on delay equations),
+  `arrayplot.c` (Surface button), `do_fit.c`, `main.c`, `many_pops.c`,
+  `Makefile` (version 8.2.2: `web/Makefile` passes `MYSTR1=8.2 MYSTR2=2`).
+- Bard's `Makefile` lists `del_spec.o` but not `del_spec.c` among the sources
+  (only matters for its `srconly` target).
+
+The web Xlib layer gained `XFillPolygon` (a scan-line fill in
+`web/xlib/draw.c`), `XDrawLines`, `XSync` and `XGetGCValues` for the surface
+plot.
+
+Delay equations are integrated differently from 8.1, so 8 batch examples,
+all with delays (`dde`, `junk`, `fr`, `dlog`, `myret`, `sine-circel`,
+`delay`, `vtst`), give slightly different numbers than 8.1. Against the 8.2
+desktop build: 144 SAME, 9 NOOUT. Checked in the browser (both engines):
+`two_delays.ode` Hopf at a = 0.633595 (exact 0.633594) and the periodic
+branch from it; `mg.ode` Hopf at beta = 1.33687 and period doubling at
+1.5554491 (as Bard's comment); the Surface view matches the desktop build,
+rotates, and saves GIF, EPS and SVG.

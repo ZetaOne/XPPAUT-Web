@@ -33,6 +33,7 @@
 #include "auto_x11.h"
 #include "integrate.h"
 #include "arrayplot.h"
+#include "surface.h"
 #include "eig_list.h"
 
 
@@ -1088,6 +1089,7 @@ void do_expose(ev)
   if(ev.type==Expose||ev.type==MapNotify)draw_button_hover(ev.xany.window);
   top_button_draw(ev.xany.window);
   expose_aplot(ev.xany.window); 
+  surface_expose(ev.xany.window);
   /* redraw_txtview(ev.xany.window);  */
   ani_expose(ev.xany.window); 
   expose_my_browser(ev);

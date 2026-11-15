@@ -19,6 +19,7 @@ python3 - "$root" <<'EOF'
 import json, os, shutil, sys
 root = sys.argv[1]
 groups = [  # folders relative to the project
+    ("xpp82", "New in XPPAUT 8.2", "examples/xpp82"),
     ("xpp81", "New in XPPAUT 8.1", "examples/xpp81"),
     ("ode", "XPP examples", "xppaut/ode"),
     ("tstauto", "AUTO test models", "xppaut/tstauto"),

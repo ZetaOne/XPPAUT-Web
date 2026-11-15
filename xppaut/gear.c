@@ -1,4 +1,5 @@
 #include "gear.h"
+#include "del_stab.h"
 #include "ggets.h"
 #include "menudrive.h"
 #include "eig_list.h"
@@ -21,6 +22,8 @@ extern int Xup;
 extern double DELTA_T;
 extern int METHOD;
 extern int ENDSING,PAR_FOL,SHOOT,PAUSER;
+extern int DelayFlag,del_stab_flag,NDelay;
+extern double delay_list[];
 
 extern int NODE;
 extern int NFlags;
@@ -449,6 +452,41 @@ void do_sing_info(x,eps, err,big,maxit, n,er,em,ierr)
  double real,imag;
  double bigpos=-1e10,bigneg=1e10;
 
+ /* Delay equation: equilibria and the roots of the characteristic
+    equation (the ODE code below would read the integration history). */
+ if(DelayFlag){
+   double *wk,*coefd=NULL,*evs;
+   int nun=0,nref=0,nr;
+   for(i=0;i<n;i++)old_x[i]=x[i];
+   wk=(double *)malloc(sizeof(double)*(n*(2*n+5)+50));
+   if(wk==NULL){*ierr=1;return;}
+   del_stab_flag=0;
+   rooter(x,err,eps,big,wk,ierr,maxit,n);
+   free(wk);
+   if(*ierr!=0){
+     del_stab_flag=1;
+     for(i=0;i<n;i++)x[i]=old_x[i];
+     return;
+   }
+   if(delay_char_coef(x,n,eps,&coefd)<0.0){del_stab_flag=1;*ierr=1;return;}
+   del_stab_flag=1;
+   evs=(double *)malloc(2*n*sizeof(double));
+   if(evs==NULL){free(coefd);*ierr=1;return;}
+   nr=delay_spectrum(coefd,delay_list,n,NDelay,n,evs,&nun,&nref,600);
+   free(coefd);
+   if(nr<=0){free(evs);*ierr=1;return;}
+   for(i=0;i<n;i++){
+     j=(i<nr)?i:nr-1;
+     er[i]=evs[2*j];
+     em[i]=evs[2*j+1];
+   }
+   if(nun>0&&er[n-1]<0.0)eq_symb(x,1);
+   else if(nun>0)eq_symb(x,0);
+   else eq_symb(x,3);
+   free(evs);
+   *ierr=0;
+   return;
+ }
  /* float xl[MAXODE]; */
  kmem=n*(2*n+5)+50;
  if((work=(double *)malloc(sizeof(double)*kmem))==NULL)

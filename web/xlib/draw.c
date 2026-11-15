@@ -326,3 +326,41 @@ void xw_clear_area(xw_drawable *w, int x, int y, int width, int height)
           tiled ? w->bg_tile[(size_t)(j % w->bg_th) * w->bg_tw + (i % w->bg_tw)]
                 : (uint32_t)w->bg_pixel & 0xffffff;
 }
+
+/* filled polygon (XFillPolygon), even-odd rule, sampling pixel centres as
+   X does; pts are absolute coordinates.  Used by the surface plot of the
+   array plot (XPPAUT 8.2). */
+static int cmp_double(const void *a, const void *b)
+{
+  double x = *(const double *)a, y = *(const double *)b;
+  return x < y ? -1 : x > y;
+}
+
+void xw_fill_polygon(xw_drawable *d, GC gc, const XPoint *pts, int n)
+{
+  if (n < 3) return;
+  int ymin = pts[0].y, ymax = pts[0].y;
+  for (int i = 1; i < n; i++) {
+    if (pts[i].y < ymin) ymin = pts[i].y;
+    if (pts[i].y > ymax) ymax = pts[i].y;
+  }
+  if (ymin < 0) ymin = 0;
+  if (ymax > d->height - 1) ymax = d->height - 1;
+  double *xs = malloc(sizeof(double) * (size_t)n);
+  if (!xs) return;
+  for (int y = ymin; y <= ymax; y++) {
+    double yc = y + 0.5;
+    int k = 0;
+    for (int i = 0; i < n; i++) {
+      const XPoint *a = &pts[i], *b = &pts[(i + 1) % n];
+      if ((a->y <= yc && b->y > yc) || (b->y <= yc && a->y > yc))
+        xs[k++] = a->x + (yc - a->y) * (double)(b->x - a->x) / (double)(b->y - a->y);
+    }
+    qsort(xs, (size_t)k, sizeof(double), cmp_double);
+    for (int i = 0; i + 1 < k; i += 2) {
+      int x0 = (int)ceil(xs[i] - 0.5), x1 = (int)ceil(xs[i + 1] - 0.5);
+      for (int x = x0; x < x1; x++) plot(d, gc, x, y);
+    }
+  }
+  free(xs);
+}
