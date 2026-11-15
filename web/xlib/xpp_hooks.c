@@ -55,13 +55,24 @@ static const char *axis_name(int i)
  * The graph point under root coordinates (rx, ry). out: x, y; names: "x\ty"
  * axis names. Returns 1 when the point is inside XPP's current graph area.
  */
-EMSCRIPTEN_KEEPALIVE int xw_graph_xy(int rx, int ry, double *out, char *names, int nlen)
+/* is d the top-level window `top`, or inside it? (top 0: any window) */
+static int xw_inside(xw_drawable *d, XID top)
+{
+  if (!top) return 1;
+  for (; d; d = d->parent)
+    if (d->id == top) return 1;
+  return 0;
+}
+
+/* top: the top-level window under the pointer, so a window stacked behind
+   it (AUTO's, say) does not answer for it */
+EMSCRIPTEN_KEEPALIVE int xw_graph_xy(int top, int rx, int ry, double *out, char *names, int nlen)
 {
   int ox, oy;
   /* AUTO's bifurcation diagram: the formula of its own pointer readout
      (auto_x11.c, motion in AutoW.canvas) */
   xw_drawable *a = Auto.exist ? xw_lookup(AutoW.canvas) : NULL;
-  if (a && xw_viewable(a)) {
+  if (a && xw_viewable(a) && xw_inside(a, (XID)top)) {
     xw_root_origin(a, &ox, &oy);
     int i = rx - ox, j = ry - oy;
     if (i >= Auto.x0 && i <= Auto.x0 + Auto.wid && j >= Auto.y0 && j <= Auto.y0 + Auto.hgt) {
@@ -74,7 +85,7 @@ EMSCRIPTEN_KEEPALIVE int xw_graph_xy(int rx, int ry, double *out, char *names, i
     }
   }
   xw_drawable *w = xw_lookup(draw_win);
-  if (!w || !xw_viewable(w)) return 0;
+  if (!w || !xw_viewable(w) || !xw_inside(w, (XID)top)) return 0;
   xw_root_origin(w, &ox, &oy);
   int i = rx - ox, j = ry - oy;
   if (i < 0 || j < 0 || i >= w->width || j >= w->height) return 0;

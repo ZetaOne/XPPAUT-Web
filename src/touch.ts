@@ -98,7 +98,7 @@ export class Loupe {
     g.moveTo(48, 60.5)
     g.lineTo(72, 60.5)
     g.stroke()
-    const xy = this.session()?.graphAt(cx, cy)
+    const xy = this.session()?.graphAt(cx, cy, c)
     this.label.textContent = xy ? `${xy.xname} = ${fmt(xy.x)}   ${xy.yname} = ${fmt(xy.y)}` : ''
     this.label.hidden = !xy
     // above the finger (below it near the top of the screen)

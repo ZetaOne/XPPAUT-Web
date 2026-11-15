@@ -239,17 +239,19 @@ export class XppSession {
   // ---- touch controls: read and set XPP state (web/xlib/xpp_hooks.c) ------
 
   /** XPP's graph coordinates under a page point, if it is over the graph */
-  graphAt(clientX: number, clientY: number): { x: number; y: number; xname: string; yname: string } | null {
+  graphAt(clientX: number, clientY: number, canvas?: HTMLCanvasElement): { x: number; y: number; xname: string; yname: string } | null {
     const m = this.mod;
     if (!m) return null;
     for (const p of this.panels.values()) {
+      // only the window under the finger: AUTO's window may be mapped behind it
+      if (canvas && p.canvas !== canvas) continue;
       if (!p.mapped || p.popup || p.el.classList.contains('offstage')) continue;
       const r = p.canvas.getBoundingClientRect();
       if (clientX < r.left || clientX >= r.right || clientY < r.top || clientY >= r.bottom) continue;
       const [rx, ry] = this.rootXY(p, { clientX, clientY });
       const buf = m._malloc(16 + 64);
       try {
-        if (!m._xw_graph_xy(rx, ry, buf, buf + 16, 64)) return null;
+        if (!m._xw_graph_xy(p.id, rx, ry, buf, buf + 16, 64)) return null;
         const f = new Float64Array(m.HEAPU8.buffer, buf, 2);
         const [xname, yname] = m.UTF8ToString(buf + 16).split('\t');
         return { x: f[0], y: f[1], xname, yname };
