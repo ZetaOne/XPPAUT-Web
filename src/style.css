@@ -825,9 +825,9 @@ button.primary {
   display: none;
 }
 
-/* round icon buttons (theme, Aa, install) */
+/* round icon buttons (theme, Aa; Install on phones and tablets) */
 summary.round,
-button.round {
+:root:not([data-device='desktop']) .install {
   display: grid;
   place-items: center;
   width: 30px;
@@ -841,13 +841,13 @@ button.round {
 }
 
 summary.round:hover,
-button.round:hover,
+:root:not([data-device='desktop']) .install:hover,
 .themes[open] summary.round {
   background: var(--panel-bar-active);
 }
 
 summary.round:focus-visible,
-button.round:focus-visible {
+:root:not([data-device='desktop']) .install:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -1305,6 +1305,16 @@ button.round:focus-visible {
 /* ---- installable app: Install button, "new version" banner ----------------- */
 .install {
   margin-left: auto; /* right end of the toolbar, before the theme button */
+}
+
+/* computers: the word; phones and tablets: a small round icon */
+.install svg,
+:root:not([data-device='desktop']) .install span {
+  display: none;
+}
+
+:root:not([data-device='desktop']) .install svg {
+  display: block;
 }
 
 .install:not([hidden]) ~ .themes {
