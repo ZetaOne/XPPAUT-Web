@@ -92,28 +92,33 @@ shot pp.ps          # save the picture (.ps or .svg), no dialogs
 - **Loops and errors**: `for a in 1 2 3 ... end`, `for k = 0:0.5:2`,
   `repeat 3`, with `$a` in any line (also file names); `try ... else ... end`
   carries on when a command fails.
-- **Running a script**: the **Scripts** menu at the top of the page lists the
-  scripts in XPP's folder, each with **Run** and **Edit**. It is easier to use
-  than XPP's own small file selector, above all on phones (there it is in the
-  ☰ menu, and the Cmd panel has **Scripts…** and **Do script**). XPP's File →
-  **Do script** (keys F D) works too. A link can also run one as soon as the
-  model opens:
+- **Running a script**: when XPP's folder has scripts (an example that comes
+  with them, or a folder or files you open that include `.xps` files), a
+  **Scripts** menu appears at the top of the page, listing each script with
+  **Run** and **Edit**. It is easier to use than XPP's own small file
+  selector, above all on phones: there it is in the ☰ menu, and **Scripts…**
+  is the last button of the Cmd panel. XPP's File → **Do script** (keys F D;
+  also under More… in the Cmd panel) works too. A link can also run a script
+  as soon as the model opens:
   [`?ode=xpp84/lecar.ode&script=lecar-nullclines.xps`](https://zetaone.github.io/XPPAUT-Web/?ode=xpp84/lecar.ode&script=lecar-nullclines.xps).
-- **Writing scripts**: **New script** and **Edit** open a script editor, like
-  Edit .ode. **Save and run** runs the script at once; no restart is needed.
-  **Add scripts…** (or Open .ode file… and Add files…) brings in your own
-  `.xps` files.
+- **Writing scripts**: **New script** (under **Files**, and in the Scripts
+  menu) and **Edit** open a script editor, like Edit .ode. **Save and run**
+  runs it at once; no restart is needed. **Add scripts…** (or Open .ode
+  file… and Add files…) brings in your own `.xps` files.
+- **Pictures as PNG**: in XPPAUT-Web, `shot fig.png` (or `shot auto fig.png`)
+  saves the graph (or the AUTO diagram) as it is on screen, at twice the
+  size, ready to view on a phone. Desktop XPPAUT saves `.ps` or `.svg`.
 - **Examples**: the group **8.4-scripting-xpp** in the Model list, with what
   scripts do best: work that would take many clicks and dialogs by hand, done
   the same way every time.
-  - `hh.ode` (Hodgkin–Huxley): an f–I sweep with one figure per current
-    (`hh-fi.xps`); a lecture with pauses on bistability at I = 8, where the
+  - `hh.ode` (Hodgkin–Huxley): an f–I sweep, eight currents one after
+    another and three of them on one plot (`hh-fi.xps`); a lecture with pauses on bistability at I = 8, where the
     same neuron rests or fires for ever depending on one kick
     (`hh-bistable.xps`); and AUTO from start to finish: Hopf points at
     I = 9.78 and 154.5 and the periodic orbits with their fold at I = 6.26
     (`hh-auto.xps`).
   - `wc.ode` (Wilson–Cowan): phase portraits for six inputs with clicked
-    starting points, one figure each (`wc-portraits.xps`); a lecture with
+    starting points (`wc-portraits.xps`); a lecture with
     pauses (`wc-lecture.xps`); and AUTO with AUTO's own forms filled in by
     label: steady states, the Hopf point and folds, the periodic orbits, and
     two-parameter curves of the Hopf point (both directions, with a
@@ -121,7 +126,9 @@ shot pp.ps          # save the picture (.ps or .svg), no dialogs
   - `lecar.ode` (Morris–Lecar) with five shorter scripts, including Bard's
     example above, scripted mouse clicks, and an AUTO diagram.
 
-  What a script saves is in XPP's folder (**Files**, or Save session).
+  The Hodgkin–Huxley and Wilson–Cowan scripts each save one picture at the
+  end, as PNG; everything a script saves is in XPP's folder (**Files**, or
+  Save session).
 
 <p>
   <img src="docs/script-auto.png" width="60%" alt="The AUTO window of XPPAUT 8.4 after lecar-auto.xps: the steady states of the Morris-Lecar model against iapp with two folds and a Hopf point (label 4, iapp = 0.2038), and the branch of periodic orbits that starts there, all computed by the script">

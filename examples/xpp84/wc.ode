@@ -1,15 +1,14 @@
 # Wilson-Cowan: an excitatory (u) and an inhibitory (v) population.
 # Scripts (new in XPPAUT 8.4), run with File -> Do script (keys F D):
 #   wc-portraits.xps  phase portraits for 6 inputs ie0 in one go: nullclines
-#                     and 4 clicked starting points each, one picture per
-#                     input (wc_ie_-1.ps ... wc_ie_6.ps)
+#                     and 4 clicked starting points each, shown one after
+#                     another; the last saved as wc-portraits.png
 #   wc-lecture.xps    a lecture with pauses: how the input ie0 reshapes the
 #                     phase plane (rest, oscillation, high activity)
 #   wc-auto.xps       AUTO, start to finish: steady states against ie0
 #                     (folds and Hopf points), the periodic orbits, then
 #                     the two-parameter curves of folds and Hopf points in
-#                     the (ie0, ii0) plane, all saved as figures
-#                     (wc-auto-1par.ps, wc-auto-2par.ps)
+#                     the (ie0, ii0) plane, saved as wc-auto.png
 par ie0=0,ii0=0
 f(u)=1/(1+exp(-u))
 par aee=16,aie=12,aei=15,aii=3,ze=3,zi=3

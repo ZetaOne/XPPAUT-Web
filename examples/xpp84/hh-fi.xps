@@ -1,20 +1,22 @@
-# An f-I sweep: V(t) for 8 currents, one picture per current, then all of
-# them frozen on one plot. By hand: 8 x (edit I, run, Postscript dialog,
-# type a file name) and no guarantee two people get the same figures.
+# An f-I sweep: V(t) for 8 currents, shown one after another, then a few of
+# them on one plot, saved as one picture: hh-fi.png. By hand: 8 x (edit I,
+# run) and a figure that nobody can reproduce exactly.
+# (.png pictures: XPPAUT-Web; desktop XPPAUT saves .ps or .svg)
 set total=100;xp=t;yp=v;xlo=0;xhi=100;ylo=-80;yhi=50
 for i in 0 2 5 7 9 10 20 100
   set I=$i;v=-65;m=.053;h=.596;n=.318      # same start every time
   keys i g
   msg "I = $i"
-  shot hh_I_$i.ps
+  wait 1
 end
-# all on one plot, in colour: auto-freeze keeps each run
+# three currents on one plot: auto-freeze keeps each run
+keys e
 keys g f o                                  # Freeze -> On freeze (auto-freeze)
 for i in 2 9 20
   set I=$i;v=-65;m=.053;h=.596;n=.318
   keys i g
 end
-shot hh_all.ps
+shot hh-fi.png
 keys g f o                                  # auto-freeze off
 keys g f r                                  # remove the frozen curves
-msg "f-I sweep done: hh_I_*.ps and hh_all.ps (Files, or Save session)"
+msg "Saved hh-fi.png: I = 2 (one spike), 9 and 20 (firing, faster for larger I)"

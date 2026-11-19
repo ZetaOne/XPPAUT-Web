@@ -1,6 +1,7 @@
 # A lecture with pauses (Enter or Space goes on, Esc stops): at I = 8 the
 # Hodgkin-Huxley neuron is bistable. Rest and repetitive firing coexist
 # for 6.26 < I < 9.78 (see hh-auto.xps); a brief kick chooses between them.
+# Saves the phase portrait as hh-bistable.png (XPPAUT-Web).
 set total=100;xp=t;yp=v;xlo=0;xhi=100;ylo=-80;yhi=50
 msg "Hodgkin-Huxley at I = 8 (between 6.26 and 9.78)"
 pause "Press Enter: start at rest"
@@ -20,5 +21,6 @@ set v=-35;m=.09005;h=.43051;n=.39061
 keys i g
 msg "The limit cycle (firing) surrounds the stable rest point"
 pause "Press Enter: back to V(t)"
+shot hh-bistable.png             # the phase portrait, as a picture
 set xp=t;yp=v;xlo=0;xhi=100;ylo=-80;yhi=50
-msg "The end. Try hh-auto.xps for the bifurcation diagram."
+msg "Saved hh-bistable.png. Try hh-auto.xps for the bifurcation diagram."

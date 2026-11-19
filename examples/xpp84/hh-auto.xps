@@ -1,6 +1,7 @@
 # AUTO, start to finish (about 20 s): the rest state against I, its two
-# Hopf points, the periodic orbits and their fold, and the diagram saved.
+# Hopf points, the periodic orbits and their fold, saved as hh-auto.png.
 # By hand: about 15 clicks and dialogs, in the right order, every time.
+# (.png pictures: XPPAUT-Web; desktop XPPAUT saves .ps or .svg)
 set I=0;v=-65;m=.053;h=.596;n=.318
 keys i g i l i l                 # settle at rest (AUTO starts from the current state)
 keys f a                         # File -> Auto
@@ -14,4 +15,4 @@ try
 else
   msg "($error)"
 end
-shot auto hh-auto.ps
+shot auto hh-auto.png

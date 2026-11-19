@@ -61,8 +61,6 @@ const DEFAULT_LIST = [
   'Fixed point here = s m',
   'Numerics… = @numerics',
   'AUTO = f a',
-  'Do script = f d',
-  'Scripts… = @scripts',
   'Sliders = @sliders',
   'Share graph = @share-graph',
   'Tips = @tips',
@@ -487,6 +485,14 @@ export class MobileUI {
     this.buildMain()
   }
 
+  /** XPP's folder has scripts (.xps): the main page ends with Scripts… */
+  private hasScripts = false
+  setScripts(on: boolean) {
+    if (on === this.hasScripts) return
+    this.hasScripts = on
+    if (this.page === 'main') this.renderPage('main')
+  }
+
   private pages: Record<string, Cmd[]> = {}
   private page = 'main'
 
@@ -507,6 +513,11 @@ export class MobileUI {
       // the model's  @ BUT=  buttons, before More…/Esc/Enter/Keyboard
       const at = items.findIndex((c) => c.label === 'More…')
       items.splice(at, 0, { label: '', hint: '', title: 'This model' } as Cmd, ...model.map((c) => this.toCmd(c)))
+    }
+    if (name === 'main' && this.hasScripts && this.features.scripts && !this.list.some((c) => c.feature === 'scripts')) {
+      // XPP's folder has scripts (.xps): Scripts… as the last command
+      const at = items.findIndex((c) => c.label === 'More…')
+      items.splice(at, 0, this.toCmd({ label: 'Scripts…', feature: 'scripts' } as Shortcut))
     }
     for (const c of items) {
       if (c.title) {

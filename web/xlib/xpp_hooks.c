@@ -499,3 +499,53 @@ EMSCRIPTEN_KEEPALIVE void xw_pick_script(const char *name)
   extern char xppweb_script_pick[];
   snprintf(xppweb_script_pick, 300, "%s", name);
 }
+
+/* A PNG from RGBA pixels, drawn at twice the size (sharp on phones), written
+   to XPP's folder; the page then downloads it like any file XPP writes */
+EM_JS(int, js_write_png, (const uint8_t *rgba, int w, int h, const char *name), {
+  try {
+    if (typeof document === 'undefined') return -1;
+    const src = document.createElement('canvas');
+    src.width = w;
+    src.height = h;
+    src.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(HEAPU8.buffer, rgba, w * h * 4).slice(), w, h), 0, 0);
+    const c = document.createElement('canvas');
+    c.width = 2 * w;
+    c.height = 2 * h;
+    const g = c.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.drawImage(src, 0, 0, 2 * w, 2 * h);
+    const url = c.toDataURL('image/png');
+    const bin = atob(url.slice(url.indexOf(',') + 1));
+    const a = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+    let p = UTF8ToString(name);
+    if (p.charAt(0) !== String.fromCharCode(47)) {
+      let d = FS.cwd();
+      if (d.charAt(d.length - 1) !== String.fromCharCode(47)) d += String.fromCharCode(47);
+      p = d + p;
+    }
+    FS.writeFile(p, a);
+    if (Module.xppFileWritten) Module.xppFileWritten(p);
+    return 1;
+  } catch (e) {
+    return -1;
+  }
+});
+
+/* "shot fig.png" / "shot auto fig.png" in a script (patched xpp_script.c):
+   the graph, or AUTO's diagram, as on screen. 1 saved, 0 no AUTO diagram,
+   -1 could not write */
+int xppweb_shot_png(int auto_diagram, const char *file)
+{
+  Window win = draw_win;
+  if (auto_diagram) {
+    if (!Auto.exist) return 0;
+    win = AutoW.canvas;
+  }
+  XFlush(xw_display);
+  int w = 0, h = 0;
+  uint8_t *rgba = xw_render(win, &w, &h);
+  if (!rgba || w <= 0 || h <= 0) return -1;
+  return js_write_png(rgba, w, h, file);
+}

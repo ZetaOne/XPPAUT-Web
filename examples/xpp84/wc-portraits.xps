@@ -1,9 +1,11 @@
 # Phase portraits for 6 inputs in one go: nullclines and 4 starting points
-# each (clicks at the same places every time), one picture per input
-# (wc_ie_-1.ps ... wc_ie_6.ps). By hand this is an afternoon of clicking.
+# each (clicks at the same places every time), shown one after another;
+# the last one is saved as wc-portraits.png. By hand: an afternoon of clicking.
+# (.png pictures: XPPAUT-Web; desktop XPPAUT saves .ps or .svg)
 set xp=u;yp=v;xlo=-.05;xhi=1;ylo=-.05;yhi=1;total=40
 keys g f o                       # auto-freeze: every run stays on the plot
 for ie in -1 1 2 2.5 3.5 6
+  keys g f r                     # remove the runs of the previous input
   set ie0=$ie
   keys e                         # erase
   keys n n                       # nullclines for this input
@@ -14,7 +16,8 @@ for ie in -1 1 2 2.5 3.5 6
   click .1 .6
   keys esc
   msg "ie0 = $ie"
-  shot wc_ie_$ie.ps
-  keys g f r                     # remove the frozen runs before the next input
+  wait 1.5
 end
+shot wc-portraits.png            # the last portrait (ie0 = 6)
 keys g f o                       # auto-freeze off
+msg "Saved wc-portraits.png (ie0 = 6)"

@@ -36,12 +36,13 @@ app.innerHTML = `
             <span>XPP's working folder</span>
             <label class="file small" title="Add data, table, .ani, .set or .xps (script) files for XPP to open">Add files…<input type="file" id="addfiles" multiple hidden></label>
             <button class="small" id="zipall">Download all (.zip)</button>
+            <button class="small" id="fnewscript" title="Write an XPPAUT script (.xps): commands that XPP carries out for you">New script</button>
           </div>
           <table id="filelist"></table>
           <p class="files-note">Everything XPP saves (Graphic stuff → Postscript/SVG, data, .set files, AUTO diagrams) is also downloaded or saved to your folder, as chosen under <b>Exports</b>. ⤓ on any window's title bar saves it as PNG.</p>
         </div>
       </details>
-      <details class="files" id="scripts">
+      <details class="files" id="scripts" hidden>
         <summary title="XPPAUT scripts (.xps) in XPP's folder: run or edit them">Scripts <span class="badge" id="scount"></span></summary>
         <div class="files-panel">
           <div class="files-head">
@@ -383,6 +384,7 @@ async function launch(name: string, text: string, extras: Array<{ name: string; 
   session.bellFlash = bellFlash.checked
   mobile.attach(session)
   ;(window as unknown as { xpp: XppSession }).xpp = session // for tests and debugging
+  updateScriptCount()
   setInterval(() => (updateFileCount(), updateScriptCount()), 2000)
   // XPP's WebAssembly started downloading when the page opened; wait for it
   let wasm: ArrayBuffer | undefined
@@ -769,6 +771,9 @@ const isScript = (n: string) => /\.xps$/i.test(n)
 function updateScriptCount() {
   const n = session?.listFiles().filter((f) => isScript(f.name)).length ?? 0
   $('scount').textContent = n ? String(n) : ''
+  // the Scripts menu (and Scripts… in the Cmd panel) only when there are scripts
+  $('scripts').hidden = n === 0
+  mobile.setScripts(n > 0)
 }
 function runScript(name: string) {
   if (!session) return
@@ -854,6 +859,10 @@ function saveScript(): string | null {
   return n
 }
 $('scnew').addEventListener('click', () => openScriptEditor(null))
+$('fnewscript').addEventListener('click', () => {
+  ;($('files') as HTMLDetailsElement).open = false
+  openScriptEditor(null)
+})
 $('scsave').addEventListener('click', () => void saveScript())
 $('scrun').addEventListener('click', () => {
   const n = saveScript()

@@ -1059,11 +1059,16 @@ int script_load(void)
       }
       strncpy(file,t,sizeof(file)-1);file[sizeof(file)-1]=0;
       dot=strrchr(file,'.');
+#ifdef __EMSCRIPTEN__
+      /* XPPAUT-Web: also .png, a picture of the window as it is on screen */
+      if(dot!=NULL&&strcasecmp(dot,".png")==0)svg=2;
+      else
+#endif
       if(dot==NULL||(strcasecmp(dot,".ps")!=0&&strcasecmp(dot,".svg")!=0)){
         load_error("%s:%d: shot: the file name must end in .ps (Postscript) or .svg",script_name,line);
         bad=1;continue;
       }
-      svg=(strcasecmp(dot,".svg")==0);
+      if(svg!=2)svg=(strcasecmp(dot,".svg")==0);
       while(tok_next(&ap,t,sizeof(t))){
         char *eq=strchr(t,'='),*key,*val,*e;
         int k;
@@ -1405,6 +1410,14 @@ static void do_shot(SCMD *c)
   if(c->o_mask&4)PS_FONTSIZE=c->o_fs;
   if(c->o_mask&8){strncpy(PS_FONT,c->o_font,99);PS_FONT[99]=0;}
   if(c->o_mask&16)PS_LW=c->o_lw;
+#ifdef __EMSCRIPTEN__
+  /* XPPAUT-Web: .png (web/xlib/xpp_hooks.c) */
+  if(c->shot_svg==2){
+    int xppweb_shot_png(int auto_diagram,const char *file);
+    r=xppweb_shot_png(c->shot_auto,c->arg);
+  }
+  else
+#endif
   if(c->shot_auto)
     r=auto_diagram_to_file(c->arg,c->shot_svg);
   else if(c->shot_svg){

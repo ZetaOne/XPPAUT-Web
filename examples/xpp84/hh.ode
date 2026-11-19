@@ -1,13 +1,14 @@
 # Hodgkin-Huxley (squid axon, 6.3 C). I in uA/cm^2.
 # Scripts (new in XPPAUT 8.4), run with File -> Do script (keys F D):
-#   hh-fi.xps         an f-I sweep: V(t) for 8 currents, one picture each
-#                     (hh_I_0.ps ... hh_I_100.ps), plus all of them on one
+#   hh-fi.xps         an f-I sweep: V(t) for 8 currents, one after another,
+#                     then three of them on one plot, saved as hh-fi.png
 #   hh-bistable.xps   a lecture with pauses: at I = 8 the same neuron rests
-#                     or fires forever, depending on one kick
+#                     or fires forever, depending on one kick (the phase
+#                     portrait saved as hh-bistable.png)
 #   hh-auto.xps       AUTO, start to finish: rest state against I (Hopf
 #                     points near I = 9.78 and 154.5), the periodic orbits
 #                     with their fold (I = 6.26: where firing can start),
-#                     and the diagram saved as hh-auto.ps
+#                     and the diagram saved as hh-auto.png
 par I=0
 par gna=120,gk=36,gl=0.3,ena=50,ek=-77,el=-54.4,c=1
 am(v)=.1*(v+40)/(1-exp(-(v+40)/10))
