@@ -300,6 +300,11 @@ export class MobileUI {
 
   private fitViewport: () => void = () => {}
 
+  /** a button at the start of the zoom bar (the 🎤) */
+  addTool(b: HTMLButtonElement) {
+    this.zoomBar.prepend(b)
+  }
+
   // ---- the user's Cmd panel: a list kept as text ("Label = keys" lines) ----
   private common: Cmd[] = []
   private features: Record<string, { label: string; hint: string; fn: () => void; page?: string }> = {

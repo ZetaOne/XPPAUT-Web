@@ -40,7 +40,12 @@ jobs:
         run: scripts/setup-emsdk.sh
 
       - name: Install page dependencies
+        env:
+          ONNXRUNTIME_NODE_INSTALL: skip # transformers.js in the browser only
         run: npm ci
+
+      - name: Voice models (downloaded by the page only when a user picks that engine)
+        run: scripts/fetch-voice.sh
 
       - name: Build XPP (WebAssembly), examples and help
         run: scripts/build-web.sh

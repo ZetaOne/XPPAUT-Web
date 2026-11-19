@@ -38,3 +38,8 @@ android/keystore.properties
 
 # offline downloads (scripts/build-offline.mjs)
 offline/
+# voice engines: models and runtimes (scripts/fetch-voice.sh), not in git
+public/voice/vosk/
+public/voice/whisper/
+public/voice/ort/
+public/voice/test/

@@ -5,8 +5,10 @@ import { download, makeZip } from './zip'
 import { CommandLibrary } from './cmdlib'
 import { MobileUI, detectDevice, watchDevice, type ViewMode } from './mobile'
 import { setupPwa } from './pwa'
-import { lockRotation, setupApp, shareFile } from './android'
+import { inApp, lockRotation, setupApp, shareFile } from './android'
 import { Loupe, SliderDrawer } from './touch'
+import { ENGINES, WebVoice, canRun, type RealEngine, type WebEngine } from './webvoice'
+import { helpFor, interpret, learnWords, matchPhrase, plainWords, setOfflineWords, spokenForm, vocabulary, words, type Action, type Context } from './voicecmd'
 import { FONT_NAMES, PRESETS, chosenFont, fontArgs, fontKey, saveFont, type FontChoice } from './fonts'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
@@ -55,6 +57,7 @@ app.innerHTML = `
           <p class="files-note"><b>Run</b> starts the script as XPP's File → Do script would (F D in XPP, or in the Cmd panel). While it runs, <b>Esc</b> stops it; at a pause, <b>Enter</b> or <b>Space</b> goes on. What it saves appears under Files.</p>
         </div>
       </details>
+      <button type="button" class="micbtn" id="voicehdr" hidden aria-label="Voice commands" title="Voice: speak commands (tap again to stop)">🎤</button>
       <details class="settings" id="settings">
         <summary title="Exports, output and window options">Settings</summary>
         <div class="settings-panel">
@@ -93,6 +96,19 @@ app.innerHTML = `
           <label class="check" title="Flash the screen when XPP rings its bell (like File &gt; Bell on in XPP). Off by default.">
             <input type="checkbox" id="bellflash"> Flash on bell
           </label>
+          <div class="voiceset" id="voiceset">
+            <label title="Speak XPP's commands: tap 🎤, then say for example “integrate”, “nullclines”, “set i app to point one”">Voice
+              <select id="webvoiceengine">
+                <option value="" hidden>Not chosen yet</option>
+                <option value="off">Off</option>
+                <option value="browser">Browser speech (built in)</option>
+                <option value="vosk">Vosk (offline, ~44 MB)</option>
+                <option value="whisper">Whisper (offline, ~57 MB)</option>
+              </select>
+            </label>
+            <p class="voiceabout" id="voiceabout"></p>
+            <button type="button" class="small" id="voicedelete" hidden>Delete the download</button>
+          </div>
         </div>
       </details>
       <button id="savesession" title="Download a .zip with everything XPP saved, its graphs and AUTO diagram (SVG, PostScript), screenshots of the windows, the state (.set), the data and XPP's output">Save session</button>
@@ -1097,7 +1113,355 @@ if (mobile.listWasReset) setTimeout(() => notice('Your Cmd panel could not be re
 function baseName() {
   return (odeName || 'xpp').replace(/\.ode$/i, '')
 }
-const updateDevice = () => mobile.apply(detectDevice(viewMode))
+// ---- voice commands (the website; the Android app has its own engine) ---------
+// 🎤 in the zoom bar (phones, tablets) or the header (computers, when chosen).
+// Settings -> Voice picks the engine: the browser's own recognition, or Vosk or
+// Whisper running in the page (offline, downloaded once). What is heard is
+// matched by src/voicecmd.ts: the same commands as in the Android app.
+let voiceShown = () => {}
+// the Android app has its own engine and its own Settings -> Voice
+if (inApp) $('voiceset').hidden = true
+if (!inApp) {
+  const voice = new WebVoice(desktop)
+  voice.notice = notice
+  const context = (): Context => {
+    const active = session?.windows().find((w) => w.active)
+    return active?.title.startsWith("It's AUTO") ? 'auto' : 'xpp'
+  }
+  const names = () => (session ? session.params().map((p) => p.name) : [])
+  // the Cmd panel's commands by voice: their labels (and the model's @ BUT= buttons)
+  const spoken = () => [...mobile.shortcuts(), ...mobile.modelButtons()].map((c) => ({ c, phrases: [c.label] }))
+  // Vosk hears only words it knows: its word list (for spoken forms of the rest)
+  let offline: Promise<void> | null = null
+  const offlineWords = () =>
+    (offline ??= fetch('voice/vosk-words.txt')
+      .then((r) => (r.ok ? r.text() : ''))
+      .then((t) => setOfflineWords(new Set(t.split('\n'))))
+      .catch(() => {}))
+  /** the scripts in XPP's folder, by the words of their names ("hh-auto.xps":
+   *  "hh auto", and "auto" without the model's name) */
+  const scriptItems = () => {
+    const base = odeName.replace(/\.ode$/i, '').toLowerCase()
+    return (session?.listFiles() ?? [])
+      .filter((f) => /\.xps$/i.test(f.name))
+      .map((f) => {
+        const all = f.name.replace(/\.xps$/i, '').replace(/[-_.]+/g, ' ').toLowerCase()
+        const short = all.startsWith(base + ' ') ? all.slice(base.length + 1) : all
+        return { file: f.name, phrases: [...new Set([all, short].map((p) => words(p).join(' ')))] }
+      })
+  }
+  /** the script whose name sounds most like `said` (letter pairs in common),
+   *  when it is clearly the best */
+  const closestScript = (said: string, list: Array<{ file: string; phrases: string[] }>) => {
+    const pairs = (t: string) => {
+      const x = t.replace(/[^a-z0-9]/g, '')
+      return new Set(Array.from({ length: Math.max(0, x.length - 1) }, (_, i) => x.slice(i, i + 2)))
+    }
+    const a = pairs(said)
+    const score = (p: string) => {
+      const b = pairs(p)
+      let n = 0
+      for (const x of a) if (b.has(x)) n++
+      return a.size + b.size ? (2 * n) / (a.size + b.size) : 0
+    }
+    const ranked = list.map((x) => ({ x, s: Math.max(...x.phrases.map(score)) })).sort((p, q) => q.s - p.s)
+    return ranked[0] && ranked[0].s >= 0.4 && (!ranked[1] || ranked[0].s - ranked[1].s >= 0.1) ? ranked[0].x : null
+  }
+  voice.grammarFor = () => {
+    const mine = spoken().flatMap((s) => s.phrases)
+    const scripts = scriptItems().flatMap((x) => x.phrases)
+    learnWords([...mine, ...scripts])
+    return [
+      ...vocabulary(context(), names()),
+      ...[...mine, ...scripts].flatMap((p) => plainWords(p).split(' ')).flatMap((w) => (spokenForm(w) ?? w).split(' ')).filter(Boolean),
+      'run', 'start', 'play', 'the', 'script',
+      // a name's first letter and the rest ("i app" for iapp, "g k" for gk)
+      ...names().flatMap((n) => (n.length > 2 ? [n[0].toLowerCase(), n.slice(1).toLowerCase()] : [])),
+    ]
+  }
+  const recent = new Map<string, number>()
+  /** several commands in one breath ("auto, run, enter", "set i app to point
+   *  one then integrate"): split at then/and/commas, else wherever the longest
+   *  known command ends; null when it is not a list of commands */
+  const splitCommands = (said: string, ctx: Context): Array<{ text: string; ctx: Context }> | null => {
+    const pieces = said
+      .toLowerCase()
+      .replace(/(\w)-(\w)/g, '$1 $2') // auto-run
+      .split(/\s*(?:,|;|\band then\b|\bthen\b|\band\b|\bnext\b)\s*/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+    const out: Array<{ text: string; ctx: Context }> = []
+    let c = ctx
+    const known = (t: string, c: Context) =>
+      matchPhrase([t], spoken(), false) || /^(?:run|start|play)\s+(?:the\s+)?script\b/.test(t) || interpret([t], c, names())
+    for (const piece of pieces) {
+      const w = piece.split(/\s+/)
+      let i = 0
+      while (i < w.length) {
+        let j = w.length
+        for (; j > i; j--) if (known(w.slice(i, j).join(' '), c)) break
+        if (j === i) return null // a part that is not a command
+        const text = w.slice(i, j).join(' ')
+        out.push({ text, ctx: c })
+        const m = interpret([text], c, names())
+        // what the next command applies to: AUTO once it is opened
+        if (m?.action.kind === 'keys' && m.action.keys.join(' ') === 'f a') c = 'auto'
+        if (m?.action.kind === 'ui' && m.action.id === 'mainWindow') c = 'xpp'
+        i = j
+      }
+    }
+    return out.length > 1 ? out : null
+  }
+  /** one command after another: XPP gets time for each, and AUTO's wait for
+   *  its window to open */
+  let queue: Promise<void> = Promise.resolve()
+  const runSequence = (list: Array<{ text: string; ctx: Context }>) => {
+    queue = queue.then(async () => {
+      const done: string[] = []
+      for (const { text, ctx } of list) {
+        if (ctx === 'auto')
+          for (let t = 0; t < 50 && !session?.windows().some((w) => w.title.startsWith("It's AUTO")); t++) await new Promise((r) => setTimeout(r, 100))
+        const msg = runOne([text], ctx)
+        if (msg && !msg.startsWith('✓')) {
+          voice.flash(`${done.length ? done.join(', ') + '; then ' : ''}“${text}”: ${msg}`, 5000)
+          return
+        }
+        done.push(msg ? msg.slice(2) : text)
+        voice.flash('✓ ' + done.join(' → '), 3000)
+        await new Promise((r) => setTimeout(r, 700))
+      }
+    })
+  }
+  voice.onHeard = (alts) => {
+    const ctx = context()
+    // the whole utterance as one command first; else a list of them
+    let one = runOne(alts, ctx, true)
+    if (one === null) {
+      const list = splitCommands(alts[0], ctx)
+      if (list) return runSequence(list)
+      one = runOne(alts, ctx)!
+      if (one === 'not a command') return voice.flash(`Not a command: “${alts[0]}”. Say “what can I say”`, 3500)
+    }
+    voice.flash(one, one.startsWith('✓') ? 2500 : 3500)
+  }
+  /** one command: a message to show (✓ ... when done); null when `probe`
+   *  and nothing fits */
+  const runOne = (alts: string[], ctx: Context, probe = false): string | null => {
+    const own = (near: boolean): string | null => {
+      if (!session) return null
+      const hit = matchPhrase(alts, spoken(), near)
+      if (!hit) return null
+      mobile.runCommand(hit.c)
+      return '✓ ' + hit.c.label
+    }
+    const mine = own(false)
+    if (mine) return mine
+    // "run script hh auto": a script in XPP's folder, by its name
+    const rs = alts.map((a) => a.match(/^\s*(?:run|start|play)\s+(?:the\s+)?script\s*(.*)$/i)).find(Boolean)
+    if (rs && session) {
+      const list = scriptItems()
+      if (!rs[1].trim() || !list.length) {
+        mobile.runCommand({ label: 'Scripts…', feature: 'scripts' })
+        return '✓ Scripts'
+      }
+      const said = alts.map((a) => words(a.replace(/^\s*(?:run|start|play)\s+(?:the\s+)?script\s*/i, '')).join(' '))
+      const hit = matchPhrase(said, list, false) ?? matchPhrase(said, list, true) ?? closestScript(said[0], list)
+      if (!hit) return `No script called “${said[0]}”. Say “scripts” for the list`
+      session.runScript(hit.file)
+      return '✓ Running ' + hit.file
+    }
+    const m = interpret(alts, ctx, names(), (n) => -(recent.get(n) ?? 0))
+    if (!m) {
+      // a near miss of a Cmd label: only once it is not a list of commands
+      if (probe) return null
+      return own(true) ?? 'not a command'
+    }
+    if (m.ambiguous) return `Which one: ${m.ambiguous.join(' or ')}? Spell it letter by letter`
+    const msg = doVoice(m.action)
+    if ((!msg || msg.startsWith('✓')) && m.action.kind === 'set') recent.set(m.action.name, Date.now())
+    return msg ?? '✓ ' + m.label
+  }
+  /** carry out a spoken command; a message when it could not be done */
+  const doVoice = (a: Action): string | void => {
+    const s = session
+    const zoom = (z: string) => document.querySelector<HTMLButtonElement>(`.zoombar [data-z="${z}"]`)?.click()
+    switch (a.kind) {
+      case 'keys': {
+        if (!s) return 'XPP is not running'
+        if (a.to === 'auto') {
+          const w = s.windows().find((w) => w.title.startsWith("It's AUTO"))
+          if (!w) return 'The AUTO window is not open (say “auto”)'
+          s.activate(w.id)
+        } else if (a.to === 'main') s.activate(s.mainWindow)
+        for (const k of a.keys) s.pressKey(k)
+        return
+      }
+      case 'set': {
+        const p = s?.params().find((p) => p.name.toLowerCase() === a.name.toLowerCase())
+        if (!s || !p) return `“${a.name}” is not a parameter or variable of this model`
+        s.setValue(p.name, a.value, p.ic)
+        return
+      }
+      case 'numeric':
+        if (!s) return 'XPP is not running'
+        s.activate(s.mainWindow)
+        s.pressKey('u')
+        s.pressKey(a.key)
+        s.typeValue(String(a.value))
+        s.pressKey('Escape')
+        return
+      case 'menu':
+        if (!s) return 'XPP is not running'
+        s.activate(s.mainWindow)
+        for (const k of a.keys) s.pressKey(k)
+        return
+      case 'edit': {
+        // XPP's prompt line (and lists): the matching keys
+        if (!s) return
+        const n = Math.min(a.n ?? 1, 50)
+        const map: Partial<Record<typeof a.op, string>> = { home: 'Home', end: 'End', up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', backspace: 'Backspace' }
+        if (a.op === 'deleteLine') {
+          s.bellMutedUntil = performance.now() + 3000
+          s.pressKey('End')
+          for (let i = 0; i < 40; i++) s.pressKey('Backspace')
+          return
+        }
+        const k = map[a.op]
+        if (!k) return
+        for (let i = 0; i < (['home', 'end'].includes(a.op) ? 1 : n); i++) s.pressKey(k)
+        return
+      }
+      case 'pick':
+        return 'Numbered buttons are in the Android app only'
+      case 'option':
+      case 'value':
+        return 'That is for the .ode editor of the Android app'
+      case 'ui':
+        switch (a.id) {
+          case 'help': return showVoiceHelp(context())
+          case 'sleep': return voice.sleep()
+          case 'zoomIn': return zoom('in')
+          case 'zoomOut': return zoom('out')
+          case 'fit': return zoom('fit')
+          case 'keyboard': return zoom('kbd')
+          case 'sliders': return void sliders.toggle()
+          case 'shareGraph': return void mobile.runCommand({ label: 'Share graph', feature: 'share-graph' })
+          case 'csv': return void mobile.runCommand({ label: 'Data (CSV)', feature: 'share-data' })
+          case 'edit': return $('edit').click()
+          case 'tips': return mobile.showTips()
+          case 'mainWindow': return void s?.activate(s.mainWindow)
+          case 'scripts':
+            if (!scriptItems().length) return 'No scripts in XPP’s folder yet (say “new script”)'
+            return void mobile.runCommand({ label: 'Scripts…', feature: 'scripts' })
+          case 'newScript': return openScriptEditor(null)
+          case 'numbersOn':
+          case 'numbersOff':
+            return 'Numbered buttons are in the Android app only'
+        }
+    }
+  }
+  const showVoiceHelp = (ctx: Context) => {
+    document.querySelector('.voicehelp')?.remove()
+    const d = document.createElement('div')
+    d.className = 'tips voicehelp'
+    d.setAttribute('role', 'dialog')
+    d.setAttribute('aria-label', 'Voice commands')
+    d.innerHTML = `<h3>You can say (${ctx === 'auto' ? 'AUTO window' : 'XPP window'})</h3><table></table>
+      <p>Numbers: “two point five”, “minus three”, “one e minus three”. Names: as words, or
+      spelled (“g k”). The Cmd panel’s buttons: say their label. Scripts: “run script” and its name
+      (“run script h h auto”). “Stop listening” or 🎤 ends voice.</p><button type="button">Close</button>`
+    const tbl = d.querySelector('table')!
+    for (const [say, what] of [...helpFor(ctx), ...spoken().map((x) => [plainWords(x.c.label), x.c.label] as [string, string])]) {
+      const tr = document.createElement('tr')
+      tr.append(Object.assign(document.createElement('td'), { textContent: say }), Object.assign(document.createElement('td'), { textContent: what }))
+      tbl.append(tr)
+    }
+    d.querySelector('button')!.addEventListener('click', () => d.remove())
+    document.body.append(d)
+  }
+  // ---- choosing the engine: Settings -> Voice, or at the first 🎤
+  const sel = $<HTMLSelectElement>('webvoiceengine')
+  const about = async () => {
+    const e = voice.engine
+    const del = $<HTMLButtonElement>('voicedelete')
+    del.hidden = true
+    if (e === '' || e === 'off') {
+      $('voiceabout').textContent = 'Off. Choose how to turn speech into text: ' +
+        (Object.keys(ENGINES) as RealEngine[]).map((k) => `${ENGINES[k].name}: ${ENGINES[k].short}`).join('; ') + '.'
+      return
+    }
+    const info = ENGINES[e]
+    const ok = canRun(e)
+    const have = e !== 'browser' && ok && (await voice.downloaded(e))
+    $('voiceabout').textContent = (ok ? '' : 'This browser cannot use it. ') + info.about + (e === 'browser' ? '' : have ? ' Downloaded: ready offline.' : ' Not downloaded yet: the first 🎤 downloads it.')
+    del.hidden = !have
+  }
+  voice.onEngineChange = (e) => {
+    sel.value = e
+    if (e === 'vosk') void offlineWords()
+    void about()
+    voiceShown()
+  }
+  sel.value = voice.engine
+  sel.addEventListener('change', () => voice.setEngine(sel.value as WebEngine))
+  $('voicedelete').addEventListener('click', async () => {
+    const e = voice.engine as RealEngine
+    await voice.deleteDownload(e)
+    notice(`${ENGINES[e].name}: the download was removed from this browser`)
+    void about()
+  })
+  $('settings').addEventListener('toggle', () => void about())
+  voice.onChoose = () => {
+    document.querySelector('.voiceoffer')?.remove()
+    const d = document.createElement('div')
+    d.className = 'tips voiceoffer'
+    d.setAttribute('role', 'dialog')
+    d.setAttribute('aria-label', 'Voice commands')
+    d.innerHTML = '<h3>Voice commands: how should speech become text?</h3><div class="vchoices"></div><p class="muted">You can change this later in Settings → Voice.</p><div class="row"><button type="button" class="vcancel">Not now</button></div>'
+    for (const k of Object.keys(ENGINES) as RealEngine[]) {
+      const c = document.createElement('div')
+      c.className = 'vchoice'
+      const ok = canRun(k)
+      c.innerHTML = `<b></b><p></p><button type="button"></button>`
+      c.querySelector('b')!.textContent = ENGINES[k].name
+      c.querySelector('p')!.textContent = (ok ? '' : 'Not available in this browser. ') + ENGINES[k].about
+      const b = c.querySelector('button')!
+      b.textContent = k === 'browser' ? 'Use browser speech' : `Download ${ENGINES[k].mb} MB and use it`
+      b.disabled = !ok
+      b.addEventListener('click', () => {
+        d.remove()
+        voice.setEngine(k)
+        voice.button.click() // start listening (downloads first if needed)
+      })
+      d.querySelector('.vchoices')!.append(c)
+    }
+    d.querySelector('.vcancel')!.addEventListener('click', () => d.remove())
+    document.body.append(d)
+  }
+  if (voice.engine === 'vosk') void offlineWords()
+  // where the 🎤 shows: the zoom bar on phones and tablets (unless Voice is
+  // Off), the header on computers once an engine is chosen
+  const hdr = $<HTMLButtonElement>('voicehdr')
+  hdr.addEventListener('click', () => voice.button.click())
+  voice.button.addEventListener('click', () => setTimeout(() => hdr.classList.toggle('on', voice.button.classList.contains('on')), 50))
+  mobile.addTool(voice.button)
+  voiceShown = () => {
+    const real = voice.engine !== '' && voice.engine !== 'off'
+    voice.button.hidden = voice.engine === 'off'
+    hdr.hidden = !(mobile.device === 'desktop' && real)
+  }
+  voiceShown()
+  // tests: Chrome emulating a phone has no microphone
+  ;(window as unknown as { xppVoiceTest: unknown }).xppVoiceTest = {
+    say: (t: string) => voice.onHeard([t]),
+    wav: (url: string, e: 'vosk' | 'whisper') => voice.testWav(url, e),
+    voice,
+  }
+}
+const updateDevice = () => {
+  mobile.apply(detectDevice(viewMode))
+  voiceShown()
+}
 updateDevice()
 watchDevice(updateDevice)
 viewSelect.addEventListener('change', () => {

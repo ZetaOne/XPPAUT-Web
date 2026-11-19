@@ -128,7 +128,11 @@ writeFileSync(join(out, 'XPPAUT-Web.html'), html)
 // ---- 2. zip: the site + a local web server -------------------------------------
 const stage = join(out, 'stage')
 const top = join(stage, 'XPPAUT-Web')
-cpSync(dist, join(top, 'site'), { recursive: true, filter: (s) => !s.includes(`${dist}/videos`) })
+// not the videos, nor the voice engines and models (about 100 MB; online only)
+cpSync(dist, join(top, 'site'), {
+  recursive: true,
+  filter: (s) => !s.includes(`${dist}/videos`) && !s.includes(`${dist}/voice`) && !/assets\/(voice-|ort-wasm)/.test(s),
+})
 
 writeFileSync(
   join(top, 'serve.py'),

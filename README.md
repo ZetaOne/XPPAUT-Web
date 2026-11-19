@@ -58,7 +58,7 @@ Last). Click a preview to play the full 2-minute video.*
   window of Sing pts) and the results it printed; offered before you restart
   or quit.
 - **Phones**: detected automatically, with touch controls
-  (see [below](#phones)).
+  (see [below](#phones)), and [voice commands](#voice-commands).
 - **Install as an app**: its own icon and window, works offline, and offers
   updates when a new version is published (see [below](#install-as-an-app)).
 - **Model editor**, **XPP's terminal output**, **built-in help**, and
@@ -268,6 +268,28 @@ The phone layout is chosen automatically (switch it under **Settings → View**)
 > networks and arrays), large storage (`maxstor`) and long AUTO continuations
 > (large `NMAX` or `NTST`) may be slow or fail. Use **Save session** often, or
 > run such models on a computer.
+
+## Voice commands
+
+Tap **🎤** (in the zoom bar on phones and tablets; on a computer it appears at
+the top once a voice engine is chosen) and speak XPP's commands: “integrate”,
+“nullclines”, “set i app to point one five”, “auto”, “run steady state”,
+“run script nullclines”, “what can I say”. Several commands can be said in
+one go: “set i app to point one five then integrate then nullclines”, or
+“auto, run, enter”. The buttons of the Cmd panel work by saying their label.
+
+How speech becomes text is chosen at the first tap, or in **Settings →
+Voice**:
+
+| | Download | Internet | Notes |
+|---|---|---|---|
+| **Browser speech** | none (built in) | needed | Chrome sends the audio to Google, Safari to Apple. Chrome, Edge and Samsung Internet on Android, Safari on iPhone and iPad (turn on Dictation); not Firefox |
+| **Vosk** | about 44 MB, once | not needed | Completely offline and private; every browser; listens for XPP's commands only |
+| **Whisper** (tiny.en) | about 57 MB, once | not needed | Completely offline and private; the most accurate, but slower on phones |
+
+A download happens only when that engine is chosen, never when the page
+opens, and stays in the browser (Settings → Voice → **Delete the download**
+removes it). The Android app has its own voice control.
 
 ## Install as an app
 

@@ -12,5 +12,9 @@
   "devDependencies": {
     "typescript": "~7.0.2",
     "vite": "^8.3.5"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "4.3.2",
+    "vosk-browser": "0.0.8"
   }
 }

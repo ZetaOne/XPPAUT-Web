@@ -48,6 +48,9 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
+  // voice engines' models: the page keeps them itself ("xpp-voice"), not here
+  if (rest.startsWith('voice/')) return
+
   // anything else: from the cache, else from the network (and keep a copy)
   event.respondWith(
     (async () => {

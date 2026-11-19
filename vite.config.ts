@@ -10,6 +10,10 @@ function walk(dir: string, sub = ''): string[] {
   )
 }
 
+/** voice engines (assets/voice-*) and their files (voice/): not kept offline
+ *  with the page; the page downloads and keeps them when chosen */
+const isVoice = (f: string) => f.startsWith('voice/') || f.startsWith('assets/voice-') || /ort-wasm/.test(f)
+
 /**
  * Writes dist/sw.js from pwa/sw.js after the build: the list of files to keep
  * offline and a version that is a hash of all of them, so each deploy that
@@ -27,8 +31,9 @@ function serviceWorker(): Plugin {
     },
     closeBundle() {
       const files = walk(outDir)
-        // videos (README tour) are played online only, not stored offline
-        .filter((f) => f !== 'sw.js' && !f.endsWith('.map') && !f.startsWith('videos/'))
+        // videos (README tour) are played online only, not stored offline;
+        // voice engines and models download only when chosen (Settings -> Voice)
+        .filter((f) => f !== 'sw.js' && !f.endsWith('.map') && !f.startsWith('videos/') && !isVoice(f))
         .sort()
       const template = readFileSync(resolve(root, 'pwa/sw.js'), 'utf8')
       const hash = createHash('sha256').update(template) // a changed worker is a new version too
@@ -48,4 +53,20 @@ function serviceWorker(): Plugin {
 export default defineConfig({
   base: './',
   plugins: [serviceWorker()],
+  resolve: {
+    // Whisper (transformers.js) on ONNX Runtime's plain WebAssembly build (14 MB,
+    // no WebGPU): the same everywhere, and the smaller download
+    alias: [{ find: /^onnxruntime-web\/webgpu$/, replacement: 'onnxruntime-web/wasm' }],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        // the voice engines in their own files, loaded only when chosen
+        manualChunks(id) {
+          if (id.includes('node_modules/vosk-browser')) return 'voice-vosk'
+          if (/node_modules\/(@huggingface|onnxruntime)/.test(id)) return 'voice-whisper'
+        },
+      },
+    },
+  },
 })

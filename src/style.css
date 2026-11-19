@@ -1971,3 +1971,125 @@ summary.round:focus-visible {
   text-transform: none;
   letter-spacing: 0;
 }
+
+/* ---- voice commands (website) ------------------------------------------------ */
+.zoombar .micbtn.on,
+#voicehdr.on {
+  background: #b3261e;
+  color: #fff;
+}
+
+#voicehdr[hidden],
+.micbtn[hidden] {
+  display: none;
+}
+
+.voicebar {
+  position: fixed;
+  left: 50%;
+  bottom: 62px; /* above the zoom bar, clear of XPP's own top row */
+  transform: translateX(-50%);
+  z-index: 100001;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(520px, calc(100% - 16px));
+  padding: 6px 6px 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bar);
+  color: var(--fg);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.35);
+  font-size: 14px;
+}
+
+.voicebar[hidden] {
+  display: none;
+}
+
+.voicebar .vtext {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voicebar.live .vtext {
+  font-weight: 600;
+}
+
+.voicebar .vmeter {
+  flex: none;
+  width: 34px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.voicebar .vmeter b {
+  display: block;
+  height: 100%;
+  background: #2e7d32;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 80ms linear;
+}
+
+.voicebar button {
+  flex: none;
+  min-height: 34px;
+  min-width: 60px;
+}
+
+/* the first 🎤: which engine */
+.voiceoffer .vchoice {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.voiceoffer .vchoice p {
+  margin: 4px 0 8px;
+  font-size: 13px;
+}
+
+.voiceoffer .row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* "what can I say?" */
+.voicehelp table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.voicehelp td {
+  padding: 3px 4px;
+  border-top: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.voicehelp td:first-child {
+  font-style: italic;
+}
+
+/* Settings -> Voice */
+.voiceset {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.voiceabout {
+  margin: 0;
+  max-width: 420px;
+  font-size: 12px;
+  color: var(--muted);
+}

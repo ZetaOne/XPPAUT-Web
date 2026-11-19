@@ -262,6 +262,18 @@ export class XppSession {
     return null;
   }
 
+  /** no visual bell until then (voice clears XPP's prompts with extra Backspaces) */
+  bellMutedUntil = 0;
+
+  /** type a value at XPP's prompt line, replacing what is there, and Enter */
+  typeValue(text: string): void {
+    this.bellMutedUntil = performance.now() + 3000;
+    this.pressKey('End');
+    for (let i = 0; i < 40; i++) this.pressKey('Backspace');
+    for (const ch of text) this.pressKey(ch);
+    this.pressKey('Enter');
+  }
+
   /** run the script `name` (in XPP's folder) through XPP's File -> Do script,
    *  without its file selector (xw_pick_script) */
   runScript(name: string): void {
@@ -1094,7 +1106,7 @@ export class XppSession {
   bellFlash = false;
 
   private bell(): void {
-    if (!this.bellFlash) return;
+    if (!this.bellFlash || performance.now() < this.bellMutedUntil) return;
     this.desktop.classList.remove('bell');
     void this.desktop.offsetWidth;
     this.desktop.classList.add('bell');
