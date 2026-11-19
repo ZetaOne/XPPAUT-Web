@@ -16,6 +16,8 @@ val webAssets = layout.buildDirectory.dir("generated/web")
 val syncWeb by tasks.registering(Sync::class) {
     from(rootProject.file("../dist")) {
         exclude("sw.js", "manifest.webmanifest", "videos/**") // browser-only
+        // the website's voice engines and models: the app has its own (Voice.java)
+        exclude("voice/vosk/**", "voice/whisper/**", "voice/ort/**", "voice/test/**", "assets/voice-*", "assets/ort-wasm*")
     }
     into(webAssets.map { it.dir("www") })
     doFirst {
