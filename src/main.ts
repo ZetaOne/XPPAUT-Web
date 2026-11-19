@@ -115,7 +115,7 @@ app.innerHTML = `
       <button id="savesession" title="Download a .zip with everything XPP saved, its graphs and AUTO diagram (SVG, PostScript), screenshots of the windows, the state (.set), the data and XPP's output">Save session</button>
       <button id="restart">Restart</button>
     </div>
-    <button type="button" class="install" id="install" hidden title="Install XPPAUT-Web as an app: its own window and icon, and it works offline">Install</button>
+    <button type="button" class="install round" id="install" hidden aria-label="Install as an app" title="Install XPPAUT-Web as an app: its own window and icon, and it works offline"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3v11m0 0-4.5-4.5M12 14l4.5-4.5M5 15v4h14v-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <details class="fontsize" id="fontsize">
       <summary class="round" title="XPP font size" aria-label="XPP font size">Aa</summary>
       <div class="fontsize-panel" id="fontpanel">

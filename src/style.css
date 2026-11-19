@@ -825,8 +825,9 @@ button.primary {
   display: none;
 }
 
-/* round icon button (theme) */
-summary.round {
+/* round icon buttons (theme, Aa, install) */
+summary.round,
+button.round {
   display: grid;
   place-items: center;
   width: 30px;
@@ -840,11 +841,13 @@ summary.round {
 }
 
 summary.round:hover,
+button.round:hover,
 .themes[open] summary.round {
   background: var(--panel-bar-active);
 }
 
-summary.round:focus-visible {
+summary.round:focus-visible,
+button.round:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -1212,11 +1215,21 @@ summary.round:focus-visible {
   display: none;
 }
 
-:root[data-device='phone'][data-orient='landscape'] header.bar:has(#session:not([hidden])) .menubtn,
-:root[data-device='phone'][data-orient='landscape'] header.bar:has(#session:not([hidden])) .install {
+:root[data-device='phone'][data-orient='landscape'] header.bar:has(#session:not([hidden])) .menubtn {
   order: 0;
   width: 100%;
   margin: 0;
+}
+
+/* the install icon in the rail: with Aa and the theme button at the bottom */
+:root[data-device='phone'][data-orient='landscape'] header.bar:has(#session:not([hidden])) .install {
+  order: 18;
+  margin: auto 0 0;
+  align-self: center;
+}
+
+:root[data-device='phone'][data-orient='landscape'] header.bar:has(#session:not([hidden])) .install:not([hidden]) ~ .fontsize {
+  margin-top: 0;
 }
 
 :root[data-device='phone'][data-orient='landscape'] header.bar:has(#session:not([hidden])) .themes {
@@ -1300,7 +1313,6 @@ summary.round:focus-visible {
 
 :root[data-device='phone'] .install {
   order: 9;
-  height: 34px;
 }
 
 :root[data-device='phone'] header:has(.install:not([hidden])) .menubtn {
