@@ -117,10 +117,19 @@ class Mic {
   private node: ScriptProcessorNode | null = null
   rate = 48000
   onAudio: (data: Float32Array, buffer: AudioBuffer) => void = () => {}
+  /** the microphone went away (another app took it, unplugged...) */
+  onEnded: () => void = () => {}
   async start() {
     this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 }, video: false })
+    for (const t of this.stream.getAudioTracks()) t.addEventListener('ended', () => this.onEnded())
     this.ctx = new AudioContext()
     this.rate = this.ctx.sampleRate
+    // phones suspend audio (a call, another app): carry on when allowed
+    const ctx = this.ctx
+    ctx.onstatechange = () => {
+      if (ctx.state === 'suspended') void ctx.resume().catch(() => {})
+    }
+    if (ctx.state === 'suspended') await ctx.resume().catch(() => {})
     const src = this.ctx.createMediaStreamSource(this.stream)
     this.node = this.ctx.createScriptProcessor(4096, 1, 1)
     this.node.onaudioprocess = (e) => this.onAudio(e.inputBuffer.getChannelData(0), e.inputBuffer)
@@ -133,6 +142,12 @@ class Mic {
     void this.ctx?.close()
     this.ctx = this.stream = this.node = null
   }
+}
+
+/** real microphone audio is never exactly zero; a dead source is */
+const hasSound = (d: Float32Array) => {
+  for (let i = 0; i < d.length; i += 16) if (d[i] !== 0) return true
+  return false
 }
 
 const rms = (d: Float32Array) => {
@@ -187,6 +202,16 @@ export class WebVoice {
   private meter: HTMLElement
   private keepOn = false
   private busy = false
+  /** loading or downloading an engine (the watchdog waits) */
+  private loading = false
+  /** last sign of life from the engine (audio, or the recognizer's events) */
+  private alive = 0
+  /** Whisper is writing down an utterance since then (0: not) */
+  private workingSince = 0
+  private wave: HTMLCanvasElement
+  private peaks: number[] = []
+  private waveDrawn = 0
+  private viz: Mic | null = null
   private abort: AbortController | null = null
   private hideTimer = 0
   // engines
@@ -205,9 +230,12 @@ export class WebVoice {
     this.bar.className = 'voicebar'
     this.bar.setAttribute('role', 'status')
     this.bar.hidden = true
-    this.bar.innerHTML = '<i class="vmeter"><b></b></i><span class="vtext"></span><button type="button">Stop</button>'
+    this.bar.innerHTML = '<canvas class="vwave" width="96" height="28" aria-hidden="true"></canvas><i class="vmeter"><b></b></i><span class="vtext"></span><button type="button">Stop</button>'
     this.text = this.bar.querySelector('.vtext')!
     this.meter = this.bar.querySelector('.vmeter b')!
+    this.wave = this.bar.querySelector('.vwave')!
+    // the watchdog: listening that has gone quiet starts again by itself
+    setInterval(() => this.check(), 2000)
     this.bar.querySelector('button')!.addEventListener('click', () => this.sleep())
     host.append(this.bar)
   }
@@ -275,12 +303,78 @@ export class WebVoice {
     this.abort = null
     this.rec?.abort()
     this.rec = null
-    this.mic?.stop()
-    this.mic = null
-    this.voskRec?.remove()
-    this.voskRec = null
+    this.stopEngine()
+    this.loading = false
+    this.bar.classList.remove('loading')
     this.setOn(false)
     if (was) this.flash('Voice off', 1500)
+  }
+
+  /** the engine's pieces off (keepOn stays as it is) */
+  private stopEngine() {
+    if (this.rec) {
+      const r = this.rec
+      this.rec = null
+      try {
+        r.abort()
+      } catch {
+        /* already ended */
+      }
+    }
+    this.mic?.stop()
+    this.mic = null
+    this.viz?.stop()
+    this.viz = null
+    this.voskRec?.remove()
+    this.voskRec = null
+    this.workingSince = 0
+    this.peaks = []
+    this.drawWave(true)
+  }
+
+  /** every 2 s: listening that has gone quiet (a recognizer that stopped
+   *  without saying so, a microphone the phone took away) starts again */
+  private check() {
+    if (!this.keepOn || this.loading || document.hidden) return
+    const now = performance.now()
+    if (this.workingSince && now - this.workingSince > 20000) this.workingSince = 0 // a transcription that never came back
+    const limit = this.engine === 'browser' ? 15000 : 5000
+    if (this.busy && now - this.alive < limit) return
+    this.stopEngine()
+    this.busy = false
+    void this.listen()
+  }
+
+  /** a chunk of what the microphone hears, for the waveform */
+  private feedWave(d: Float32Array) {
+    const now = performance.now()
+    const step = 512
+    for (let i = 0; i < d.length; i += step) {
+      let m = 0
+      for (let j = i; j < Math.min(i + step, d.length); j++) m = Math.max(m, Math.abs(d[j]))
+      this.peaks.push(m)
+    }
+    if (this.peaks.length > 96) this.peaks.splice(0, this.peaks.length - 96)
+    if (now - this.waveDrawn > 50) this.drawWave()
+  }
+
+  private drawWave(clear = false) {
+    this.waveDrawn = performance.now()
+    const g = this.wave.getContext('2d')
+    if (!g) return
+    const { width: w, height: h } = this.wave
+    g.clearRect(0, 0, w, h)
+    g.fillStyle = getComputedStyle(this.bar).color
+    g.globalAlpha = 0.35
+    g.fillRect(0, h / 2 - 0.5, w, 1)
+    if (clear) return
+    g.globalAlpha = 1
+    g.fillStyle = '#2e7d32'
+    const n = this.peaks.length
+    for (let i = 0; i < n; i++) {
+      const a = Math.min(1, Math.sqrt(this.peaks[i]) * 1.6) * (h / 2 - 1)
+      g.fillRect(w - n + i, h / 2 - a, 1, Math.max(1, 2 * a))
+    }
   }
 
   private setOn(on: boolean) {
@@ -307,10 +401,6 @@ export class WebVoice {
     return this.engine === 'browser' ? 'Listening…' : `Listening (${this.engine === 'vosk' ? 'Vosk' : 'Whisper'}, offline)…`
   }
 
-  private level(v: number) {
-    this.meter.style.transform = `scaleX(${Math.min(1, v * 8)})`
-  }
-
   private heard(text: string) {
     const t = text.trim()
     if (!t) return
@@ -327,17 +417,20 @@ export class WebVoice {
     }
     this.setOn(true)
     this.busy = true
+    this.alive = performance.now()
     try {
       if (e === 'browser') return this.listenBrowser()
-      if (e === 'vosk') {
-        await this.loadVosk()
-        if (!this.keepOn) return
-        return await this.listenVosk()
-      }
-      await this.loadWhisper()
+      this.loading = true
+      if (e === 'vosk') await this.loadVosk()
+      else await this.loadWhisper()
+      this.loading = false
+      this.bar.classList.remove('loading')
       if (!this.keepOn) return
-      return await this.listenWhisper()
+      this.alive = performance.now()
+      return await (e === 'vosk' ? this.listenVosk() : this.listenWhisper())
     } catch (err) {
+      this.loading = false
+      this.bar.classList.remove('loading')
       if ((err as Error).name === 'AbortError') return
       const msg = (err as Error).name === 'NotAllowedError' ? 'The microphone is blocked: allow it for this site (the lock icon by the address)' : `Voice: ${(err as Error).message}`
       this.sleep()
@@ -353,7 +446,21 @@ export class WebVoice {
     rec.maxAlternatives = 5
     rec.continuous = false
     this.show(this.listeningText(), true)
+    const life = () => (this.alive = performance.now())
+    const r2 = rec as unknown as Record<string, (() => void) | null>
+    for (const ev of ['onstart', 'onaudiostart', 'onsoundstart', 'onspeechstart', 'onspeechend', 'onsoundend', 'onaudioend']) r2[ev] = life
+    // the waveform: the page hears the microphone too, on computers only
+    // (phones give the microphone to one listener at a time)
+    if (!this.viz && document.documentElement.dataset.device === 'desktop' && 'mediaDevices' in navigator) {
+      const viz = new Mic()
+      this.viz = viz
+      viz.onAudio = (d) => this.feedWave(d)
+      viz.start().catch(() => {
+        if (this.viz === viz) this.viz = null
+      })
+    }
     rec.onresult = (ev) => {
+      life()
       for (let i = ev.resultIndex; i < ev.results.length; i++) {
         const r = ev.results[i]
         if (!r.isFinal) {
@@ -366,6 +473,7 @@ export class WebVoice {
       }
     }
     rec.onerror = (ev) => {
+      life()
       if (ev.error === 'no-speech' || ev.error === 'aborted') return
       this.keepOn = false
       this.flash(
@@ -375,23 +483,32 @@ export class WebVoice {
     }
     rec.onend = () => {
       if (this.rec !== rec) return
+      life()
       if (this.keepOn) {
-        try {
-          rec.start() // the next command
-          return
-        } catch {
-          /* fall through */
-        }
+        // the next command: a fresh recognizer, a moment later (reusing the
+        // old one can fail silently on phones)
+        setTimeout(() => {
+          if (this.keepOn && this.rec === rec) this.listenBrowser()
+        }, 250)
+        return
       }
+      this.rec = null
       this.busy = false
       this.setOn(false)
+      this.viz?.stop()
+      this.viz = null
     }
-    rec.start()
+    try {
+      rec.start()
+    } catch {
+      /* the watchdog tries again */
+    }
   }
 
   private progress(what: string) {
     return (got: number, total: number) => {
       const mb = (n: number) => (n / 1048576).toFixed(1)
+      this.bar.classList.add('loading')
       this.show(`Downloading ${what} (once): ${mb(got)}${total ? ' of ' + mb(total) : ''} MB`, true)
       if (total) this.meter.style.transform = `scaleX(${got / total})`
     }
@@ -432,8 +549,10 @@ export class WebVoice {
     await mic.start()
     const rec = this.voskRecognizer(mic.rate, (t) => this.heard(t))
     this.voskRec = rec
+    mic.onEnded = () => (this.alive = 0)
     mic.onAudio = (d, b) => {
-      this.level(rms(d))
+      if (hasSound(d)) this.alive = performance.now()
+      this.feedWave(d)
       try {
         rec.acceptWaveform(b)
       } catch {
@@ -495,10 +614,13 @@ export class WebVoice {
     let quiet = 0
     let noise = 0.01
     let working = false
+    mic.onEnded = () => (this.alive = 0)
     mic.onAudio = (d) => {
-      if (working) return
+      if (hasSound(d)) this.alive = performance.now()
+      this.feedWave(d)
+      if (working && this.workingSince) return
+      working = false
       const v = rms(d)
-      this.level(v)
       const sec = d.length / mic.rate
       if (!speaking) {
         noise = 0.95 * noise + 0.05 * v
@@ -515,6 +637,7 @@ export class WebVoice {
       if (quiet > 0.8 || len > 8) {
         speaking = false
         working = true
+        this.workingSince = performance.now()
         const all = new Float32Array(chunks.reduce((n, c) => n + c.length, 0))
         let o = 0
         for (const c of chunks) all.set(c, o), (o += c.length)
@@ -522,6 +645,7 @@ export class WebVoice {
           .then((t) => this.heard(t))
           .finally(() => {
             working = false
+            this.workingSince = 0
             if (this.keepOn) this.show(this.listeningText(), true)
           })
       }

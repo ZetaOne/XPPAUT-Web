@@ -2029,6 +2029,19 @@ summary.round:focus-visible,
   display: none;
 }
 
+/* what the microphone hears (offline engines; browser speech on computers) */
+.voicebar .vwave {
+  flex: none;
+  width: 96px;
+  height: 28px;
+}
+
+/* the level bar shows download progress only */
+.voicebar:not(.loading) .vmeter,
+.voicebar.loading .vwave {
+  display: none;
+}
+
 .voicebar .vtext {
   flex: 1;
   min-width: 0;
