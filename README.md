@@ -41,7 +41,7 @@ Last). Click a preview to play the full 2-minute video.*
   and [8.1](#new-in-xppaut-81).
 - **AUTO** for steady states, periodic orbits and bifurcation diagrams, now also
   of delay equations.
-- **225 example models** from the XPPAUT release and for the new 8.1, 8.2 and 8.4 features, or your own `.ode` file with
+- **227 example models** from the XPPAUT release and for the new 8.1, 8.2 and 8.4 features, or your own `.ode` file with
   its `.ani`, `.tab`, `.dat` and `.xps` (script) files (pick them together, or drag and drop
   them onto the page; a model whose table file is missing asks for it).
 - **Window panels**: drag, resize, close, save as PNG, or pop out into a
@@ -92,15 +92,37 @@ shot pp.ps          # save the picture (.ps or .svg), no dialogs
 - **Loops and errors**: `for a in 1 2 3 ... end`, `for k = 0:0.5:2`,
   `repeat 3`, with `$a` in any line (also file names); `try ... else ... end`
   carries on when a command fails.
-- **Running a script**: File → **Do script** (keys F D) and pick the file. Your
-  own scripts go in with **Open .ode file…** or **Add files…** (or drop them
-  on the page). A link can also run one as soon as the model opens:
+- **Running a script**: the **Scripts** menu at the top of the page lists the
+  scripts in XPP's folder, each with **Run** and **Edit**. It is easier to use
+  than XPP's own small file selector, above all on phones (there it is in the
+  ☰ menu, and the Cmd panel has **Scripts…** and **Do script**). XPP's File →
+  **Do script** (keys F D) works too. A link can also run one as soon as the
+  model opens:
   [`?ode=xpp84/lecar.ode&script=lecar-nullclines.xps`](https://zetaone.github.io/XPPAUT-Web/?ode=xpp84/lecar.ode&script=lecar-nullclines.xps).
-- **Examples**: the group **8.4-scripting-xpp** in the Model list.
-  `lecar.ode` comes with five scripts (Bard's example above, a tutorial with
-  pauses, a sweep over `iapp`, scripted mouse clicks, and an AUTO diagram);
-  `hutch.ode` with a `try` sweep in AUTO. Their pictures are saved in XPP's
-  folder (**Files**, or Save session).
+- **Writing scripts**: **New script** and **Edit** open a script editor, like
+  Edit .ode. **Save and run** runs the script at once; no restart is needed.
+  **Add scripts…** (or Open .ode file… and Add files…) brings in your own
+  `.xps` files.
+- **Examples**: the group **8.4-scripting-xpp** in the Model list, with what
+  scripts do best: work that would take many clicks and dialogs by hand, done
+  the same way every time.
+  - `hh.ode` (Hodgkin–Huxley): an f–I sweep with one figure per current
+    (`hh-fi.xps`); a lecture with pauses on bistability at I = 8, where the
+    same neuron rests or fires for ever depending on one kick
+    (`hh-bistable.xps`); and AUTO from start to finish: Hopf points at
+    I = 9.78 and 154.5 and the periodic orbits with their fold at I = 6.26
+    (`hh-auto.xps`).
+  - `wc.ode` (Wilson–Cowan): phase portraits for six inputs with clicked
+    starting points, one figure each (`wc-portraits.xps`); a lecture with
+    pauses (`wc-lecture.xps`); and AUTO with AUTO's own forms filled in by
+    label: steady states, the Hopf point and folds, the periodic orbits, and
+    two-parameter curves of the Hopf point (both directions, with a
+    generalised Hopf point) and of a fold (`wc-auto.xps`).
+  - `lecar.ode` (Morris–Lecar) with five shorter scripts, including Bard's
+    example above, scripted mouse clicks, and an AUTO diagram; `hutch.ode`
+    with a `try` sweep in AUTO.
+
+  What a script saves is in XPP's folder (**Files**, or Save session).
 
 <p>
   <img src="docs/script-auto.png" width="60%" alt="The AUTO window of XPPAUT 8.4 after lecar-auto.xps: the steady states of the Morris-Lecar model against iapp with two folds and a Hopf point (label 4, iapp = 0.2038), and the branch of periodic orbits that starts there, all computed by the script">

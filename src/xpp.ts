@@ -262,6 +262,24 @@ export class XppSession {
     return null;
   }
 
+  /** run the script `name` (in XPP's folder) through XPP's File -> Do script,
+   *  without its file selector (xw_pick_script) */
+  runScript(name: string): void {
+    const m = this.mod;
+    if (!m) return;
+    const n = name.length * 4 + 1;
+    const p = m._malloc(n);
+    try {
+      m.stringToUTF8(name, p, n);
+      m._xw_pick_script(p);
+    } finally {
+      m._free(p);
+    }
+    this.activate(this.mainWindow);
+    this.pressKey('f');
+    this.pressKey('d');
+  }
+
   /** the model's parameters, then its variables (initial values) */
   params(): Array<{ name: string; value: number; ic: boolean }> {
     const m = this.mod;

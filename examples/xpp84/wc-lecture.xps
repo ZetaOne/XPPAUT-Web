@@ -1,0 +1,27 @@
+# A lecture with pauses (Enter or Space goes on, Esc stops): how the
+# excitatory input ie0 reshapes the Wilson-Cowan phase plane.
+set xp=u;yp=v;xlo=-.05;xhi=1;ylo=-.05;yhi=1;total=60
+set ie0=0;u=.15;v=.05
+msg "Wilson-Cowan: excitatory (u) and inhibitory (v) populations"
+pause "Press Enter: low input, ie0 = 0"
+keys n n
+keys i g
+msg "One stable state of low activity"
+pause "Press Enter: ie0 = 2.5 (past the Hopf point at 2.048)"
+set ie0=2.5;u=.15;v=.05
+keys e
+keys n n
+keys i g
+msg "The low state has lost stability: the populations oscillate"
+pause "Press Enter: ie0 = 3.5"
+set ie0=3.5;u=.15;v=.05
+keys e
+keys n n
+keys i g
+msg "The oscillation is gone: activity goes to the high state"
+pause "Press Enter: ie0 = 6 (past the fold at 5.465)"
+set ie0=6;u=.15;v=.05
+keys e
+keys n n
+keys i g
+msg "Only the high-activity state is left. Run wc-auto.xps for the diagrams."

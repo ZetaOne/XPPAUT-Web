@@ -660,7 +660,8 @@ button.small,
 }
 
 /* ---- .ode editor ------------------------------------------------------ */
-dialog#editor {
+dialog#editor,
+dialog#sceditor {
   width: min(900px, calc(100vw - 32px));
   height: min(80vh, 760px);
   padding: 0;
@@ -670,7 +671,8 @@ dialog#editor {
   color: var(--fg);
 }
 
-dialog#editor::backdrop {
+dialog#editor::backdrop,
+dialog#sceditor::backdrop {
   background: rgb(0 0 0 / 0.35);
 }
 
@@ -691,6 +693,10 @@ dialog#editor::backdrop {
 .editor-foot {
   justify-content: flex-end;
   border-top: 1px solid var(--line);
+}
+
+.editor-head input {
+  font: 13px ui-monospace, Menlo, Consolas, monospace;
 }
 
 .editor textarea {
@@ -1079,6 +1085,14 @@ summary.round:focus-visible {
 
 :root[data-device='phone'] header.menu-open .session > * {
   width: 100%;
+  flex-shrink: 0;
+}
+
+/* one column that scrolls (wrapping put Scripts, Settings, ... in a second
+   column outside the menu on landscape phones) */
+:root[data-device='phone'] header.menu-open .session:not([hidden]) {
+  flex-wrap: nowrap;
+  overflow-y: auto;
 }
 
 :root[data-device='phone'] .settings-panel,
@@ -1086,6 +1100,18 @@ summary.round:focus-visible {
   position: static;
   margin-top: 6px;
   box-shadow: none;
+  width: auto;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+:root[data-device='phone'] .files-head {
+  flex-wrap: wrap;
+}
+
+:root[data-device='phone'] .files-panel td:first-child {
+  white-space: normal;
+  word-break: break-all;
 }
 
 :root[data-device='phone'] .start {

@@ -62,7 +62,7 @@ export const COMMANDS: XppCommand[] = [
   ...menu('Text, markers', 't e', 'm:Move item|c:Change item|d:Delete item'),
   ...menu('Boundary value', 'b', 'r:BVP range|n:BVP no show|s:BVP show|p:BVP periodic'),
   ...menu('File', 'f', 'a:AUTO|c:Calculator|h:Help|w:Write set|r:Read set|g:Get par set|p:Print source|s:Save info|' +
-    't:Transpose|l:Clone|x:.xpprc|b:Bell on/off|i:Tips on/off|u:Tutorial|q:Quit'),
+    't:Transpose|l:Clone|x:.xpprc|b:Bell on/off|i:Tips on/off|u:Tutorial|d:Do script|q:Quit'),
   ...menu('Edit equations', 'f e', 'r:Edit RHS|f:Edit functions|s:Save as'),
   // ---- Numerics (XPP stays in its Numerics menu: the Cmd panel shows that page)
   ...menu('Numerics', 'u', 't:Total*|s:Start time*|r:Transient*|d:Dt*|o:nOutput*|b:Bounds*|e:Delay*|' +

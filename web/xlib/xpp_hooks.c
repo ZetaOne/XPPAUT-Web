@@ -491,3 +491,11 @@ void xw_before_quit(void)
   if (!Xup) return;
   xw_export_session("/xw-session-quit");
 }
+
+/* The page's Scripts menu: the next File -> Do script runs `name` (a file in
+   XPP's folder) instead of opening the file selector (patched xpp_script.c) */
+EMSCRIPTEN_KEEPALIVE void xw_pick_script(const char *name)
+{
+  extern char xppweb_script_pick[];
+  snprintf(xppweb_script_pick, 300, "%s", name);
+}

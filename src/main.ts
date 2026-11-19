@@ -41,6 +41,19 @@ app.innerHTML = `
           <p class="files-note">Everything XPP saves (Graphic stuff → Postscript/SVG, data, .set files, AUTO diagrams) is also downloaded or saved to your folder, as chosen under <b>Exports</b>. ⤓ on any window's title bar saves it as PNG.</p>
         </div>
       </details>
+      <details class="files" id="scripts">
+        <summary title="XPPAUT scripts (.xps) in XPP's folder: run or edit them">Scripts <span class="badge" id="scount"></span></summary>
+        <div class="files-panel">
+          <div class="files-head">
+            <span>Scripts (.xps)</span>
+            <button class="small" id="scnew" title="Write a new script">New script</button>
+            <label class="file small" title="Add .xps script files to XPP's folder">Add scripts…<input type="file" id="addscripts" accept=".xps,.txt,text/plain" multiple hidden></label>
+            <a class="small" href="help/script_doc.html" target="_blank" rel="noopener" title="Bard Ermentrout's scripting manual">Manual</a>
+          </div>
+          <table id="scriptlist"></table>
+          <p class="files-note"><b>Run</b> starts the script as XPP's File → Do script would (F D in XPP, or in the Cmd panel). While it runs, <b>Esc</b> stops it; at a pause, <b>Enter</b> or <b>Space</b> goes on. What it saves appears under Files.</p>
+        </div>
+      </details>
       <details class="settings" id="settings">
         <summary title="Exports, output and window options">Settings</summary>
         <div class="settings-panel">
@@ -134,6 +147,19 @@ app.innerHTML = `
       <div class="editor-foot">
         <button type="button" id="eddownload">Download</button>
         <button type="button" id="edrestart">Restart XPP with this file</button>
+        <button value="cancel">Close</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="sceditor">
+    <form method="dialog" class="editor">
+      <div class="editor-head"><label>Script <input id="scname" size="24" spellcheck="false" autocomplete="off"></label><span class="muted">Saved in XPP's folder; runs without a restart.</span><a href="help/script_doc.html" target="_blank" rel="noopener">Manual</a></div>
+      <textarea id="sctext" spellcheck="false"></textarea>
+      <div class="editor-foot">
+        <span class="muted" id="scmsg"></span>
+        <button type="button" id="scdownload">Download</button>
+        <button type="button" id="scsave">Save</button>
+        <button type="button" id="scrun">Save and run</button>
         <button value="cancel">Close</button>
       </div>
     </form>
@@ -357,7 +383,7 @@ async function launch(name: string, text: string, extras: Array<{ name: string; 
   session.bellFlash = bellFlash.checked
   mobile.attach(session)
   ;(window as unknown as { xpp: XppSession }).xpp = session // for tests and debugging
-  setInterval(updateFileCount, 2000)
+  setInterval(() => (updateFileCount(), updateScriptCount()), 2000)
   // XPP's WebAssembly started downloading when the page opened; wait for it
   let wasm: ArrayBuffer | undefined
   try {
@@ -737,6 +763,108 @@ $<HTMLInputElement>('addfiles').addEventListener('change', async (e) => {
   updateFileCount()
 })
 
+// ---- scripts (XPPAUT 8.4, .xps): a menu on the page, as XPP's own file
+// selector is small (above all on phones), and an editor -------------------------
+const isScript = (n: string) => /\.xps$/i.test(n)
+function updateScriptCount() {
+  const n = session?.listFiles().filter((f) => isScript(f.name)).length ?? 0
+  $('scount').textContent = n ? String(n) : ''
+}
+function runScript(name: string) {
+  if (!session) return
+  ;($('scripts') as HTMLDetailsElement).open = false
+  document.querySelector('header')!.classList.remove('menu-open')
+  $('menubtn').setAttribute('aria-expanded', 'false')
+  session.runScript(name)
+}
+function renderScripts() {
+  const table = $<HTMLTableElement>('scriptlist')
+  const files = (session?.listFiles() ?? []).filter((f) => isScript(f.name))
+  table.innerHTML = files.length ? '' : '<tr><td class="muted">No scripts yet: New script, or Add scripts…</td></tr>'
+  for (const f of files) {
+    const tr = document.createElement('tr')
+    const name = document.createElement('td')
+    name.textContent = f.name
+    const acts = document.createElement('td')
+    acts.className = 'num'
+    const run = document.createElement('button')
+    run.className = 'small'
+    run.textContent = 'Run'
+    run.title = 'Run it (File -> Do script)'
+    run.addEventListener('click', () => runScript(f.name))
+    const edit = document.createElement('button')
+    edit.className = 'small'
+    edit.textContent = 'Edit'
+    edit.addEventListener('click', () => openScriptEditor(f.name))
+    acts.append(run, ' ', edit)
+    tr.append(name, acts)
+    table.append(tr)
+  }
+}
+$('scripts').addEventListener('toggle', () => {
+  if (($('scripts') as HTMLDetailsElement).open) renderScripts()
+})
+$<HTMLInputElement>('addscripts').addEventListener('change', async (e) => {
+  const input = e.target as HTMLInputElement
+  for (const f of input.files ?? []) {
+    const name = isScript(f.name) ? f.name : f.name.replace(/\.[^.]*$/, '') + '.xps'
+    session?.writeFile(name, new Uint8Array(await f.arrayBuffer()))
+  }
+  input.value = ''
+  renderScripts()
+  updateScriptCount()
+  updateFileCount()
+})
+const scEditor = $<HTMLDialogElement>('sceditor')
+const NEW_SCRIPT = `# A script: one command per line (manual: Manual, above)
+#   set a=1;b=2      parameters, initial conditions, numerics, plot options
+#   keys i g         XPP's menu keys (here Initialconds -> Go)
+#   ans 16           the answer to the dialog the line above opens
+#   msg "text"       a message;  pause "text"  waits for Enter
+#   shot fig.ps      save the picture (.ps or .svg)
+#   for a in 1 2 3 ... end,  try ... else ... end,  auto goto HB 1, ...
+keys i g
+`
+function openScriptEditor(name: string | null) {
+  if (!session) return
+  ;($('scripts') as HTMLDetailsElement).open = false
+  document.querySelector('header')!.classList.remove('menu-open')
+  const base = odeName.replace(/\.ode$/i, '')
+  let n = name
+  if (!n) {
+    n = base + '-new.xps'
+    for (let k = 2; session.listFiles().some((f) => f.name === n); k++) n = `${base}-new${k}.xps`
+  }
+  $<HTMLInputElement>('scname').value = n
+  $<HTMLTextAreaElement>('sctext').value = name ? new TextDecoder().decode(session.readFile(name)) : NEW_SCRIPT
+  $('scmsg').textContent = ''
+  scEditor.showModal()
+}
+/** save the editor's script into XPP's folder; returns its name, or null */
+function saveScript(): string | null {
+  if (!session) return null
+  let n = $<HTMLInputElement>('scname').value.trim().replace(/[\\/]/g, '_')
+  if (!n) n = 'script.xps'
+  if (!isScript(n)) n += '.xps'
+  $<HTMLInputElement>('scname').value = n
+  session.writeFile(n, new TextEncoder().encode($<HTMLTextAreaElement>('sctext').value))
+  $('scmsg').textContent = 'Saved ' + n
+  updateScriptCount()
+  updateFileCount()
+  return n
+}
+$('scnew').addEventListener('click', () => openScriptEditor(null))
+$('scsave').addEventListener('click', () => void saveScript())
+$('scrun').addEventListener('click', () => {
+  const n = saveScript()
+  if (!n) return
+  scEditor.close()
+  runScript(n)
+})
+$('scdownload').addEventListener('click', () => {
+  const n = saveScript()
+  if (n) download(n, new Blob([$<HTMLTextAreaElement>('sctext').value], { type: 'text/plain' }))
+})
 // ---- .ode editor --------------------------------------------------------------
 const editor = $<HTMLDialogElement>('editor')
 $('edit').addEventListener('click', () => {
@@ -932,6 +1060,16 @@ $('cmdlibbtn').addEventListener('click', () => {
   cmdlib.open()
 })
 mobile.addFeature('sliders', 'Sliders', 'parameters', () => sliders.toggle())
+// "Scripts… = @scripts" in the Cmd panel opens the page's Scripts menu
+mobile.addFeature('scripts', 'Scripts…', 'run a script', () => {
+  renderScripts()
+  // on phones the toolbar (with Scripts) is folded into the ☰ menu: open it
+  if (getComputedStyle($('menubtn')).display !== 'none') {
+    document.querySelector('header')!.classList.add('menu-open')
+    $('menubtn').setAttribute('aria-expanded', 'true')
+  }
+  ;($('scripts') as HTMLDetailsElement).open = true
+})
 mobile.addFeature('share-graph', 'Share graph', 'picture', () => {
   const main = session?.windowImages().find((w) => /^XPP Ver/.test(w.title))
   if (!main) return notice('No graph to share')

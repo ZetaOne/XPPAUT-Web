@@ -1,0 +1,39 @@
+# AUTO, start to finish: steady states against ie0 (folds, Hopf point),
+# the periodic orbits from the Hopf point, then two-parameter curves of
+# the Hopf point and a fold in the (ie0, ii0) plane, in both directions,
+# with a generalised Hopf (Bautin) point. Two pictures:
+#   wc-auto-1par.ps  u against ie0       wc-auto-2par.ps  ii0 against ie0
+# By hand: AUTO's Parameter, Numerics and Axes forms, Grab, and the step
+# sign flipped for each direction - easy to get wrong, here in one go.
+set ie0=-2;ii0=0;u=.1;v=.05
+keys i g i l i l                 # settle at rest
+keys f a
+autokeys p                       # AUTO Parameter form: main and second parameter
+ans Par1=ie0|Par2=ii0
+autokeys n                       # Numerics form, by label
+ans SuppBP=1
+autokeys r s                     # steady states: Hopf at 2.048, folds at 2.705 and 5.465
+auto goto HB 1
+autokeys r p                     # periodic orbits from the Hopf point
+shot auto wc-auto-1par.ps
+autokeys n
+ans Nmax=300|Dsmax=0.02
+auto goto HB 1 branch 1
+autokeys r t                     # Hopf point -> Two Param: the Hopf curve, one way
+auto goto HB 1 branch 1
+autokeys n
+ans Ds=-0.02
+autokeys r t                     # ... and the other way
+auto goto LP 2 branch 1          # the fold at ie0 = 2.705
+autokeys n
+ans Ds=0.01
+autokeys r                       # a fold: Run continues it in two parameters
+auto goto LP 2 branch 1
+autokeys n
+ans Ds=-0.01
+autokeys r
+auto list
+autokeys a t                     # Axes -> Two par
+ans Xmin=-2|Ymin=-4|Xmax=8|Ymax=6
+shot auto wc-auto-2par.ps
+msg "Done: wc-auto-1par.ps and wc-auto-2par.ps"

@@ -1,0 +1,28 @@
+# Hodgkin-Huxley (squid axon, 6.3 C). I in uA/cm^2.
+# Scripts (new in XPPAUT 8.4), run with File -> Do script (keys F D):
+#   hh-fi.xps         an f-I sweep: V(t) for 8 currents, one picture each
+#                     (hh_I_0.ps ... hh_I_100.ps), plus all of them on one
+#   hh-bistable.xps   a lecture with pauses: at I = 8 the same neuron rests
+#                     or fires forever, depending on one kick
+#   hh-auto.xps       AUTO, start to finish: rest state against I (Hopf
+#                     points near I = 9.78 and 154.5), the periodic orbits
+#                     with their fold (I = 6.26: where firing can start),
+#                     and the diagram saved as hh-auto.ps
+par I=0
+par gna=120,gk=36,gl=0.3,ena=50,ek=-77,el=-54.4,c=1
+am(v)=.1*(v+40)/(1-exp(-(v+40)/10))
+bm(v)=4*exp(-(v+65)/18)
+ah(v)=.07*exp(-(v+65)/20)
+bh(v)=1/(1+exp(-(v+35)/10))
+an(v)=.01*(v+55)/(1-exp(-(v+55)/10))
+bn(v)=.125*exp(-(v+65)/80)
+v'=(I-gna*m^3*h*(v-ena)-gk*n^4*(v-ek)-gl*(v-el))/c
+m'=am(v)*(1-m)-bm(v)*m
+h'=ah(v)*(1-h)-bh(v)*h
+n'=an(v)*(1-n)-bn(v)*n
+init v=-65,m=.053,h=.596,n=.318
+@ total=100,dt=.02,bound=1000,maxstor=50000
+@ xp=t,yp=v,xlo=0,xhi=100,ylo=-80,yhi=50
+@ ntst=50,nmax=400,npr=400,ds=.02,dsmin=1e-4,dsmax=1
+@ parmin=-5,parmax=200,autoxmin=0,autoxmax=200,autoymin=-80,autoymax=50
+done

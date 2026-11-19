@@ -1204,14 +1204,30 @@ void script_start(void)
 extern char this_file[];
 int file_selector(char *title,char *file,char *wild);
 
+#ifdef __EMSCRIPTEN__
+/* XPPAUT-Web: a script chosen in the page's Scripts menu (web/xlib/xpp_hooks.c,
+   xw_pick_script); File -> Do script then runs it without the file selector */
+char xppweb_script_pick[XPP_MAX_NAME];
+#endif
+
 void script_run_from_menu(void)
 {
   char filename[XPP_MAX_NAME];
   if(active){
+#ifdef __EMSCRIPTEN__
+    xppweb_script_pick[0]=0;
+#endif
     err_msg("A script is already running -- a script cannot start another script");
     return;
   }
   snprintf(filename,sizeof(filename),"%s.xps",this_file);
+#ifdef __EMSCRIPTEN__
+  if(xppweb_script_pick[0]){
+    snprintf(filename,sizeof(filename),"%s",xppweb_script_pick);
+    xppweb_script_pick[0]=0;
+  }
+  else
+#endif
   if(!file_selector("Run script",filename,"*.xps"))return;
   script_set_file(filename);
   opt_nopause=0;

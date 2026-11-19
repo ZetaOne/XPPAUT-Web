@@ -1,0 +1,17 @@
+# AUTO, start to finish (about 20 s): the rest state against I, its two
+# Hopf points, the periodic orbits and their fold, and the diagram saved.
+# By hand: about 15 clicks and dialogs, in the right order, every time.
+set I=0;v=-65;m=.053;h=.596;n=.318
+keys i g i l i l                 # settle at rest (AUTO starts from the current state)
+keys f a                         # File -> Auto
+autokeys r s                     # Run -> Steady state: Hopf points near I = 9.78 and 154.5
+auto goto HB 1                   # the first Hopf point
+autokeys r p                     # Run -> Periodic: the branch of firing solutions
+auto list                        # labelled points (terminal / side panel)
+try
+  auto goto LP 3                 # the fold of periodic orbits, I = 6.26
+  msg "Firing starts at the fold, I = 6.26; rest loses stability at I = 9.78"
+else
+  msg "($error)"
+end
+shot auto hh-auto.ps

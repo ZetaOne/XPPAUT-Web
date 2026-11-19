@@ -1,0 +1,20 @@
+# Phase portraits for 6 inputs in one go: nullclines and 4 starting points
+# each (clicks at the same places every time), one picture per input
+# (wc_ie_-1.ps ... wc_ie_6.ps). By hand this is an afternoon of clicking.
+set xp=u;yp=v;xlo=-.05;xhi=1;ylo=-.05;yhi=1;total=40
+keys g f o                       # auto-freeze: every run stays on the plot
+for ie in -1 1 2 2.5 3.5 6
+  set ie0=$ie
+  keys e                         # erase
+  keys n n                       # nullclines for this input
+  keys i i                       # mIce: each click is a starting point
+  click .05 .05
+  click .9 .9
+  click .5 .1
+  click .1 .6
+  keys esc
+  msg "ie0 = $ie"
+  shot wc_ie_$ie.ps
+  keys g f r                     # remove the frozen runs before the next input
+end
+keys g f o                       # auto-freeze off
