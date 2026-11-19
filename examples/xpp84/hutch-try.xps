@@ -1,0 +1,28 @@
+# Bard's example 6c, made visible: an AUTO sweep that carries on when a pass
+# has no Hopf point. For each start r0 the branch of x = 1 is continued in r;
+# it has a Hopf point at r = pi/2 = 1.5708 only if it starts below it. When
+# there is one, the periodic orbits from it are computed too.
+# "try ... else ... end": the pass with r0 = 2.0 has no Hopf point; the
+# script says so and goes on (that is what try is for, not an error).
+# Saves the last diagram as hutch-try.svg (works in desktop XPPAUT too).
+keys f a                              # open AUTO
+for r0 in 2.0 1.0
+  set r=$r0;x=1.0                     # start the branch of x = 1 at r = r0
+  autokeys r s                        # Run -> Steady state
+  try
+    auto goto HB 1
+    autokeys r p                      # periodic orbits from the Hopf point
+    msg "r0=$r0: Hopf point at r = 1.5708, periodic orbits from it"
+  else
+    msg "r0=$r0: no Hopf point (the branch starts past r = 1.5708): skipped"
+  end
+  wait 2.5                            # a look at this pass
+  autokeys f r                        # AUTO File -> Reset diagram
+  ans y
+end
+set r=1.2;x=1.0                       # the last pass stays on screen
+autokeys r s
+auto goto HB 1
+autokeys r p
+shot auto hutch-try.svg
+msg "r0=1.2: Hopf point at r = 1.5708. Saved hutch-try.svg. (r0=2.0 was skipped on purpose.)"

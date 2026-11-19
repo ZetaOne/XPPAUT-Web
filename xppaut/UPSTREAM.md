@@ -206,8 +206,10 @@ Batch outputs: against the 8.4 desktop build, 144 SAME, 9 NOOUT. Every
 example script was run on the desktop build (under Xvfb, `-scriptexit`) and
 in the browser (both engines, including File -> Do script and the pauses of
 `lecar-tutorial.xps`); each picture they save is byte for byte the same size
-as the desktop's. (A Hutchinson `try` sweep, the manual's example 6c, was
-removed from the examples at the user's request.)
+as the desktop's. `hutch-try.xps` (the manual's example 6c, made visible:
+each pass shown, periodic orbits from the Hopf point, the last diagram kept
+and saved as SVG) gives the same messages and the same `hutch-try.svg`, byte
+for byte, in Bard's unmodified 8.4 build and in the browser (both engines).
 
 Notes for Bard: in his e-mail example the line `i g` must be `keys i g`
 ("unknown command"); and the manual's `keys g f a` (Auto-freeze) is `keys g f

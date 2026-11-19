@@ -41,7 +41,7 @@ Last). Click a preview to play the full 2-minute video.*
   and [8.1](#new-in-xppaut-81).
 - **AUTO** for steady states, periodic orbits and bifurcation diagrams, now also
   of delay equations.
-- **226 example models** from the XPPAUT release and for the new 8.1, 8.2 and 8.4 features, or your own `.ode` file with
+- **227 example models** from the XPPAUT release and for the new 8.1, 8.2 and 8.4 features, or your own `.ode` file with
   its `.ani`, `.tab`, `.dat` and `.xps` (script) files (pick them together, or drag and drop
   them onto the page; a model whose table file is missing asks for it).
 - **Window panels**: drag, resize, close, save as PNG, or pop out into a
@@ -125,9 +125,14 @@ shot pp.ps          # save the picture (.ps or .svg), no dialogs
     generalised Hopf point) and of a fold (`wc-auto.xps`).
   - `lecar.ode` (Morris–Lecar) with five shorter scripts, including Bard's
     example above, scripted mouse clicks, and an AUTO diagram.
+  - `hutch.ode` (Hutchinson delay equation): an AUTO sweep over three
+    starting values that carries on when a pass has no Hopf point
+    (`try … else … end`), with the periodic orbits from each Hopf point
+    (`hutch-try.xps`; saves `hutch-try.svg`, and runs unchanged in desktop
+    XPPAUT 8.4).
 
   The Hodgkin–Huxley and Wilson–Cowan scripts each save one picture at the
-  end, as PNG; everything a script saves is in XPP's folder (**Files**, or
+  end, as PNG (the Hutchinson one as SVG); everything a script saves is in XPP's folder (**Files**, or
   Save session).
 
 <p>
