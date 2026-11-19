@@ -1,0 +1,10 @@
+# Hutchinson delay equation: Hopf at r=pi/2, period 4 there
+# Scripting (new in XPPAUT 8.4): hutch-try.xps, run with File -> Do script
+# (keys F D), does an AUTO sweep that survives a pass with no Hopf point
+# ("try ... else ... end"); see the messages in the terminal / side panel.
+par r=1.8
+x'=r*x*(1-delay(x,1))
+init x=1.2
+@ total=300,trans=295.8164662,dt=0.01,delay=2,meth=rungekutta
+@ xlo=0,xhi=300,ylo=0,yhi=3,maxstor=100000
+done

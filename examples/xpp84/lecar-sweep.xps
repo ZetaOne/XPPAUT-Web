@@ -1,0 +1,13 @@
+# A loop over iapp: one picture per value (sweep_0.05.ps, ...), and with
+# auto-freeze every run stays on the plot for one picture of all of them
+set total=100
+keys n n                  # nullclines
+keys g f o                # Graphic stuff -> Freeze -> On freeze: auto-freeze (a toggle)
+for iapp in 0.05 0.08 0.1 0.15
+  set iapp=$iapp
+  keys i g
+  msg "iapp = $iapp"
+  shot sweep_$iapp.ps     # $iapp also works in file names
+end
+shot sweep.ps             # all four runs
+keys g f o                # auto-freeze off again

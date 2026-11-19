@@ -1,8 +1,8 @@
 # Upstream source
 
 This directory is the official XPPAUT 8.0 source release by Bard Ermentrout,
-updated to XPPAUT 8.1 and 8.2 with the source Bard sent in November 2026 (see
-"XPPAUT 8.1" and "XPPAUT 8.2" below). Upstream files are kept unmodified apart from the
+updated to XPPAUT 8.1, 8.2 and 8.4 with the source Bard sent in November 2026 (see
+"XPPAUT 8.1", "XPPAUT 8.2" and "XPPAUT 8.4" below). Upstream files are kept unmodified apart from the
 patches listed here, so web-specific changes stay visible in git history.
 
 - Source: https://sites.pitt.edu/~phase/bard/bardware/xpp/xppaut8.0.tgz
@@ -41,6 +41,7 @@ Changes to upstream files are marked with `XPPAUT-Web:` comments.
 | `arrayplot.c` | `aplot_gif_note()`: set `indexn` (last column drawn) before writing the GIF note | Upstream never sets it, so the note named the last column "? (0)" |
 | `dde_po_xpp.c` | Declare `redraw_auto_menus()` as `void`, as `auto_x11.c` defines it | Declared `int` there: harmless on the desktop, but in WebAssembly a call through the wrong signature traps ("unreachable"), so Run -> Periodic on a delay equation crashed |
 | `surface.c` | `<stdlib.h>` instead of `stdfix.h`; new `surface_export()` | `stdfix.h` declares libc without prototypes (as before); `surface_export()` lets Save session write the Surface view (web/xlib/xpp_hooks.c) |
+| `pop_list.c` | WebAssembly build only: in `xpp_next_event()`, a script's timed wait calls `xppweb_script_wait(ms)` (web/xlib/platform_web.c) instead of `select()` on the X connection | There is no X connection in the browser; the page must get a turn (to draw, and to deliver the key that ends a `pause`) while a script waits |
 
 ### Fixes from Bard Ermentrout (2025)
 
@@ -171,3 +172,41 @@ desktop build: 144 SAME, 9 NOOUT. Checked in the browser (both engines):
 branch from it; `mg.ode` Hopf at beta = 1.33687 and period doubling at
 1.5554491 (as Bard's comment); the Surface view matches the desktop build,
 rotates, and saves GIF, EPS and SVG.
+
+### XPPAUT 8.4 (Bard Ermentrout, 19 November 2026)
+
+`xppsrc8.4.tgz` (SHA-256 fa5f7266ef2c9f409f125e7402b88a6626de2a22d9f73cbba2bd28e891639e94),
+merged three-way on top of 8.2. One conflict, in `auto_x11.c`
+(`traverse_diagram`): Bard moved the Grab code into `auto_grab_point()`, and
+the merge keeps his version. His manual came with it as `script_doc.html`
+(in `help/`, so the site serves it).
+
+- New files: `xpp_script.c`, `xpp_script.h` (scripting: `set`, `keys`,
+  `autokeys`, `ans`/`ok`/`cancel`, `click`/`drag`, `msg`, `pause`, `wait`,
+  `speed`, `shot`, `auto goto`/`auto list`, `for`/`repeat`, `try`/`else`;
+  File -> Do script, `-script`, `-nopause`, `-scriptexit`). Also in
+  `web/objects.txt`.
+- Changed: `pop_list.c` (the script runs from `xpp_next_event()` when XPP is
+  idle; dialogs ask the script for answers), `auto_x11.c` (`auto_goto_point`,
+  `auto_list_points`, `auto_key_window`), `comline.c` (options), `main.c`,
+  `menu.c`, `menus.h` (Do script), `dialog_box.c`, `ggets.c`, `graf_par.c`,
+  `graphics.c`, `init_conds.c`, `rubber.c` (scripted answers and mouse),
+  `autlib1.c`, `auto_nox.c`, `diagram.c/.h`, `dde_po_xpp.c`, `load_eqn.c`,
+  `many_pops.c`, `my_ps.h`, `periodic_ic.c`, `read_dir.c`, `txtread.c`,
+  `Makefile` (version 8.4.2: `web/Makefile` passes `MYSTR1=8.4 MYSTR2=2`).
+
+The web Xlib layer gained `XLookupKeysym`. The page brings an example's
+scripts (`foo.xps` and `foo-*.xps` for `foo.ode`) into XPP's folder, accepts
+`.xps` files from Open/Add files, and `?script=name.xps` passes
+`-script name.xps`. Examples: `examples/xpp84/` (group "8.4-scripting-xpp").
+
+Batch outputs: against the 8.4 desktop build, 144 SAME, 9 NOOUT. Every
+example script was run on the desktop build (under Xvfb, `-scriptexit`) and
+in the browser (both engines, including File -> Do script and the pauses of
+`lecar-tutorial.xps`); each picture they save is byte for byte the same size
+as the desktop's. `hutch-try.xps` reproduces the manual's example 6c (Hopf
+at r = 1.5708, the r0 = 2.0 pass caught by `try`).
+
+Notes for Bard: in his e-mail example the line `i g` must be `keys i g`
+("unknown command"); and the manual's `keys g f a` (Auto-freeze) is `keys g f
+o` (the Freeze menu's keys are `f d e r k b c o`; `a` is ignored silently).

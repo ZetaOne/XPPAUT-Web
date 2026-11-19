@@ -1,0 +1,16 @@
+# Bard's example 6c: a sweep that survives a pass with no Hopf point.
+# For each r0 the branch of x = 1 starts at r = r0; it has a Hopf point
+# at r = pi/2 = 1.5708 only when it starts below it.
+keys f a
+for r0 in 1.0 2.0 1.2
+  set r=$r0;x=1.0
+  autokeys r s
+  try
+    auto goto HB 1
+    msg "r0=$r0: Hopf point at r = 1.5708"
+  else
+    msg "r0=$r0: no Hopf point  ($error)"
+  end
+  autokeys f r            # AUTO File -> Reset diagram
+  ans y
+end

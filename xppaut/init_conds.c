@@ -1,3 +1,4 @@
+#include "xpp_script.h"
 #include "init_conds.h"
 #include "parserslow.h"
 #include "tabular.h"
@@ -1069,14 +1070,23 @@ int *off1,*pos1,mc;
 	
         ft[m] = '\0';
      	m--;
+	/* A name with no directory part (like the default "model.ode.ps") has no '/'
+	   to stop at: m would go below zero and ft[m] would be written before the start
+	   of the buffer (a crash).  Stop at the start of the name instead. */
+	if (m<0)
+	{
+		m=0;
+		break;
+	}
 	if ((ft[m] != '/') & (ft[m] != '\\'))
      	{
 		ft[m] = '\0';
      		m--;
      	}
 	
-	if (m==0)
+	if (m<=0)
 	{
+		if (m<0)m=0;
 		break;
 	}
      }
@@ -1250,7 +1260,11 @@ int file_selector(title,file,wild)
  char *title;
  char *wild,*file;
 {
-  int i;
+  int i,sr;
+  /* scripted answer ("ans filename", "ok" or "cancel") */
+  sr=script_take_text(title,file,200);
+  if(sr==1)return 1;
+  if(sr==-1)return 0;
   if(!get_directory(cur_dir))
  return 0;
  if(!get_fileinfo(wild,cur_dir,&my_ff))

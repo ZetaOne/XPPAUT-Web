@@ -1,0 +1,11 @@
+# AUTO from a script: steady states, the first Hopf point, the periodic
+# orbits from it, and the diagram saved as lecar-auto.ps
+set iapp=-0.1
+keys i g i l i l          # settle at rest (AUTO starts from the current state)
+keys f a                  # File -> Auto: open the AUTO window
+autokeys r s              # Run -> Steady state
+auto list                 # the labelled points (in the terminal)
+auto goto HB 1            # the first Hopf point, as Grab + Enter would
+autokeys r p              # Run -> Periodic
+auto list
+shot auto lecar-auto.ps

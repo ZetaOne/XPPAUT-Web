@@ -44,6 +44,7 @@ extern int (*rhs)();
 void err_msg(char *string);
 int plintf(char *fmt, ...);
 void ping(void);
+int script_is_active(void);
 
 #define PIC_VOLTERRA 6
 #define PIC_MAXSTEPS 4000000L
@@ -497,7 +498,10 @@ int periodic_ic_prepare(void)
              q, (q - floor(q)) * step);
   }
   sprintf(msg, "Period T=%.8g. Starting at max of %s; total set to T", T, uvar_names[iv]);
-  err_msg(msg);
+  if (script_is_active())
+    plintf("%s\n", msg);
+  /* a script gets a note, not an error box */
+  else err_msg(msg);
 
   free(xe); free(fe); free(amp); free(scl); free(wk); free(wk2);
   pic_free(&W);

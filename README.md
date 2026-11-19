@@ -35,13 +35,14 @@ Last). Click a preview to play the full 2-minute video.*
 
 ## Features
 
-- **The real XPPAUT 8.2**: its C code compiled to WebAssembly. Windows match the
-  desktop version pixel for pixel. See what is new in [8.2](#new-in-xppaut-82)
+- **The real XPPAUT 8.4**: its C code compiled to WebAssembly. Windows match the
+  desktop version pixel for pixel. See what is new in
+  [8.4](#new-in-xppaut-84-scripting), [8.2](#new-in-xppaut-82)
   and [8.1](#new-in-xppaut-81).
 - **AUTO** for steady states, periodic orbits and bifurcation diagrams, now also
   of delay equations.
-- **223 example models** from the XPPAUT release and for the new 8.1 and 8.2 features, or your own `.ode` file with
-  its `.ani`, `.tab` and `.dat` files (pick them together, or drag and drop
+- **225 example models** from the XPPAUT release and for the new 8.1, 8.2 and 8.4 features, or your own `.ode` file with
+  its `.ani`, `.tab`, `.dat` and `.xps` (script) files (pick them together, or drag and drop
   them onto the page; a model whose table file is missing asks for it).
 - **Window panels**: drag, resize, close, save as PNG, or pop out into a
   separate browser window. Windows are also easier to close than on the desktop.
@@ -65,9 +66,53 @@ Last). Click a preview to play the full 2-minute video.*
 - **Fast and private**: about 0.5 MB, near-native speed, and nothing leaves
   your browser.
 
+## New in XPPAUT 8.4: scripting
+
+XPPAUT 8.4 (November 2026) can run **scripts**: plain text files (`.xps`) of
+commands that XPP carries out for you, for reproducing a figure exactly, for a
+tutorial with pauses, or for a parameter sweep. Bard Ermentrout's manual:
+[script_doc.html](https://zetaone.github.io/XPPAUT-Web/help/script_doc.html).
+
+```
+set iapp=.15        # parameters, initial conditions, numerics, plot options
+keys n n            # menu keys: Nullcline -> New
+keys d s            # Dir.field/flow -> Scaled Dir.Fld
+ans 16              # the answer to the dialog that opens (grid size)
+keys i g            # Initialconds -> Go
+shot pp.ps          # save the picture (.ps or .svg), no dialogs
+```
+
+- **Commands**: `set`, `keys`, `ans` / `ok` / `cancel` for dialogs, `click`
+  and `drag` for the mouse in the plot (in the plot's own coordinates),
+  `msg`, `pause` (Enter or Space goes on, Esc stops), `wait`, `speed`, and
+  `shot` to save a picture.
+- **AUTO**: `autokeys` presses keys in the AUTO window, `auto goto HB 1`
+  selects a point of the diagram (as Grab + Enter would), `auto list` prints
+  the labelled points, and `shot auto file.ps` saves the diagram.
+- **Loops and errors**: `for a in 1 2 3 ... end`, `for k = 0:0.5:2`,
+  `repeat 3`, with `$a` in any line (also file names); `try ... else ... end`
+  carries on when a command fails.
+- **Running a script**: File → **Do script** (keys F D) and pick the file. Your
+  own scripts go in with **Open .ode file…** or **Add files…** (or drop them
+  on the page). A link can also run one as soon as the model opens:
+  [`?ode=xpp84/lecar.ode&script=lecar-nullclines.xps`](https://zetaone.github.io/XPPAUT-Web/?ode=xpp84/lecar.ode&script=lecar-nullclines.xps).
+- **Examples**: the group **8.4-scripting-xpp** in the Model list.
+  `lecar.ode` comes with five scripts (Bard's example above, a tutorial with
+  pauses, a sweep over `iapp`, scripted mouse clicks, and an AUTO diagram);
+  `hutch.ode` with a `try` sweep in AUTO. Their pictures are saved in XPP's
+  folder (**Files**, or Save session).
+
+<p>
+  <img src="docs/script-auto.png" width="60%" alt="The AUTO window of XPPAUT 8.4 after lecar-auto.xps: the steady states of the Morris-Lecar model against iapp with two folds and a Hopf point (label 4, iapp = 0.2038), and the branch of periodic orbits that starts there, all computed by the script">
+</p>
+
+*`lecar-auto.xps` in XPPAUT-Web: steady states, the first Hopf point
+(iapp = 0.2038), and the periodic orbits from it, computed and saved by the
+script.*
+
 ## New in XPPAUT 8.2
 
-XPPAUT-Web runs XPPAUT 8.2, Bard Ermentrout's newest version (November 2026).
+XPPAUT 8.2 (November 2026) added the following.
 Pick the examples under **New in XPPAUT 8.2** in the Model list to try it;
 their comments give the steps and the values to expect.
 

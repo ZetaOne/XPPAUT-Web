@@ -21,7 +21,7 @@ app.innerHTML = `
       </label>
       <button id="run">Run</button>
       <span class="sep">or</span>
-      <label class="file" title="Pick an .ode file, plus any files it uses (.ani, .tab, .dat, .set)">Open .ode file…<input type="file" id="upload" multiple hidden></label>
+      <label class="file" title="Pick an .ode file, plus any files it uses (.ani, .tab, .dat, .set, .xps scripts)">Open .ode file…<input type="file" id="upload" multiple hidden></label>
     </div>
     <div class="session" id="session" hidden>
       <label title="Switch to another example (restarts XPP)">Model
@@ -34,7 +34,7 @@ app.innerHTML = `
         <div class="files-panel">
           <div class="files-head">
             <span>XPP's working folder</span>
-            <label class="file small" title="Add data, table, .ani or .set files for XPP to open">Add files…<input type="file" id="addfiles" multiple hidden></label>
+            <label class="file small" title="Add data, table, .ani, .set or .xps (script) files for XPP to open">Add files…<input type="file" id="addfiles" multiple hidden></label>
             <button class="small" id="zipall">Download all (.zip)</button>
           </div>
           <table id="filelist"></table>
@@ -367,7 +367,10 @@ async function launch(name: string, text: string, extras: Array<{ name: string; 
   }
   $('loadtext').textContent = 'Starting XPP…'
   startedFont = chosenFont()
-  await session.start(name, text, extras, wasm, fontArgs(startedFont))
+  // ?script=fig.xps: run that XPPAUT script (one of the files brought along) once XPP is up
+  const script = new URLSearchParams(location.search).get('script')
+  const scriptArgs = script && extras.some((f) => f.name === script) ? ['-script', script] : []
+  await session.start(name, text, extras, wasm, [...fontArgs(startedFont), ...scriptArgs])
   showFont()
   $('hint')?.remove()
 }
@@ -441,6 +444,9 @@ async function loadExample(id: string) {
   // named in it, and the .ani of the same name (pend.ode + pend.ani)
   const wanted = new Set([name.replace(/\.ode$/, '.ani')])
   for (const m of text.matchAll(/[\w.+-]+\.(?:ani|tab|dat)\b/gi)) wanted.add(m[0])
+  // XPPAUT 8.4 scripts (File -> Do script): those of this model, foo-*.xps for foo.ode
+  const base = name.replace(/\.ode$/i, '')
+  for (const f of group.data) if (/\.xps$/i.test(f) && (f === base + '.xps' || f.startsWith(base + '-'))) wanted.add(f)
   const extras: Array<{ name: string; data: Uint8Array }> = []
   for (const f of wanted) {
     if (!group.data.includes(f)) continue

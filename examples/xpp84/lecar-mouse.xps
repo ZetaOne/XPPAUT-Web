@@ -1,0 +1,18 @@
+# The mouse in a script: click and drag give points in the plot's own
+# coordinates (here v across, w up)
+set iapp=0.1;total=60
+keys g f o                # Graphic stuff -> Freeze -> On freeze (auto-freeze): keep every run
+keys i i                  # Initialconds -> mIce: each click starts a run
+click -0.4 0.1
+click 0.2 0.6
+click 0.6 0.1
+keys esc                  # end mIce
+keys t t                  # Text, etc -> Text
+ans "three starts"        # the text
+ans 2                     # its size
+click -0.45 0.5           # where it goes (inside the zoom below)
+wait 1
+keys w z                  # Window/zoom -> Zoom in
+drag -0.5 -0.1 0.5 0.6    # the new window
+shot mouse.ps
+keys g f o                # auto-freeze off again

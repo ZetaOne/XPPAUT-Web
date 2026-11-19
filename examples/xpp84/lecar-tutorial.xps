@@ -1,0 +1,23 @@
+# A tutorial with pauses: Enter or Space goes on, Esc stops the script
+msg "Morris-Lecar: a membrane oscillator"
+pause "Press Enter to run it with iapp = 0.05"
+set iapp=0.05
+keys i g
+msg "It goes to rest. Now the nullclines"
+pause "Press Enter for the nullclines"
+keys n n
+pause "Press Enter to raise the current to iapp = 0.1"
+set iapp=0.1;total=100
+keys e            # erase
+keys n n
+keys i g
+msg "A limit cycle around an unstable rest point"
+pause "Press Enter to block the potassium current (gk = 0)"
+set gk=0
+keys e
+keys n n
+keys i g
+msg "No potassium: the voltage goes up and stays"
+wait 2
+set gk=2;iapp=0.05;total=30
+msg "Back to the start (gk = 2, iapp = 0.05). The end."

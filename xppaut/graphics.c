@@ -597,12 +597,25 @@ void set_extra_graphs()
   }
 }
 
+void check_flags(void);
+
 void reset_graph()
 {
   if(AXES>=5)
     PLOT_3D=1;
   else
     PLOT_3D=0;
+  /* For a 2D plot XPP keeps xmin,xmax,ymin,ymax equal to xlo,xhi,ylo,yhi (the
+     Window dialog, zoom_in and the loader all do).  The 2D View dialog reads
+     xmin..ymax, so without this a window loaded through the internal options
+     is drawn correctly but XPP still reports -- and later restores -- the old
+     one. */
+  if(AXES<5){
+    x_3d[0]=MY_XLO;
+    x_3d[1]=MY_XHI;
+    y_3d[0]=MY_YLO;
+    y_3d[1]=MY_YHI;
+  }
   MyGraph->xv[0]=IXPLT;
   MyGraph->yv[0]=IYPLT;
   MyGraph->zv[0]=IZPLT;
@@ -623,6 +636,10 @@ void reset_graph()
     MyGraph->xhi=MY_XHI;
     MyGraph->yhi=MY_YHI;
     MyGraph->grtype=AXES;
+    /* refresh TimeFlag/ThreeDFlag from the plotted variables *before* redrawing:
+       a set that changes xp,yp must switch XPP out of "time plot" mode, or
+       nullclines, direction fields etc. are ignored */
+    check_flags();
     check_windows();
     set_normal_scale();
     redraw_the_graph();

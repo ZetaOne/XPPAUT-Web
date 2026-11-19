@@ -7,7 +7,8 @@
 #include <string.h>
 /* command-line stuff for xpp */
 #include <stdio.h>
-#define NCMD 45 /* add new commands as needed  */
+#include "xpp_script.h"
+#define NCMD 48 /* add new commands as needed  */
 
 #define MAKEC 0
 #define XORFX 1
@@ -54,6 +55,9 @@
 #define READSET 42
 #define WITH 43
 #define EQUIL 44
+#define SCRIPTEXIT 45
+#define SCRIPT 46
+#define NOPAUSE 47
 
 extern OptionsSet notAlreadySet;
 
@@ -138,7 +142,7 @@ extern int ConvertStyle;
 int noicon=1;
 int newseed=0;
 typedef struct {
-  char name[10];
+  char name[16];
   int len;
 
 } VOCAB;
@@ -189,7 +193,10 @@ VOCAB my_cmd[NCMD]=
   {"-def",4},
   {"-readset",8},
   {"-with",5},
-  {"-equil",6}
+  {"-equil",6},
+  {"-scriptexit",12},
+  {"-script",8},
+  {"-nopause",9}
  };
 
 
@@ -439,6 +446,17 @@ int argc;
      i++;
      externaloptionsflag=2;
    }
+   if(k==31){ /* -scriptexit */
+     script_set_options(-1,1);
+   }
+   if(k==32){ /* -script file */
+     if(i+1>=argc){plintf("-script needs a file name\n");exit(2);}
+     script_set_file(argv[i+1]);
+     i++;
+   }
+   if(k==33){ /* -nopause */
+     script_set_options(1,-1);
+   }
    if(k==30){ /* -equil */
      BatchEquil=atoi(argv[i+1]);
      i++;
@@ -667,6 +685,12 @@ int parse_it(com)
       return 29;
     case EQUIL: 
       return 30;
+    case SCRIPTEXIT:
+      return 31;
+    case SCRIPT:
+      return 32;
+    case NOPAUSE:
+      return 33;
     case QSETS:
       XPPBatch=1;
       querysets=1;
@@ -729,6 +753,9 @@ int parse_it(com)
      plintf("  -version               Print XPPAUT version and exit \n");
      plintf("  -readset <filename>   Read in a set file like the internal sets\n");
      plintf("  -with string   String must be surrounded with quotes; anything that is in an internal set is valid\n");
+     plintf("  -script <file>   Run a script of commands (set, msg, pause, wait, ...) in the GUI\n");
+     plintf("  -nopause         With -script: skip pause/wait/speed commands\n");
+     plintf("  -scriptexit      With -script: quit when the script ends (implies -nopause)\n");
      plintf("  -equil <0|1>    Write equilibria to equil.dat and if <1> manifolds um1.dat,...,sm2.dat\n");
      plintf("\n");
 

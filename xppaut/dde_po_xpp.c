@@ -166,6 +166,20 @@ static void save_point(int ibr,int ntot,int lab,const DDEPO *P,double T,const do
   nsaved++;
 }
 
+/* Forget every stored orbit.  Called when the AUTO diagram is destroyed
+   (File -> Reset diagram): the orbits are keyed by branch and label, and both
+   numberings start again from 1, so a stale entry could otherwise be taken for
+   an orbit of the new diagram, and the memory would only ever grow. */
+void dde_po_clear_saved(void)
+{
+  int i;
+  if(saved==NULL)return;
+  for(i=0;i<nsaved;i++){free(saved[i].X);saved[i].X=NULL;}
+  free(saved);
+  saved=NULL;
+  nsaved=0;
+}
+
 static int max_label(void)
 {
   DIAGRAM *d=bifd;

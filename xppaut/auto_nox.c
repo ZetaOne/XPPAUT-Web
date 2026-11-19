@@ -627,7 +627,9 @@ void open_auto(flg) /* compatible with new auto */
     sprintf(string,"%s.s",this_auto_file);
     copyf(string,fort3);
   }
-
+  /* bname and dname pointed into these copies; they are not used again */
+  free(basec);
+  free(dirc);
 }
 
 /* MAIN Running routine  Assumes that Auto structure is set up */
@@ -2253,10 +2255,6 @@ void auto_new_ss()
 
   if(NBifs>1){
     ans=reset_auto();
-    if ((ans!=0) || (ans!=1))
-    {
-       plintf("Boolean response expected.\n");	
-    }
    /* if(ans==0){
       opn=OPEN_3;
       cls=APPEND;
@@ -2283,10 +2281,6 @@ void auto_new_discrete()
   NewPeriodFlag=0;
   if(NBifs>1){
     ans=reset_auto();
-    if ((ans!=0) || (ans!=1))
-    {
-       plintf("Boolean response expected.\n");	
-    }
    /* if(ans==0){
       opn=OPEN_3;
       cls=APPEND;

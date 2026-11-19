@@ -49,6 +49,17 @@ void xw_platform_wait(void)
   yield(10);
 }
 
+/* called by xpp_next_event() (patched pop_list.c) while a script waits
+   (wait, speed, pause between keys): give the page a turn of up to ms,
+   returning early when input arrives */
+void xppweb_script_wait(int ms)
+{
+  js_busy(0);
+  js_drain_input();
+  if (xw_queue_length()) return;
+  yield(ms < 1 ? 1 : (ms > 50 ? 50 : ms));
+}
+
 void xw_platform_poll(void)
 {
   /* XPending/XFlush are called constantly during long computations; let

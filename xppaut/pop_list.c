@@ -1,3 +1,6 @@
+#include <sys/time.h>
+#include <sys/select.h>
+#include "xpp_script.h"
 #include "pop_list.h"
 
 #include "many_pops.h"
@@ -249,6 +252,11 @@ int do_string_box(n,row,col,title,names,values,maxchar)
  int colm,pos;
  SCROLLBOX scrb;
  scrb.exist=0;
+
+ /* scripted answer ("ans ...") for this form */
+ status=script_take_form(title,n,names,(char *)values,MAX_LEN_SBOX);
+ if(status==1)return(DONE_ALL);
+ if(status==-1)return(FORGET_ALL);
 
   for(i=0;i<n;i++){
         sb.hh[i]=-1;
@@ -947,7 +955,7 @@ Window make_unmapped_icon_window(root,x,y,width,height,bw,icx,icy,icdata)
 		col=0;
 		row=-1;
 		z=0;
-		while (row<height)
+		while (row<height-1)   /* rows 0..height-1; "row<height" read one row past the icon data */
 		{
 			col=0;
 			row++;
@@ -1117,7 +1125,39 @@ void install_xpp_error_handler(void)
 void xpp_next_event(XEvent *ev)
 {
   int i;
-  XNextEvent(display,ev);
+  for(;;){
+    /* Scripting: whenever XPP is idle (no X events pending) the script
+       engine gets to run its next command.  See xpp_script.c.            */
+    if(script_is_active()){
+      int r,ms=0;
+      XSync(display,False);
+      if(XPending(display)==0){
+        r=script_poll(&ms,ev);
+        if(r==1)continue;
+        if(r==3)return;       /* a scripted key press */
+        if(r==2){
+#ifdef __EMSCRIPTEN__
+          /* XPPAUT-Web: no X connection to select() on; let the page run
+             (and deliver input) for up to ms, then poll the script again */
+          void xppweb_script_wait(int ms);
+          xppweb_script_wait(ms);
+#else
+          fd_set rd;
+          struct timeval tv;
+          FD_ZERO(&rd);
+          FD_SET(ConnectionNumber(display),&rd);
+          tv.tv_sec=ms/1000;
+          tv.tv_usec=(ms%1000)*1000;
+          select(ConnectionNumber(display)+1,&rd,NULL,NULL,&tv);
+#endif
+          continue;
+        }
+      }
+    }
+    XNextEvent(display,ev);
+    if(script_is_active()&&script_filter_event(ev))continue;
+    break;
+  }
   wm_button_hover_event(ev);
   if(!is_wm_delete(ev))return;
   for(i=0;i<MAX_WM_CLOSE;i++){
@@ -1332,7 +1372,9 @@ void expose_resp_box(button,message,wb,wm,w)
 void respond_box(button,message)
     char *button,*message;
     {
-     int l1=strlen(message);
+     int l1;
+     if(script_message(message))return;
+     l1=strlen(message);
       int l2=strlen(button);
       int width;
       int height;
@@ -1433,11 +1475,16 @@ int two_choice(choice1,choice2,string,key,x,y,w,title)
   XEvent ev;
   int not_done=1;
   int value=0;
+  int sidx,sr;
   int l1=strlen(choice1)*DCURX;
   int l2=strlen(choice2)*DCURX;
   int lm=strlen(string)*DCURX;
   int tot=lm,xm,x1,x2;
   
+   /* scripted answer ("ans y" / "ans n") */
+   sr=script_take_choice(string,key,&sidx);
+   if(sr==1)return((int)key[sidx]);
+   if(sr==-1)return((int)key[1]);
    if(lm<(l1+l2+4*DCURX))tot=(l1+l2+4*DCURX);
    tot=tot+6*DCURX;
     xm=(tot-lm)/2;
@@ -1611,6 +1658,7 @@ Window *root,hwin;
 	 XDestroySubwindows(display,p.base);
 	 XDestroyWindow(display,p.base);
          XFlush(display);
+        free(p.w);   /* allocated above; this is the only way out of the loop */
         if(value==13)value=(int)key[def];
 	return(value);
 

@@ -19,6 +19,7 @@ python3 - "$root" <<'EOF'
 import json, os, shutil, sys
 root = sys.argv[1]
 groups = [  # folders relative to the project
+    ("xpp84", "8.4-scripting-xpp", "examples/xpp84"),
     ("xpp82", "New in XPPAUT 8.2", "examples/xpp82"),
     ("xpp81", "New in XPPAUT 8.1", "examples/xpp81"),
     ("ode", "XPP examples", "xppaut/ode"),
@@ -39,7 +40,7 @@ for gid, label, src in groups:
         ext = os.path.splitext(name)[1].lower()
         if ext == ".ode":
             odes.append(name)
-        elif ext in (".ani", ".tab") or (ext == ".dat" and os.path.getsize(path) < 200_000):
+        elif ext in (".ani", ".tab", ".xps") or (ext == ".dat" and os.path.getsize(path) < 200_000):
             data.append(name)
         else:
             continue

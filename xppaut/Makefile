@@ -1,4 +1,4 @@
-# Copyright (C) 1990-2016 Bard Ermentrout & Daniel Dougherty & Robert McDougal
+# Copyright (C) 1990-2026 Bard Ermentrout & Daniel Dougherty & Robert McDougal
 # Edited for Debian GNU/Linux.
 #BINDIR = /usr/X11R6/bin
 DESTDIR =
@@ -8,8 +8,8 @@ MANDIR = /usr/local/man/man1
 # End Debian Edit
 #################################
 #
-VERSION=8.2
-MAJORVER=8.2
+VERSION=8.4
+MAJORVER=8.4
 MINORVER=2
 
 ODES=ode/*.ode ode/*.ani canonical/*.* tstauto/*.ode
@@ -40,13 +40,18 @@ CC= gcc -std=c99 -pedantic -D_XOPEN_SOURCE=600 -Wall
 #CFLAGS=   -g -O -m32 -DNON_UNIX_STDIO -DAUTO -DCVODE_YES  -DHAVEDLL -DMYSTR1=$(MAJORVER) -DMYSTR2=$(MINORVER)  -I/usr/X11R6/include
 #CFLAGS=   -g -O -m64 -DNOERRNO -DNON_UNIX_STDIO -DAUTO -DCVODE_YES  -DHAVEDLL DMYSTR1=$(MAJORVER) -DMYSTR2=$(MINORVER)  -I/usr/include/X11
 #  to create univeral mac app, lipo -create -output xppmac  xppx86 xpparm
-#  -target x86_64-apple-macos10.12  for I86
-CFLAGS= -g -pedantic -O2   -DNOERRNO -DNON_UNIX_STDIO -DAUTO -DCVODE_YES  -DHAVEDLL -DMYSTR1=$(MAJORVER) -DMYSTR2=$(MINORVER)  -I/opt/X11/include 
+# for I86
+#  -target x86_64-apple-macos10.12  
+CFLAGS= -g -pedantic -O2   -DNOERRNO -DNON_UNIX_STDIO -DAUTO -DCVODE_YES  -DHAVEDLL -DMYSTR1=$(MAJORVER) -DMYSTR2=$(MINORVER)  -I/opt/X11/include
+# add this line for x86
+#-target x86_64-apple-macos10.12
 #LDFLAGS=  -m64 -L/usr/lib -L/usr/lib64
-#LDFLAGS=  -m32 -L/usr/X11R6/lib
-# -target x86_64-apple-macos10.12  for i86
-LDFLAGS=  -L/usr/X11/lib -fcommon   
-LIBS=  -lX11 -lm -ldl   
+#LDFLAGS=  -m32 -L/usr/X11R6/lib 
+#for i86 -target x86_64-apple-macos10.12    
+LDFLAGS=  -L/usr/X11/lib -fcommon 
+# add this line for x86
+# -target x86_64-apple-macos10.12  
+LIBS=  -lX11 -lm -ldl 
 # NOTE: Recent (RedHat 8) versions of GCC seem to no longer have
 # the integer errno, so compile with the -DNOERRNO option as well
 #
@@ -129,7 +134,7 @@ HEADERS = abort.h browse.h do_fit.h iterativ.h my_rhs.h shoot.h \
 	  axes2.h  diagram.h init_conds.h my_pars.h run_auto.h xpplim.h \
 	  band.h  dialog_box.h integrate.h my_ps.h  scrngif.h spgmr.h \
 	  arrayplot.h cv2.h  extra.h load_eqn.h newpars.h struct.h \
-	  array_print.h comline.h endfile.h llnltyps.h newhome.h storage.h surface.h dde_po.h  	
+	  array_print.h comline.h endfile.h llnltyps.h newhome.h storage.h surface.h dde_po.h xpp_script.h  	
 
 BITMAPS = aniwin.bitmap alert.bitmap bc.bitmap eqns.bitmap info.bitmap ic.bitmap pp.bitmap\
 	  array.bitmap browse.bitmap equilib.bitmap lines.bitmap txtview.bitmap\
@@ -152,7 +157,7 @@ SOURCES = abort.c  cabs.c  delay_handle.c graf_par.c my_ps.c  simplenet.c \
 	  autpp.c  d_lg10.c form_ode.c many_pops.c read_dir.c z_log.c \
 	  axes2.c  d_sign.c gear.c  markov.c rubber.c \
 	  band.c  dae_fun.c ggets.c  menu.c  scrngif.c \
-	  browse.c del_stab.c gogoauto.c menudrive.c setubv2.c surface.c dde_po.c dde_po_xpp.c \
+	  browse.c del_stab.c gogoauto.c menudrive.c setubv2.c surface.c dde_po.c dde_po_xpp.c xpp_script.c \
 
 
 #
@@ -175,7 +180,7 @@ OBJECTS = abort.o  cabs.o  delay_handle.o graf_par.o my_ps.o  simplenet.o \
 	  autpp.o  d_lg10.o form_ode.o many_pops.o read_dir.o z_log.o \
 	  axes2.o  d_sign.o gear.o  markov.o rubber.o \
 	  band.o  dae_fun.o ggets.o  menu.o  scrngif.o \
-	  browse.o del_stab.o del_spec.o gogoauto.o menudrive.o setubv2.o surface.o dde_po.o dde_po_xpp.o\
+	  browse.o del_stab.o del_spec.o gogoauto.o menudrive.o setubv2.o surface.o dde_po.o dde_po_xpp.o xpp_script.o\
 
 #If you are using sundials cvode libraries then you may comment out following above
 #	cvode.o  cvdense.o  dense.o  cvband.o \
@@ -201,7 +206,7 @@ xppaut: $(OBJECTS)
 	 #$(CC) -DAUTO -o xppaut $(OBJECTS) $(AUTOOBJ) $(LDFLAGS) $(LIBS) $(AUTLIBS) ./libf2cm.a
 	 $(CC) -DAUTO -o xppaut $(OBJECTS) $(LDFLAGS) $(LIBS) 
 extras:
-	tar zcvf xppextra.tgz default.opt xpp_doc.tex README ode/*.* tstauto/*.ode canonical/*.* xpp_doc.pdf xpp_sum.tex xpp_sum.pdf tree.tex tree.pdf help/*.html help/odes/*.ode
+	tar zcvf xppextra.tgz default.opt script_doc.html xpp_doc.tex README ode/*.* tstauto/*.ode canonical/*.* xpp_doc.pdf xpp_sum.tex xpp_sum.pdf tree.tex tree.pdf help/*.html help/odes/*.ode
 
 srconly:
 	tar zcvf xppsrc$(VERSION).tgz *.c *.h *.bitmap Makefile

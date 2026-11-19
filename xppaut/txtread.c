@@ -122,15 +122,23 @@ void enter_txtview(Window w,int val)
 }
  
 
+extern double DELAY,DELTA_T;
+
 void do_txt_action(char *s)
 {
   int tb=tfBell;
+  double old_delay=DELAY,old_dt=DELTA_T;
   tfBell=1;
  get_graph();
  extract_action(s);
  ping();
  tfBell=tb;
-  chk_delay();
+  /* Rebuilding the delay buffer also throws away the last solution, so do it
+     only when the maximal delay or the step size really changed. */
+  if(DELAY!=old_delay||DELTA_T!=old_dt)chk_delay();
+  /* Same as after changing parameters by hand: recompute derived parameters,
+     convolution kernels and tabulated functions that depend on them. */
+  redo_stuff();
   redraw_params();
   redraw_ics();
   reset_graph();

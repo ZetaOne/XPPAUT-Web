@@ -67,7 +67,7 @@ void create_the_menus(base)
   key[18]=0;
   add_menu(base,NUM_MENU,NUM_ENTRIES,num_menu,key,num_hint);
   /* CLONE */
-  strcpy(key,"pwracesbhqtiglxu");
+  strcpy(key,"pwracesbhqtiglxud");
   add_menu(base,FILE_MENU,FILE_ENTRIES,fileon_menu,key,file_hint);
   help_menu=-1;
 }

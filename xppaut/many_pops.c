@@ -152,10 +152,13 @@ int select_table()
 
 }
 
+extern double DELAY,DELTA_T;
+
 void get_intern_set()
 {
   char *n[MAX_INTERN_SET],key[MAX_INTERN_SET],ch;
   int i,j;
+  double old_delay,old_dt;
   int count=Nintern_set;
   Window temp=main_win;
   if(count==0)return;
@@ -174,9 +177,16 @@ void get_intern_set()
     return;
   }
   /* plintf(" Got set %d \n",j); */
+  old_delay=DELAY;
+  old_dt=DELTA_T;
   get_graph();
   extract_internset(j);
-  chk_delay();
+  /* Rebuilding the delay buffer also throws away the last solution, so do it
+     only when the maximal delay or the step size really changed. */
+  if(DELAY!=old_delay||DELTA_T!=old_dt)chk_delay();
+  /* Same as after changing parameters by hand: recompute derived parameters,
+     convolution kernels and tabulated functions that depend on them. */
+  redo_stuff();
   redraw_params();
   redraw_ics();
   reset_graph();

@@ -1756,6 +1756,12 @@ int XLookupString(XKeyEvent *ev, char *buf, int n, KeySym *ks, XComposeStatus *s
   return len;
 }
 
+KeySym XLookupKeysym(XKeyEvent *ev, int index)
+{
+  (void)index;
+  return ev->keycode <= MAX_KEYCODE ? keycode_sym[ev->keycode] : NoSymbol;
+}
+
 KeyCode XKeysymToKeycode(Display *d, KeySym ks)
 {
   (void)d;

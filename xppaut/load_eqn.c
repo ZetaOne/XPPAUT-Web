@@ -104,6 +104,7 @@ typedef struct {
   unsigned int use;
 } INTERN_SET;
 
+void check_flags();
 extern int XNullColor,YNullColor,StableManifoldColor,UnstableManifoldColor;
 int IX_PLT[10],IY_PLT[10],IZ_PLT[10],NPltV;
 int MultiWin=0;
@@ -840,6 +841,7 @@ void extract_internset(j)
      int j;
 {
   extract_action(intern_set[j].does);
+  check_flags();
 }
 
 void do_intern_set(name1,value)
@@ -1105,6 +1107,7 @@ void stor_internopts(s1)
   
 
 
+int set_option_unmatched=0;   /* set when set_option() does not know the name */
 void set_option(s1,s2,force,mask)
      char *s1,*s2;
      int force;
@@ -1116,6 +1119,7 @@ void set_option(s1,s2,force,mask)
  static char mkey[]="demragvbqsc582y";
  static char Mkey[]="DEMRAGVBQSC582Y";
  strupr(s1);
+ set_option_unmatched=0;
  if(msc("QUIET",s1)){
    if(!(msc(s2,"0")||msc(s2,"1")))
    {
@@ -2457,6 +2461,7 @@ if(msc("SLO2",s1)){
        return;
      }
 
+set_option_unmatched=1;
 plintf("!! Option %s not recognized\n",s1); 
   
 }

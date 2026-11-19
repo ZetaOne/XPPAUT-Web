@@ -9,7 +9,7 @@
 #define NUM_MENU 2
 #define MAIN_ENTRIES 20
 /* CLONE */
-#define FILE_ENTRIES 16
+#define FILE_ENTRIES 17
 #define NUM_ENTRIES 18
 char *main_menu[]={
  "XPP","Initialconds","Continue","Nullcline",
@@ -28,12 +28,12 @@ char *num_menu[]={"NUMERICS","Total","Start time","tRansient",
 char *fileon_menu[]={
 "FILE","Prt src","Write set","Read set",
 "Auto","Calculator","Edit","Save info",
-"Bell off","Help","Quit","Transpose","tIps","Get par set","cLone",".Xpprc","tUtorial"}; 
+"Bell off","Help","Quit","Transpose","tIps","Get par set","cLone",".Xpprc","tUtorial","Do script"}; 
 
 char *fileoff_menu[]={
 "FILE","Prt src","Write set","Read set",
 "Auto","Calculator","Edit","Save info",
-"Bell on","Help","Quit","Transpose","tIps","Get par set","cLone",".Xpprc","tUtorial"}; 
+"Bell on","Help","Quit","Transpose","tIps","Get par set","cLone",".Xpprc","tUtorial","Do script"}; 
 
 /* end CLONE change */
 typedef struct {
@@ -89,7 +89,8 @@ char *file_hint[]={
 "Set predefined parameters",
 "Clone the ode file",
 "Edit your .xpprc preferences file",
-"Run a quick tutorial on XPPAUT"
+"Run a quick tutorial on XPPAUT",
+"Run a script of commands (an .xps file)"
 };
 
 

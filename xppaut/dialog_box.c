@@ -1,4 +1,5 @@
 #include "dialog_box.h"
+#include "xpp_script.h"
 #include "pop_list.h"
 
 #include "many_pops.h"
@@ -55,10 +56,15 @@ int max;
 
  int status;
   XTextProperty winname;
+  int sr;
 
  
 
  DIALOG d;
+ /* scripted answer ("ans text") */
+ sr=script_take_text(name,value,max+1);
+ if(sr==1)return(ALL_DONE);
+ if(sr==-1)return(FORGET_ALL);
  strcpy(d.mes_s,name);
  strcpy(d.input_s,value);
  strcpy(d.ok_s,ok);

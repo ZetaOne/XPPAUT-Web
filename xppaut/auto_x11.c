@@ -306,6 +306,130 @@ void find_point(int ibr, int pt)
 }
         
 
+/* What pressing Enter at the end of Grab mode does: make d the grabbed
+   point -- fill in grabpt, set the parameters and initial conditions to the
+   values at that point.  Shared by traverse_diagram() and auto_goto_point(). */
+void auto_grab_point(DIAGRAM *d)
+{
+  int i;
+  grabpt.ibr=d->ibr;
+  grabpt.lab=d->lab;
+  for(i=0;i<8;i++)
+    grabpt.par[i]=d->par[i];
+  grabpt.icp1=d->icp1;
+  grabpt.icp2=d->icp2;
+  grabpt.per=d->per;
+  grabpt.torper=d->torper;
+  for(i=0;i<NODE;i++){
+    grabpt.uhi[i]=d->uhi[i];
+    grabpt.ulo[i]=d->ulo[i];
+    grabpt.u0[i]=d->u0[i];
+    grabpt.ubar[i]=d->ubar[i];
+    set_ivar(i+1,grabpt.u0[i]);
+  }
+  get_ic(0,grabpt.u0);
+  grabpt.flag=1;
+  grabpt.itp=d->itp;
+  grabpt.ntot=d->ntot;
+  grabpt.nfpar=d->nfpar;
+  grabpt.index=d->index;
+  for(i=0;i<NAutoPar;i++)
+    constants[Auto_index_to_array[i]]=grabpt.par[i];
+}
+
+/* ---- scripting: select a point of the bifurcation diagram, exactly as
+   Grab mode followed by Enter would ------------------------------------
+   kind  AG_TYPE   the n-th point of type symb (BP EP HB LP MX PD TR UZ);
+                   n<0 counts from the end
+         AG_LABEL  the point with AUTO label `label`
+         AG_FIRST / AG_LAST   the first / last point
+   branch !=0 restricts the search to that AUTO branch number (as shown by
+   auto list; periodic branches are negative).
+   Returns 0 on success; otherwise a message is left in err.              */
+#define AG_TYPE 0
+#define AG_LABEL 1
+#define AG_FIRST 2
+#define AG_LAST 3
+
+static int ag_matches(DIAGRAM *d,int kind,const char *symb,int label,int branch)
+{
+  char sy[3];
+  if(branch!=0&&d->ibr!=branch)return 0;
+  if(kind==AG_TYPE){get_bif_sym(sy,d->itp);return strcmp(sy,symb)==0;}
+  if(kind==AG_LABEL)return d->lab>0&&d->lab==label;
+  return 1;
+}
+
+int auto_goto_point(int kind,const char *symb,int n,int label,int branch,char *err,int errsize)
+{
+  DIAGRAM *d,*sel=NULL;
+  int ix,iy,count=0,total=0;
+  if(Auto.exist==0){
+    snprintf(err,errsize,"the AUTO window is not open (open it with keys f a)");
+    return 1;
+  }
+  if(NBifs<2||bifd==NULL){
+    snprintf(err,errsize,"there is no AUTO diagram to navigate yet");
+    return 1;
+  }
+  for(d=bifd;d!=NULL;d=d->next)
+    if(ag_matches(d,kind,symb,label,branch))total++;
+  if(total==0){
+    if(kind==AG_TYPE)snprintf(err,errsize,"the diagram has no %s point%s",symb,branch!=0?" on that branch":"");
+    else if(kind==AG_LABEL)snprintf(err,errsize,"the diagram has no point with label %d%s",label,branch!=0?" on that branch":"");
+    else snprintf(err,errsize,"the diagram is empty");
+    return 1;
+  }
+  if(kind==AG_FIRST)n=1;
+  if(kind==AG_LAST)n=-1;
+  if(kind==AG_LABEL&&n==0)n=1;
+  if(n<0)n=total+n+1;
+  if(n<1||n>total){
+    snprintf(err,errsize,"the diagram has only %d %s point%s",total,kind==AG_TYPE?symb:"matching",total==1?"":"s");
+    return 1;
+  }
+  for(d=bifd;d!=NULL;d=d->next){
+    if(ag_matches(d,kind,symb,label,branch)){
+      count++;
+      if(count==n){sel=d;break;}
+    }
+  }
+  if(sel==NULL){snprintf(err,errsize,"internal error: point not found");return 1;}
+  /* the same steps as Grab mode followed by FINE (Enter) in traverse_diagram() */
+  clear_msg();
+  mark_flag=0;
+  DONT_XORCross=0;
+  CUR_DIAGRAM=sel;
+  traverse_out(sel,&ix,&iy,1);
+  XORCross(ix,iy);
+  DONT_XORCross=1;
+  redraw_diagram();
+  RedrawMark();
+  auto_grab_point(sel);
+  evaluate_derived();
+  redo_all_fun_tables();
+  redraw_params();
+  redraw_ics();
+  return 0;
+}
+
+/* print the labelled points of the diagram to the terminal */
+void auto_list_points(void)
+{
+  DIAGRAM *d;
+  char sy[3];
+  int n=0;
+  printf("  %4s %5s %-4s %5s   %s\n","br","pt","type","label","parameter");
+  for(d=bifd;d!=NULL;d=d->next){
+    if(d->lab==0)continue;
+    get_bif_sym(sy,d->itp);
+    printf("  %4d %5d %-4s %5d   %.10g\n",d->ibr,d->ntot,sy,d->lab,d->par[d->icp1]);
+    n++;
+  }
+  if(n==0)printf("  (no labelled points)\n");
+  fflush(stdout);
+}
+
 void traverse_diagram()
 {
   DIAGRAM *d,*dnew,*dold;
@@ -591,29 +715,7 @@ void traverse_diagram()
       mark_flag=0;
   }
   if(done==1){
-    grabpt.ibr=d->ibr;
-    grabpt.lab=d->lab;
-    for(i=0;i<8;i++)
-    grabpt.par[i]=d->par[i];
-    grabpt.icp1=d->icp1;
-    grabpt.icp2=d->icp2;
-    grabpt.per=d->per;
-    grabpt.torper=d->torper;
-    for(i=0;i<NODE;i++){
-      grabpt.uhi[i]=d->uhi[i];
-      grabpt.ulo[i]=d->ulo[i];
-      grabpt.u0[i]=d->u0[i];
-      grabpt.ubar[i]=d->ubar[i];
-      set_ivar(i+1,grabpt.u0[i]);
-    }
-    get_ic(0,grabpt.u0);
-    grabpt.flag=1;
-    grabpt.itp=d->itp;
-    grabpt.ntot=d->ntot;
-    grabpt.nfpar=d->nfpar;
-    grabpt.index=d->index;
-    for(i=0;i<NAutoPar;i++)
-      constants[Auto_index_to_array[i]]=grabpt.par[i];
+    auto_grab_point(d);
   }
   evaluate_derived();
   redo_all_fun_tables();
@@ -1153,6 +1255,13 @@ void auto_kill()
   XDestroySubwindows(display,AutoW.base);
   XDestroyWindow(display,AutoW.base);
   
+}
+
+/* window that receives scripted AUTO keys (0 if the AUTO window is not open) */
+Window auto_key_window(void)
+{
+  if(Auto.exist==0)return 0;
+  return AutoW.canvas;
 }
 
 void auto_keypress(ev,used)

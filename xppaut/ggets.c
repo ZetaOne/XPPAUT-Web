@@ -1,3 +1,5 @@
+#include "xpp_script.h"
+void xpp_next_event(XEvent *ev);
 #include "ggets.h"
 
 #include <stdlib.h> 
@@ -350,6 +352,11 @@ int get_mouse_xy(x,y,w)
   XEvent ev;
   *x=0;
   *y=0;
+  if(script_is_active()){            /* a script can supply the click (xpp_script.c) */
+    int r=script_mouse_point(x,y);
+    if(r==1)return(1);
+    if(r<0)return(0);
+  }
   while(no_but)
   {
    XNextEvent(display,&ev);
@@ -688,13 +695,18 @@ char *value;
  int done=0;
  int pos=strlen(value);
  int col=(pos+strlen(name))*DCURX;
+ int sr;
  
  XEvent ev;
+ /* scripted answer ("ans text") */
+ sr=script_take_text(name,value,80);
+ if(sr==1)return(1);
+ if(sr==-1)return(0);
  strcpy(old_value,value);
  clr_command();
  display_command(name,value,pos,0);
  while(done==0){
-	XNextEvent(display,&ev);
+	xpp_next_event(&ev);
 	edit_command_string(ev,name,value,&done,&pos,&col);
  	} 
 	clr_command();

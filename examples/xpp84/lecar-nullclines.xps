@@ -1,0 +1,8 @@
+# Bard's example: iapp = 0.15, nullclines, scaled direction field,
+# a trajectory, and the picture saved as PostScript
+set iapp=.15
+keys n n          # Nullcline -> New
+keys d s          # Dir.field/flow -> Scaled Dir.Fld
+ans 16            # grid size
+keys i g          # Initialconds -> Go
+shot pp.ps
