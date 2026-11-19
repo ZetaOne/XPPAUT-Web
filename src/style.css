@@ -2122,6 +2122,34 @@ summary.round:focus-visible,
   gap: 4px;
 }
 
+.voiceteach {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.voiceteach select {
+  max-width: 180px;
+}
+
+.taught {
+  margin: 0;
+  padding: 0 0 0 4px;
+  list-style: none;
+  font-size: 12px;
+}
+
+.taught:empty {
+  display: none;
+}
+
+.taught li button {
+  min-width: 0;
+  padding: 0 6px;
+}
+
 .voiceabout {
   margin: 0;
   max-width: 420px;

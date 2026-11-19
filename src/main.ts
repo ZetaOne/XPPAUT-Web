@@ -9,7 +9,7 @@ import { inApp, lockRotation, setupApp, shareFile } from './android'
 import { Loupe, SliderDrawer } from './touch'
 import { ENGINES, WebVoice, canRun, type RealEngine, type WebEngine } from './webvoice'
 import { COMMANDS as CATALOG } from './commands'
-import { helpFor, interpret, learnWords, matchPhrase, plainWords, setOfflineWords, spokenForm, vocabulary, words, type Action, type Context } from './voicecmd'
+import { COMMANDS as VOICE_COMMANDS, helpFor, interpret, learnWords, matchPhrase, plainWords, setOfflineWords, setTaught, spokenForm, vocabulary, words, type Action, type Context } from './voicecmd'
 import { FONT_NAMES, PRESETS, chosenFont, fontArgs, fontKey, saveFont, type FontChoice } from './fonts'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
@@ -109,6 +109,12 @@ app.innerHTML = `
             </label>
             <p class="voiceabout" id="voiceabout"></p>
             <button type="button" class="small" id="voicedelete" hidden>Delete the download</button>
+            <div class="voiceteach" title="Say a command your way: the voice control learns what it hears then (kept in this browser)">
+              <span>Your own words</span>
+              <select id="teachcmd" aria-label="Command to teach"></select>
+              <button type="button" class="small" id="teachbtn">🎤 Teach</button>
+            </div>
+            <ul class="taught" id="taughtlist"></ul>
           </div>
         </div>
       </details>
@@ -1176,6 +1182,7 @@ if (!inApp) {
       ...vocabulary(context(), names()),
       ...[...mine, ...scripts].flatMap((p) => plainWords(p).split(' ')).flatMap((w) => (spokenForm(w) ?? w).split(' ')).filter(Boolean),
       'run', 'start', 'play', 'the', 'script',
+      ...taughtList.flatMap((t) => t.heard.split(' ')),
       // a name's first letter and the rest ("i app" for iapp, "g k" for gk)
       ...names().flatMap((n) => (n.length > 2 ? [n[0].toLowerCase(), n.slice(1).toLowerCase()] : [])),
     ]
@@ -1258,13 +1265,21 @@ if (!inApp) {
     let c = ctx
     const known = (t: string, c: Context) =>
       matchPhrase([t], spoken(), false) || /^(?:run|start|play)\s+(?:the\s+)?script\b/.test(t) || menuPath(t, c) || interpret([t], c, names())
+    let skipped = 0
+    let total = 0
     for (const piece of pieces) {
       const w = piece.split(/\s+/)
+      total += w.length
       let i = 0
       while (i < w.length) {
         let j = w.length
         for (; j > i; j--) if (known(w.slice(i, j).join(' '), c)) break
-        if (j === i) return null // a part that is not a command
+        if (j === i) {
+          // a stray word (a cut-off "null", an "um"): skip it, unless most are
+          skipped++
+          i++
+          continue
+        }
         const text = w.slice(i, j).join(' ')
         out.push({ text, ctx: c })
         const m = interpret([text], c, names())
@@ -1275,7 +1290,8 @@ if (!inApp) {
         i = j
       }
     }
-    return out.length > 1 ? out : null
+    if (skipped > Math.max(1, total / 4)) return null
+    return out.length > 1 || (out.length === 1 && skipped) ? out : null
   }
   /** one command after another: XPP gets time for each, and AUTO's wait for
    *  its window to open */
@@ -1297,7 +1313,76 @@ if (!inApp) {
       }
     })
   }
+  // ---- your own words: Settings -> Voice -> Teach. What the recognizer writes
+  // when you say a command your way becomes a match for that command
+  type Taught = { heard: string; say: string; label: string }
+  const TAUGHT_KEY = 'xpp-voice-taught'
+  const loadTaught = (): Taught[] => {
+    try {
+      return JSON.parse(store.get(TAUGHT_KEY) ?? '[]')
+    } catch {
+      return []
+    }
+  }
+  let taughtList = loadTaught()
+  setTaught(taughtList)
+  const saveTaught = () => {
+    store.set(TAUGHT_KEY, JSON.stringify(taughtList))
+    setTaught(taughtList)
+    renderTaught()
+  }
+  const teachSel = $<HTMLSelectElement>('teachcmd')
+  {
+    const seen = new Set<string>()
+    for (const c of VOICE_COMMANDS) {
+      if (!c.ctx.includes('xpp') && !c.ctx.includes('auto')) continue
+      const say = c.say.find((x) => !x.includes('{'))
+      if (!say || seen.has(c.label)) continue
+      seen.add(c.label)
+      teachSel.append(new Option(c.label, say))
+    }
+    teachSel.value = 'nullclines'
+  }
+  const renderTaught = () => {
+    const ul = $('taughtlist')
+    ul.replaceChildren()
+    for (const t of taughtList) {
+      const li = document.createElement('li')
+      li.textContent = `“${t.heard}” → ${t.label} `
+      const x = document.createElement('button')
+      x.type = 'button'
+      x.className = 'small'
+      x.textContent = '×'
+      x.title = 'Forget this'
+      x.addEventListener('click', () => {
+        taughtList = taughtList.filter((y) => y !== t)
+        saveTaught()
+      })
+      li.append(x)
+      ul.append(li)
+    }
+  }
+  renderTaught()
+  let teaching: { say: string; label: string } | null = null
+  $('teachbtn').addEventListener('click', () => {
+    const opt = teachSel.selectedOptions[0]
+    if (!opt) return
+    teaching = { say: opt.value, label: opt.text }
+    ;($('settings') as HTMLDetailsElement).open = false
+    if (voice.engine === '' || voice.engine === 'off') return voice.onChoose()
+    if (!voice.button.classList.contains('on')) voice.button.click()
+    voice.flash(`Teaching: say “${opt.text}” your way`, 8000)
+  })
   voice.onHeard = (alts) => {
+    if (teaching) {
+      const t = teaching
+      teaching = null
+      const heard = alts[0].toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
+      if (!heard) return
+      taughtList = [...taughtList.filter((x) => x.heard !== heard), { heard, say: t.say, label: t.label }]
+      saveTaught()
+      return voice.flash(`✓ Learned: “${heard}” means ${t.label}. Teach more ways in Settings → Voice`, 4500)
+    }
     const ctx = context()
     // the whole utterance as one command first; else a list of them
     let one = runOne(alts, ctx, true)

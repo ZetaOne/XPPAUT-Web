@@ -458,6 +458,25 @@ const METHOD_PHRASES: Array<[string[], string]> = METHOD_VALUES.map(([says, v]) 
 
 // ---- matching ------------------------------------------------------------------------
 /** what a recognizer wrote -> lower-case words (keeps numbers like 2.5, -3) */
+// what Vosk, Whisper and the browsers' recognisers wrote for "nullcline(s)",
+// said by several voices and speeds (and the usual mishearings): a first
+// sound like null / now / no / knoll / nell, then cline / clients / climb /
+// kinds / claims / coins / plans ..., apart or glued
+const NC_FIRST = '(?:null|nul|nall|nal|nalt|nell|nel|knoll|noll|knock|knelt|now|no|nought|nu|nol|north|troll|an all|then all|on all|n all|in all|and all)'
+const NC_SECOND = '(?:clines?|clined|cline|points?|clients?|climbs?|climb|claims?|clings?|kinds?|kind|kleins?|klein|coins?|coin|plans?|plan|plants?|pliance|blinds?|blind|lions?|lines?|line|glines|gines|clang|fling|blings|play)'
+const NULLCLINE_SPLIT = new RegExp(`(?<=^|\\s)${NC_FIRST}\\s*${NC_SECOND}(?=\\s|$)`, 'g')
+const NULLCLINE_GLUED = /(?<=^|\s)(?:chono|nul|nal|nalt|nel|now|no|knock|note|null|nell)[a-z]{0,2}(?:clines?|cline|klines?|clang|gines|kinds?|kind|plans?|blings|lines?|line)(?=\s|$)/g
+
+/** what the user taught (Settings -> Voice -> Teach): what the recognizer
+ *  writes when they say a command, and the command's phrase */
+let taught: Array<[RegExp, string]> = []
+export function setTaught(list: Array<{ heard: string; say: string }>) {
+  taught = list
+    .filter((x) => x.heard.trim() && x.say.trim())
+    .sort((a, b) => b.heard.length - a.heard.length)
+    .map((x) => [new RegExp(`(?<=^|\\s)${x.heard.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=\\s|$)`, 'g'), x.say])
+}
+
 export function words(text: string): string[] {
   let t = text
     .toLowerCase()
@@ -470,6 +489,15 @@ export function words(text: string): string[] {
     .replace(/(?<!\d)\.|\.(?!\d)/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+  // the user's own ways of saying commands, first
+  for (const [re, say] of taught) t = t.replace(re, say)
+  // "nullcline(s)" is the word recognisers hear worst (null clients, now
+  // climb, no kinds, knoll climbs, nalcline, ...): its own rule, first
+  t = t
+    .replace(NULLCLINE_SPLIT, 'nullclines')
+    .replace(NULLCLINE_GLUED, 'nullclines')
+    // its first half alone ("null", "knoll"; not "no" or "now") or second half alone ("clines")
+    .replace(/(^|\s)(?:null|nul|knoll|nell|nall|noll|clines?)(?=\s|$)/g, '$1nullclines')
   for (const [re, word] of SOUND_RE) t = t.replace(re, word)
   // spoken forms of words the offline model lacks ("cube helix" = cubehelix)
   for (const [re, word] of learned) t = t.replace(re, word)
