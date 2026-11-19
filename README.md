@@ -41,7 +41,7 @@ Last). Click a preview to play the full 2-minute video.*
   and [8.1](#new-in-xppaut-81).
 - **AUTO** for steady states, periodic orbits and bifurcation diagrams, now also
   of delay equations.
-- **227 example models** from the XPPAUT release and for the new 8.1, 8.2 and 8.4 features, or your own `.ode` file with
+- **226 example models** from the XPPAUT release and for the new 8.1, 8.2 and 8.4 features, or your own `.ode` file with
   its `.ani`, `.tab`, `.dat` and `.xps` (script) files (pick them together, or drag and drop
   them onto the page; a model whose table file is missing asks for it).
 - **Window panels**: drag, resize, close, save as PNG, or pop out into a
@@ -119,8 +119,7 @@ shot pp.ps          # save the picture (.ps or .svg), no dialogs
     two-parameter curves of the Hopf point (both directions, with a
     generalised Hopf point) and of a fold (`wc-auto.xps`).
   - `lecar.ode` (Morris–Lecar) with five shorter scripts, including Bard's
-    example above, scripted mouse clicks, and an AUTO diagram; `hutch.ode`
-    with a `try` sweep in AUTO.
+    example above, scripted mouse clicks, and an AUTO diagram.
 
   What a script saves is in XPP's folder (**Files**, or Save session).
 
