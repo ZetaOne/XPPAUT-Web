@@ -8,6 +8,7 @@ import { setupPwa } from './pwa'
 import { inApp, lockRotation, setupApp, shareFile } from './android'
 import { Loupe, SliderDrawer } from './touch'
 import { ENGINES, WebVoice, canRun, type RealEngine, type WebEngine } from './webvoice'
+import { COMMANDS as CATALOG } from './commands'
 import { helpFor, interpret, learnWords, matchPhrase, plainWords, setOfflineWords, spokenForm, vocabulary, words, type Action, type Context } from './voicecmd'
 import { FONT_NAMES, PRESETS, chosenFont, fontArgs, fontKey, saveFont, type FontChoice } from './fonts'
 
@@ -1180,6 +1181,69 @@ if (!inApp) {
     ]
   }
   const recent = new Map<string, number>()
+  // ---- XPP's menus by name: "file" opens the File menu, "file auto" or
+  // "file script" picks from it, and after "file" just "auto" does
+  const SYNONYMS: Record<string, string[]> = {
+    'initial conditions': ['initialconds', 'initial condition', 'initial', 'ics menu'],
+    'direction field': ['dir field', 'direction fields', 'flow'],
+    'window/zoom': ['window', 'window zoom', 'zoom menu'],
+    'phase space': ['phasespace'],
+    graphics: ['graphic stuff', 'graphic', 'graphics stuff'],
+    'sing pts': ['sing points', 'singular points', 'singular point'],
+    'view axes': ['viewaxes', 'axes'],
+    'text, markers': ['text', 'text etc', 'markers'],
+    'boundary value': ['boundary', 'bndry value', 'boundary values'],
+    'freeze curves': ['freeze menu', 'graphics freeze', 'graphic stuff freeze'],
+    'auto file': ['file'],
+    'auto axes': ['axes'],
+    'auto run (from the start)': ['run'],
+  }
+  type Menu = { name: string; say: string[]; keys: string[]; to?: 'auto'; items: Array<{ c: (typeof CATALOG)[number]; phrases: string[] }> }
+  const menus: Menu[] = (() => {
+    const out = new Map<string, Menu>()
+    for (const c of CATALOG) {
+      const k = c.keys.split(' ')
+      if (k.length < 2 && !c.to) continue
+      const prefix = (c.to === 'auto' && k.length === 1 ? [] : k.slice(0, -1))
+      if (!prefix.length) continue
+      const id = (c.to ?? '') + prefix.join(' ')
+      const g = c.group.toLowerCase()
+      const m = out.get(id) ?? { name: c.group, say: [...new Set([g, ...(SYNONYMS[g] ?? [])])].map((x) => words(x).join(' ')), keys: prefix, to: c.to, items: [] }
+      const label = c.label.replace(/[*…]/g, '').toLowerCase()
+      const short = label.replace(/^(do|run|draw|show|make|set|edit|save|load|delete|remove)\s+/, '')
+      m.items.push({ c, phrases: [...new Set([label, short].map((x) => words(x).join(' ')))].filter(Boolean) })
+      out.set(id, m)
+    }
+    return [...out.values()]
+  })()
+  const menusFor = (ctx: Context) => menus.filter((m) => (ctx === 'auto') === (m.to === 'auto'))
+  /** the menu left open by "file" (its next item may be said alone) */
+  let openMenu: { m: Menu; at: number } | null = null
+  /** "file", "file auto", "graphic stuff freeze": the keys, or null */
+  const menuPath = (text: string, ctx: Context): { keys: string[]; label: string; to?: 'auto'; open?: Menu } | null => {
+    const t = words(text).join(' ')
+    for (const m of menusFor(ctx).sort((a, b) => b.keys.length - a.keys.length)) {
+      for (const name of m.say) {
+        if (t === name) return { keys: m.keys, label: m.name + ' menu', to: m.to, open: m }
+        if (!t.startsWith(name + ' ')) continue
+        const rest = t.slice(name.length + 1)
+        const hit = matchPhrase([rest], m.items, false) ?? matchPhrase([rest], m.items, true)
+        if (hit) return { keys: hit.c.keys.split(' '), label: `${m.name} → ${hit.c.label}`, to: m.to }
+      }
+    }
+    return null
+  }
+  /** press menu keys in XPP's main window (or AUTO's) */
+  const pressMenu = (keys: string[], to?: 'auto'): string | void => {
+    const s = session
+    if (!s) return 'XPP is not running'
+    if (to === 'auto') {
+      const w = s.windows().find((w) => w.title.startsWith("It's AUTO"))
+      if (!w) return 'The AUTO window is not open (say “auto”)'
+      s.activate(w.id)
+    } else s.activate(s.mainWindow)
+    for (const k of keys) s.pressKey(k)
+  }
   /** several commands in one breath ("auto, run, enter", "set i app to point
    *  one then integrate"): split at then/and/commas, else wherever the longest
    *  known command ends; null when it is not a list of commands */
@@ -1193,7 +1257,7 @@ if (!inApp) {
     const out: Array<{ text: string; ctx: Context }> = []
     let c = ctx
     const known = (t: string, c: Context) =>
-      matchPhrase([t], spoken(), false) || /^(?:run|start|play)\s+(?:the\s+)?script\b/.test(t) || interpret([t], c, names())
+      matchPhrase([t], spoken(), false) || /^(?:run|start|play)\s+(?:the\s+)?script\b/.test(t) || menuPath(t, c) || interpret([t], c, names())
     for (const piece of pieces) {
       const w = piece.split(/\s+/)
       let i = 0
@@ -1204,8 +1268,9 @@ if (!inApp) {
         const text = w.slice(i, j).join(' ')
         out.push({ text, ctx: c })
         const m = interpret([text], c, names())
+        const mp = menuPath(text, c)
         // what the next command applies to: AUTO once it is opened
-        if (m?.action.kind === 'keys' && m.action.keys.join(' ') === 'f a') c = 'auto'
+        if ((m?.action.kind === 'keys' && m.action.keys.join(' ') === 'f a') || mp?.keys.join(' ') === 'f a') c = 'auto'
         if (m?.action.kind === 'ui' && m.action.id === 'mainWindow') c = 'xpp'
         i = j
       }
@@ -1247,6 +1312,30 @@ if (!inApp) {
   /** one command: a message to show (✓ ... when done); null when `probe`
    *  and nothing fits */
   const runOne = (alts: string[], ctx: Context, probe = false): string | null => {
+    // a menu left open by "file": its item said alone ("auto")
+    if (openMenu) {
+      const om = openMenu
+      openMenu = null
+      if (performance.now() - om.at < 20000) {
+        const said = alts.map((a) => words(a).join(' '))
+        const hit = matchPhrase(said, om.m.items, false) ?? matchPhrase(said, om.m.items, true)
+        if (hit) {
+          const r = pressMenu(hit.c.keys.split(' ').slice(om.m.keys.length), om.m.to)
+          return r ?? `✓ ${om.m.name} → ${hit.c.label}`
+        }
+        // something else: close the menu first
+        session?.pressKey('Escape')
+      }
+    }
+    for (const a of alts) {
+      const mp = menuPath(a, ctx)
+      if (!mp) continue
+      if (mp.open && interpret([a], ctx, names())) break // "auto", "nullclines": the command itself
+      const r = pressMenu(mp.keys, mp.to)
+      if (r) return r
+      if (mp.open) openMenu = { m: mp.open, at: performance.now() }
+      return '✓ ' + mp.label + (mp.open ? ': say an item, or “escape”' : '')
+    }
     const own = (near: boolean): string | null => {
       if (!session) return null
       const hit = matchPhrase(alts, spoken(), near)
