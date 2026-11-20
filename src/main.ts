@@ -9,6 +9,7 @@ import { inApp, lockRotation, setupApp, shareFile } from './android'
 import { Loupe, SliderDrawer } from './touch'
 import { ENGINES, WebVoice, canRun, type RealEngine, type WebEngine } from './webvoice'
 import { COMMANDS as CATALOG } from './commands'
+import { snap, type FlowOption } from './voiceflow'
 import { COMMANDS as VOICE_COMMANDS, helpFor, interpret, learnWords, matchPhrase, plainWords, setOfflineWords, setTaught, spokenForm, vocabulary, words, type Action, type Context } from './voicecmd'
 import { FONT_NAMES, PRESETS, chosenFont, fontArgs, fontKey, saveFont, type FontChoice } from './fonts'
 
@@ -1175,6 +1176,8 @@ if (!inApp) {
     return ranked[0] && ranked[0].s >= 0.4 && (!ranked[1] || ranked[0].s - ranked[1].s >= 0.1) ? ranked[0].x : null
   }
   voice.grammarFor = () => {
+    const f = flow(context())
+    if (f.hard) return [...f.options.flatMap((o) => o.phrases.join(' ').split(' ')), ...UNIVERSAL.flatMap((u) => u.split(' '))].filter(Boolean)
     const mine = spoken().flatMap((s) => s.phrases)
     const scripts = scriptItems().flatMap((x) => x.phrases)
     learnWords([...mine, ...scripts])
@@ -1221,7 +1224,14 @@ if (!inApp) {
       m.items.push({ c, phrases: [...new Set([label, short].map((x) => words(x).join(' ')))].filter(Boolean) })
       out.set(id, m)
     }
-    return [...out.values()]
+    const list = [...out.values()]
+    // AUTO's Run menu at a grabbed point has more (Hopf: Periodic, Extend, New
+    // Point, Two Param; period doubling: Doubling): the same keys work there
+    const run = list.find((m) => m.to === 'auto' && m.keys.join(' ') === 'r')
+    if (run)
+      for (const [k, label] of [['t', 'Two parameter'], ['e', 'Extend'], ['n', 'New point'], ['d', 'Doubling'], ['f', 'Fixed period']])
+        run.items.push({ c: { label, keys: 'r ' + k, group: run.name, to: 'auto' }, phrases: [words(label.toLowerCase()).join(' ')] })
+    return list
   })()
   const menusFor = (ctx: Context) => menus.filter((m) => (ctx === 'auto') === (m.to === 'auto'))
   /** the menu left open by "file" (its next item may be said alone) */
@@ -1250,6 +1260,52 @@ if (!inApp) {
       s.activate(w.id)
     } else s.activate(s.mainWindow)
     for (const k of keys) s.pressKey(k)
+    afterKeys(keys, to)
+  }
+  // ---- expected next commands (src/voiceflow.ts): after a command only a few
+  // things make sense; what is heard is snapped to them, they are shown as
+  // suggestions, and Vosk listens for them only inside a menu or Grab
+  let grabbing = 0
+  /** after keys went to XPP: a menu now open, Grab mode on or off */
+  const afterKeys = (keys: string[], to?: 'auto') => {
+    const full = keys.join(' ')
+    if (to === 'auto' && full === 'g') grabbing = performance.now()
+    else if (keys.includes('Enter') || keys.includes('Escape')) grabbing = 0
+    const m = menus.find((x) => (x.to === 'auto') === (to === 'auto') && x.keys.join(' ') === full)
+    if (m) openMenu = { m, at: performance.now() }
+    voice.refreshGrammar()
+    voice.refreshHints()
+  }
+  type Option = FlowOption & { say: string }
+  /** commands that work at every step (and leave a menu or Grab) */
+  const UNIVERSAL = ['escape', 'cancel', 'back', 'enter', 'okay', 'yes', 'no', 'tab', 'stop listening', 'what can i say', 'help', 'xpp window', 'main window']
+  const fromVoice = (ctxName: Context, labels?: string[]): Option[] =>
+    VOICE_COMMANDS.filter((c) => c.ctx.includes(ctxName) && (!labels || labels.includes(c.label)))
+      .map((c) => ({ label: c.label, phrases: c.say.filter((x) => !x.includes('{')), say: c.say.find((x) => !x.includes('{')) ?? '' }))
+      .filter((o) => o.say && !UNIVERSAL.includes(o.say))
+  /** what may come next: the options, whether only they count (a menu,
+   *  Grab), and how close a guess must be */
+  const flow = (ctx: Context): { name: string; options: Option[]; hard: boolean; min: number } => {
+    const now = performance.now()
+    if (openMenu && now - openMenu.at < 20000)
+      return { name: openMenu.m.name, options: openMenu.m.items.map((i) => ({ label: i.c.label.replace(/\*$/, ''), phrases: i.phrases, say: i.phrases[0] })), hard: true, min: 0.5 }
+    if (ctx === 'auto' && grabbing && now - grabbing < 120000)
+      return { name: 'Grab', options: fromVoice('auto', ['Point ▶', '◀ Point', 'Next label', 'Grab it']), hard: true, min: 0.5 }
+    if (ctx === 'auto') {
+      // AUTO's own buttons first (for the suggestions)
+      const first = ['Run', 'Grab', 'Parameter', 'Axes', 'Numerics', 'File', 'Run steady state', 'Run periodic', 'Two parameter', 'Clear', 'reDraw', 'Usr period', 'XPP window']
+      const opts = fromVoice('auto').sort((a, b) => (first.indexOf(a.label) + 1 || 99) - (first.indexOf(b.label) + 1 || 99))
+      return { name: 'AUTO', options: opts, hard: false, min: 0.55 }
+    }
+    // XPP's window: the Cmd panel's buttons first, then every command and menu
+    const mine = spoken().map((x) => ({ label: x.c.label, phrases: [plainWords(x.c.label)], say: x.c.label }))
+    const menuNames = menusFor('xpp').filter((m) => m.keys.length === 1).map((m) => ({ label: m.name, phrases: m.say, say: m.say[0] }))
+    return { name: 'XPP', options: [...mine, ...fromVoice('xpp'), ...menuNames], hard: false, min: 0.62 }
+  }
+  voice.hintsFor = () => {
+    const f = flow(context())
+    const seen = new Set<string>()
+    return f.options.filter((o) => !seen.has(o.label) && seen.add(o.label)).slice(0, 6).map((o) => o.label)
   }
   /** several commands in one breath ("auto, run, enter", "set i app to point
    *  one then integrate"): split at then/and/commas, else wherever the longest
@@ -1384,13 +1440,27 @@ if (!inApp) {
       return voice.flash(`✓ Learned: “${heard}” means ${t.label}. Teach more ways in Settings → Voice`, 4500)
     }
     const ctx = context()
+    const f = flow(ctx)
+    const heard = [...alts, ...alts.map((a) => words(a).join(' '))]
+    const isUniversal = heard.some((h) => UNIVERSAL.includes(h.toLowerCase().trim()))
+    // inside a menu or Grab: only its options count (and the universal ones)
+    if (f.hard && !isUniversal) {
+      const hit = snap(heard, f.options, f.min)
+      if (hit) {
+        const r = runOne([hit.o.say], ctx)!
+        return voice.flash(r.startsWith('✓') ? r : r, r.startsWith('✓') ? 2500 : 3500)
+      }
+    }
     // the whole utterance as one command first; else a list of them
     let one = runOne(alts, ctx, true)
     if (one === null) {
       const list = splitCommands(alts[0], ctx)
       if (list) return runSequence(list)
-      one = runOne(alts, ctx)!
-      if (one === 'not a command') return voice.flash(`Not a command: “${alts[0]}”. Say “what can I say”`, 3500)
+      // a near miss of what is expected here ("graph" for Grab)
+      const hit = snap(heard, f.options, f.min)
+      if (hit) one = runOne([hit.o.say], ctx)
+      if (one === null) one = runOne(alts, ctx)!
+      if (one === 'not a command') return voice.flash(`Not a command: “${alts[0]}”. ${f.hard ? `In ${f.name}, say: ${f.options.slice(0, 5).map((o) => o.label).join(', ')}` : 'Say “what can I say”'}`, 4500)
     }
     voice.flash(one, one.startsWith('✓') ? 2500 : 3500)
   }
@@ -1406,6 +1476,7 @@ if (!inApp) {
         const hit = matchPhrase(said, om.m.items, false) ?? matchPhrase(said, om.m.items, true)
         if (hit) {
           const r = pressMenu(hit.c.keys.split(' ').slice(om.m.keys.length), om.m.to)
+          if (!r) afterKeys(hit.c.keys.split(' '), om.m.to) // a submenu opens (Graphics -> Freeze)
           return r ?? `✓ ${om.m.name} → ${hit.c.label}`
         }
         // something else: close the menu first
@@ -1468,6 +1539,7 @@ if (!inApp) {
           s.activate(w.id)
         } else if (a.to === 'main') s.activate(s.mainWindow)
         for (const k of a.keys) s.pressKey(k)
+        afterKeys(a.keys, a.to === 'auto' || (a.to === 'active' && context() === 'auto') ? 'auto' : undefined)
         return
       }
       case 'set': {
@@ -1488,6 +1560,7 @@ if (!inApp) {
         if (!s) return 'XPP is not running'
         s.activate(s.mainWindow)
         for (const k of a.keys) s.pressKey(k)
+        afterKeys(a.keys)
         return
       case 'edit': {
         // XPP's prompt line (and lists): the matching keys

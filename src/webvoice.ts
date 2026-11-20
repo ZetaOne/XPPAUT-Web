@@ -209,6 +209,9 @@ export class WebVoice {
   /** Whisper is writing down an utterance since then (0: not) */
   private workingSince = 0
   private wave: HTMLCanvasElement
+  private hint: HTMLElement
+  /** what may be said next, shown faintly under "Listening…" */
+  hintsFor: () => string[] = () => []
   private peaks: number[] = []
   private waveDrawn = 0
   private viz: Mic | null = null
@@ -230,8 +233,9 @@ export class WebVoice {
     this.bar.className = 'voicebar'
     this.bar.setAttribute('role', 'status')
     this.bar.hidden = true
-    this.bar.innerHTML = '<canvas class="vwave" width="96" height="28" aria-hidden="true"></canvas><i class="vmeter"><b></b></i><span class="vtext"></span><button type="button">Stop</button>'
+    this.bar.innerHTML = '<canvas class="vwave" width="96" height="28" aria-hidden="true"></canvas><i class="vmeter"><b></b></i><span class="vcol"><span class="vtext"></span><span class="vhint"></span></span><button type="button">Stop</button>'
     this.text = this.bar.querySelector('.vtext')!
+    this.hint = this.bar.querySelector('.vhint')!
     this.meter = this.bar.querySelector('.vmeter b')!
     this.wave = this.bar.querySelector('.vwave')!
     // the watchdog: listening that has gone quiet starts again by itself
@@ -386,6 +390,22 @@ export class WebVoice {
     this.bar.hidden = false
     this.bar.classList.toggle('live', live)
     this.text.textContent = msg
+    this.refreshHints()
+  }
+
+  /** the suggestions: what makes sense to say next */
+  refreshHints() {
+    const h = this.keepOn ? this.hintsFor() : []
+    this.hint.textContent = h.length ? 'Say: ' + h.join(' · ') : ''
+  }
+
+  /** Vosk listens for the words of the current step only: start a new
+   *  recognizer with the new word list (the others pick it up by themselves) */
+  refreshGrammar() {
+    const mic = this.mic
+    if (!this.voskRec || !mic || this.engine !== 'vosk') return
+    this.voskRec.remove()
+    this.voskRec = this.voskRecognizer(mic.rate, (t) => this.heard(t))
   }
 
   flash(msg: string, ms = 2500) {
@@ -547,14 +567,13 @@ export class WebVoice {
     const mic = new Mic()
     this.mic = mic
     await mic.start()
-    const rec = this.voskRecognizer(mic.rate, (t) => this.heard(t))
-    this.voskRec = rec
+    this.voskRec = this.voskRecognizer(mic.rate, (t) => this.heard(t))
     mic.onEnded = () => (this.alive = 0)
     mic.onAudio = (d, b) => {
       if (hasSound(d)) this.alive = performance.now()
       this.feedWave(d)
       try {
-        rec.acceptWaveform(b)
+        this.voskRec?.acceptWaveform(b)
       } catch {
         /* the recognizer was removed */
       }

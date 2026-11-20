@@ -2042,6 +2042,26 @@ summary.round:focus-visible,
   display: none;
 }
 
+.voicebar .vcol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* what may be said next, faint */
+.voicebar .vhint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  opacity: 0.55;
+}
+
+.voicebar .vhint:empty {
+  display: none;
+}
+
 .voicebar .vtext {
   flex: 1;
   min-width: 0;
