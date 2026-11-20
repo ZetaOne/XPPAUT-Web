@@ -2117,6 +2117,18 @@ summary.round:focus-visible,
   gap: 10px;
 }
 
+/* the voice tour */
+.voicetour .row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.voicetour .row .muted {
+  margin-right: auto;
+}
+
 /* "what can I say?" */
 .voicehelp table {
   width: 100%;

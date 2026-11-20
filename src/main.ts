@@ -116,6 +116,7 @@ app.innerHTML = `
               <button type="button" class="small" id="teachbtn">🎤 Teach</button>
             </div>
             <ul class="taught" id="taughtlist"></ul>
+            <button type="button" class="small" id="voicetourbtn">Voice tour</button>
           </div>
         </div>
       </details>
@@ -1287,6 +1288,12 @@ if (!inApp) {
    *  Grab), and how close a guess must be */
   const flow = (ctx: Context): { name: string; options: Option[]; hard: boolean; min: number } => {
     const now = performance.now()
+    const pk = picker()
+    if (pk) return { name: 'the file picker', options: pk.files.map((f) => fileOption(f, 'pick file ' + f)), hard: true, min: 0.45 }
+    if (($('scripts') as HTMLDetailsElement).open)
+      return { name: 'Scripts', options: scriptItems().map((x) => ({ label: x.file, phrases: [...new Set([...x.phrases, ...fileOption(x.file, '').phrases])], say: 'run script ' + x.phrases[0] })), hard: true, min: 0.45 }
+    if (($('files') as HTMLDetailsElement).open)
+      return { name: 'Files', options: (session?.listFiles() ?? []).map((f) => fileOption(f.name, 'download file ' + f.name)), hard: true, min: 0.45 }
     if (openMenu && now - openMenu.at < 20000)
       return { name: openMenu.m.name, options: openMenu.m.items.map((i) => ({ label: i.c.label.replace(/\*$/, ''), phrases: i.phrases, say: i.phrases[0] })), hard: true, min: 0.5 }
     if (ctx === 'auto' && grabbing && now - grabbing < 120000)
@@ -1300,13 +1307,166 @@ if (!inApp) {
     // XPP's window: the Cmd panel's buttons first, then every command and menu
     const mine = spoken().map((x) => ({ label: x.c.label, phrases: [plainWords(x.c.label)], say: x.c.label }))
     const menuNames = menusFor('xpp').filter((m) => m.keys.length === 1).map((m) => ({ label: m.name, phrases: m.say, say: m.say[0] }))
-    return { name: 'XPP', options: [...mine, ...fromVoice('xpp'), ...menuNames], hard: false, min: 0.62 }
+    const page = pageCommands().map((c) => ({ label: c.label, phrases: c.phrases, say: c.phrases[0] }))
+    return { name: 'XPP', options: [...mine, ...fromVoice('xpp'), ...menuNames, ...page], hard: false, min: 0.62 }
   }
   voice.hintsFor = () => {
     const f = flow(context())
     const seen = new Set<string>()
     return f.options.filter((o) => !seen.has(o.label) && seen.add(o.label)).slice(0, 6).map((o) => o.label)
   }
+  // ---- the page by voice: settings, files, themes, windows, examples -------
+  type PageCmd = { label: string; phrases: string[]; run: () => string | void }
+  const onPhone = () => getComputedStyle($('menubtn')).display !== 'none'
+  /** open a header panel (Settings, Files, Scripts); on phones inside ☰ */
+  const openPanel = (id: string, open = true) => {
+    const d = $(id) as HTMLDetailsElement
+    if (open && onPhone()) {
+      document.querySelector('header')!.classList.add('menu-open')
+      $('menubtn').setAttribute('aria-expanded', 'true')
+    }
+    d.open = open
+    if (open && id === 'files') renderFiles()
+    if (open && id === 'scripts') renderScripts()
+  }
+  const closePanels = () => {
+    for (const id of ['settings', 'files', 'scripts', 'fontsize', 'themes']) {
+      const d = document.getElementById(id) as HTMLDetailsElement | null
+      if (d) d.open = false
+    }
+    document.querySelector('header')!.classList.remove('menu-open')
+    $('menubtn').setAttribute('aria-expanded', 'false')
+  }
+  const setCheck = (id: string, on: boolean) => {
+    const c = $<HTMLInputElement>(id)
+    c.checked = on
+    c.dispatchEvent(new Event('change'))
+  }
+  const setSelect = (id: string, v: string) => {
+    const c = $<HTMLSelectElement>(id)
+    c.value = v
+    c.dispatchEvent(new Event('change'))
+  }
+  const tabs = () => (session?.windows() ?? [])
+  const stepWindow = (d: number) => {
+    const w = tabs()
+    if (w.length < 2) return 'Only one window is open'
+    const i = Math.max(0, w.findIndex((x) => x.active))
+    const next = w[(i + d + w.length) % w.length]
+    session!.activate(next.id)
+    return '✓ ' + next.title
+  }
+  const pageCommands = (): PageCmd[] => {
+    const out: PageCmd[] = [
+      { label: 'Settings', phrases: ['settings', 'open settings', 'show settings', 'preferences'], run: () => openPanel('settings') },
+      { label: 'Files', phrases: ['files', 'show files', 'open files', 'my files'], run: () => openPanel('files') },
+      { label: 'Close menu', phrases: ['close menu', 'close settings', 'close files', 'close panel', 'close scripts'], run: () => closePanels() },
+      { label: 'Save session', phrases: ['save session', 'save the session', 'save everything'], run: () => $('savesession').click() },
+      { label: 'Restart', phrases: ['restart', 'restart xpp', 'start again'], run: () => $('restart').click() },
+      { label: 'Next window', phrases: ['next window', 'switch window', 'other window', 'change window'], run: () => stepWindow(1) },
+      { label: 'Previous window', phrases: ['previous window', 'last window', 'window back'], run: () => stepWindow(-1) },
+      { label: 'Flash on bell on', phrases: ['bell on', 'flash on bell', 'flash on bell on', 'bell flash on'], run: () => setCheck('bellflash', true) },
+      { label: 'Flash on bell off', phrases: ['bell off', 'flash on bell off', 'no bell flash', 'bell flash off'], run: () => setCheck('bellflash', false) },
+      { label: 'Show output', phrases: ['show output', 'show terminal', 'terminal', 'output panel'], run: () => setSelect('termmode', onPhone() ? 'window' : 'side') },
+      { label: 'Hide output', phrases: ['hide output', 'hide terminal', 'close terminal'], run: () => setSelect('termmode', 'hidden') },
+      { label: 'Cmd panel', phrases: ['cmd panel', 'command panel', 'commands panel', 'open cmd', 'cmd'], run: () => void mobile.toggleCommands() },
+      { label: 'Font size', phrases: ['font size', 'font', 'text size', 'bigger font', 'smaller font'], run: () => openPanel('fontsize') },
+      { label: 'Themes', phrases: ['themes', 'theme', 'colors', 'colours', 'change theme'], run: () => openPanel('themes') },
+      { label: 'Voice tour', phrases: ['voice tour', 'tour', 'voice help', 'how does voice work'], run: () => voiceTour() },
+      { label: 'Dark mode', phrases: ['dark mode', 'dark theme', 'go dark'], run: () => clickTheme('Dark') },
+      { label: 'Light mode', phrases: ['light mode', 'light theme', 'go light'], run: () => clickTheme('Light') },
+    ]
+    // every theme by name: "theme nord", "nord theme"
+    for (const b of document.querySelectorAll<HTMLButtonElement>('#themelist button')) {
+      const name = (b.textContent ?? '').trim()
+      const plain = words(name.replace(/\(.*\)/, '').toLowerCase()).join(' ')
+      if (plain) out.push({ label: 'Theme ' + name, phrases: ['theme ' + plain, plain + ' theme'], run: () => clickTheme(name) })
+    }
+    // every window by its title: "show auto", "auto window"
+    for (const w of tabs()) {
+      const t = words(w.title.replace(/^XPP Ver [\d.]+ >> /, '').replace(/[.]ode$/, '').toLowerCase()).join(' ')
+      if (t) out.push({ label: 'Window ' + w.title, phrases: ['show ' + t, t + ' window', 'go to ' + t], run: () => (session!.activate(w.id), '✓ ' + w.title) })
+    }
+    return out
+  }
+  const clickTheme = (name: string) => {
+    const b = [...document.querySelectorAll<HTMLButtonElement>('#themelist button')].find((x) => (x.textContent ?? '').trim().toLowerCase().startsWith(name.toLowerCase()))
+    if (!b) return `No theme “${name}”`
+    b.click()
+    return '✓ Theme ' + (b.textContent ?? '').trim()
+  }
+  /** "load lecar", "open model hh": an example by name */
+  const loadByName = (said: string): string | null => {
+    const m = said.match(/^(?:load|open|switch to|open model|load model|model)\s+(.+)$/)
+    if (!m) return null
+    const items = groups.flatMap((g) => g.odes.map((o) => ({ label: o, phrases: [words(o.replace(/\.ode$/, '').replace(/[-_]/g, ' ')).join(' ')], id: g.id + '/' + o })))
+    const hit = matchPhrase([m[1]], items, false) ?? snap([m[1]], items, 0.6)?.o
+    if (!hit) return `No example called “${m[1]}”`
+    setSelect('switch', hit.id)
+    return '✓ Loading ' + hit.label
+  }
+  // ---- files by voice: XPP's own file picker, the Scripts and Files panels
+  /** XPP's file selector (title "*.xps - /work"), when it is the active window */
+  const picker = () => {
+    const w = session?.windows().find((x) => x.active && /^\S+ - \//.test(x.title))
+    if (!w) return null
+    const [glob, dir] = w.title.split(' - ')
+    if (dir.replace(/\/$/, '') !== '/work') return { w, files: [] as string[] }
+    const re = new RegExp('^' + glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 'i')
+    return { w, files: (session?.listFiles() ?? []).map((f) => f.name).filter((n) => re.test(n)) }
+  }
+  const fileOption = (name: string, say: string): Option => {
+    const base = odeName.replace(/\.ode$/i, '').toLowerCase()
+    const stem = name.replace(/\.[^.]+$/, '').replace(/[-_.]+/g, ' ').toLowerCase()
+    const short = stem.startsWith(base + ' ') ? stem.slice(base.length + 1) : stem
+    return { label: name, phrases: [...new Set([stem, short, name.replace(/[-_.]+/g, ' ').toLowerCase()].map((x) => words(x).join(' ')))], say }
+  }
+  // ---- the first-time voice tour (Next / Skip), again from Settings -> Voice
+  const TOUR = [
+    ['Voice commands', 'Tap 🎤 and speak. The bar at the bottom shows what was heard and what was done; tap 🎤 or Stop to end.'],
+    ['Say XPP’s commands', '“integrate”, “nullclines”, “direction field”, “set i app to point one five”, “auto”, “run steady state”. Numbers: “two point five”, “minus three”.'],
+    ['Several at once', '“set i app to point one then integrate then nullclines”, or “auto, run, steady state”.'],
+    ['What can I say next?', 'The faint line under “Listening…” shows what makes sense now (after “auto”: Run, Grab, Parameter…). Words that sound close are understood (“graph” → Grab).'],
+    ['Menus, files and scripts', '“file” opens XPP’s File menu, then say an item (“calculator”). In a file picker or the Scripts panel, say the file’s name. “run script nullclines” runs a script.'],
+    ['The page too', '“settings”, “files”, “next window”, “dark mode”, “theme nord”, “flash on bell on”, “save session”, “load hh”.'],
+    ['Help and your own words', '“what can I say” lists everything. If a word is not understood, teach your way of saying it: Settings → Voice → Your own words.'],
+  ]
+  const voiceTour = () => {
+    document.querySelector('.voicetour')?.remove()
+    const d = document.createElement('div')
+    d.className = 'tips voicetour'
+    d.setAttribute('role', 'dialog')
+    d.setAttribute('aria-label', 'Voice tour')
+    let i = 0
+    const draw = () => {
+      d.innerHTML = `<h3></h3><p></p><div class="row"><span class="muted">${i + 1} of ${TOUR.length}</span><button type="button" data-a="skip">Skip</button>${i ? '<button type="button" data-a="back">Back</button>' : ''}<button type="button" data-a="next">${i === TOUR.length - 1 ? 'Done' : 'Next'}</button></div>`
+      d.querySelector('h3')!.textContent = TOUR[i][0]
+      d.querySelector('p')!.textContent = TOUR[i][1]
+    }
+    d.addEventListener('click', (e) => {
+      const a = (e.target as HTMLElement).dataset.a
+      if (!a) return
+      if (a === 'next' && i < TOUR.length - 1) return (i++, draw())
+      if (a === 'back' && i > 0) return (i--, draw())
+      if (a === 'next' || a === 'skip') {
+        store.set('xpp-voice-tour', '1')
+        d.remove()
+      }
+    })
+    draw()
+    document.body.append(d)
+  }
+  $('voicetourbtn').addEventListener('click', () => {
+    ;($('settings') as HTMLDetailsElement).open = false
+    voiceTour()
+  })
+  // the first time voice starts: the tour (once; Skip ends it)
+  voice.button.addEventListener('click', () => {
+    if (store.get('xpp-voice-tour') || voice.engine === '' || voice.engine === 'off') return
+    setTimeout(() => {
+      if (voice.button.classList.contains('on') && !document.querySelector('.voiceoffer')) voiceTour()
+    }, 600)
+  })
   /** several commands in one breath ("auto, run, enter", "set i app to point
    *  one then integrate"): split at then/and/commas, else wherever the longest
    *  known command ends; null when it is not a list of commands */
@@ -1448,9 +1608,12 @@ if (!inApp) {
       const hit = snap(heard, f.options, f.min)
       if (hit) {
         const r = runOne([hit.o.say], ctx)!
-        return voice.flash(r.startsWith('✓') ? r : r, r.startsWith('✓') ? 2500 : 3500)
+        if (r.startsWith('✓') && (f.name === 'Scripts' || f.name === 'Files')) closePanels()
+        return voice.flash(r, r.startsWith('✓') ? 2500 : 3500)
       }
     }
+    // something else while the Scripts or Files panel is open: close it first
+    if (f.name === 'Scripts' || f.name === 'Files') closePanels()
     // the whole utterance as one command first; else a list of them
     let one = runOne(alts, ctx, true)
     if (one === null) {
@@ -1482,6 +1645,36 @@ if (!inApp) {
         // something else: close the menu first
         session?.pressKey('Escape')
       }
+    }
+    const plain = alts.map((a) => words(a).join(' '))
+    // a file chosen in XPP's picker, or in the Files panel
+    const pf = alts[0].match(/^pick file (.+)$/)
+    if (pf) {
+      const pk = picker()
+      if (!pk) return 'The file picker is not open'
+      session!.activate(pk.w.id)
+      session!.typeValue(pf[1])
+      return '✓ ' + pf[1]
+    }
+    const df = alts[0].match(/^download file (.+)$/)
+    if (df && session) {
+      download(df[1], session.readFile(df[1]))
+      return '✓ Downloading ' + df[1]
+    }
+    // "do script", "file script", "run script": the Scripts panel (bigger than XPP's picker)
+    if (plain.some((a) => /^(?:do script|file script|file do script|run script|run a script|choose a script|choose script)$/.test(a)) && scriptItems().length) {
+      openPanel('scripts')
+      return '✓ Scripts: say a script’s name'
+    }
+    // the page: settings, files, themes, windows ...
+    const pc = matchPhrase(plain, pageCommands(), false)
+    if (pc) {
+      const r = pc.run()
+      return typeof r === 'string' ? r : '✓ ' + pc.label
+    }
+    for (const a of plain) {
+      const r = loadByName(a)
+      if (r) return r
     }
     for (const a of alts) {
       const mp = menuPath(a, ctx)
@@ -1618,7 +1811,8 @@ if (!inApp) {
       spelled (“g k”). The Cmd panel’s buttons: say their label. Scripts: “run script” and its name
       (“run script h h auto”). “Stop listening” or 🎤 ends voice.</p><button type="button">Close</button>`
     const tbl = d.querySelector('table')!
-    for (const [say, what] of [...helpFor(ctx), ...spoken().map((x) => [plainWords(x.c.label), x.c.label] as [string, string])]) {
+    const page = pageCommands().filter((c) => !c.label.startsWith('Window ') && !c.label.startsWith('Theme ')).map((c) => [c.phrases[0], c.label] as [string, string])
+    for (const [say, what] of [...helpFor(ctx), ...spoken().map((x) => [plainWords(x.c.label), x.c.label] as [string, string]), ...page, ['theme nord, theme sepia …', 'Any theme'], ['show auto, next window', 'Windows'], ['load hh', 'Load an example'], ['a file’s name', 'In a file picker or the Scripts / Files panel']]) {
       const tr = document.createElement('tr')
       tr.append(Object.assign(document.createElement('td'), { textContent: say }), Object.assign(document.createElement('td'), { textContent: what }))
       tbl.append(tr)

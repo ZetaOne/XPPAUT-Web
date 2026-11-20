@@ -278,6 +278,20 @@ the top once a voice engine is chosen) and speak XPP's commands: “integrate”
 one go: “set i app to point one five then integrate then nullclines”, or
 “auto, run, enter”. The buttons of the Cmd panel work by saying their label.
 
+- **What comes next**: after a command, the voice bar shows faintly what
+  makes sense now (after “auto”: Run, Grab, Parameter, …), and words that
+  sound close are understood (“graph” → Grab). Menus by name: “file”, then
+  an item (“calculator”), or “file auto”.
+- **Files and scripts**: in XPP's file picker, or the Scripts and Files
+  panels, say a file's name; “do script” opens the Scripts panel.
+- **The page**: “settings”, “files”, “next window”, “show auto”, “dark mode”,
+  “theme nord”, “flash on bell on”, “show output”, “save session”,
+  “load hh”.
+- **Your own words**: Settings → Voice → Your own words: say a command your
+  way once, and it is understood from then on (in that browser).
+- A short **voice tour** the first time (Skip ends it; Settings → Voice →
+  Voice tour shows it again). “What can I say” lists everything.
+
 How speech becomes text is chosen at the first tap, or in **Settings →
 Voice**:
 
