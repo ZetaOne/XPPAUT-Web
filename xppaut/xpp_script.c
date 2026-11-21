@@ -21,6 +21,10 @@
         keys i g                       press keys (menu hot keys are lowercase);
                                        see below
         autokeys r                     the same, sent to the AUTO window
+        browser open | close           press the Data button / the Close button of the data browser
+        browsekeys s e                 the same as keys, sent to the data browser (arrows, s e r w g f l u t p a d)
+        aplot edit|fit|range|redraw|print|gif|surface|close
+                                       press that button of the array plot window
         ans text                       answer the next prompt (see below)
         auto goto HB 1                 AUTO diagram: select a point as Grab + Enter
         auto goto lab 5                would (see below);  auto list  prints the
@@ -98,6 +102,14 @@
 
 extern Display *display;
 extern int Xup;
+Window browser_key_window(void);
+int browser_owns_key(Window w);
+Window browser_button_window(const char *name);
+Window aplot_button_window(const char *name);
+Window top_button_window(int i);
+int file_selector(char *title,char *file,char *wild);
+extern int DLeft,DRight,DTop,DBottom;
+void get_draw_area(void);
 extern Window main_win;
 Window auto_key_window(void);
 int auto_goto_point(int kind,const char *symb,int n,int label,int branch,char *err,int errsize);
@@ -130,7 +142,7 @@ extern double x_3d[2],y_3d[2],MY_XLO,MY_XHI,MY_YLO,MY_YHI;
 extern double last_ic[];
 #define XS_IC 2     /* same value as IC in newpars.h */
 
-enum { C_SET=1, C_PRINT, C_MSG, C_PAUSE, C_WAIT, C_SPEED, C_QUIT, C_KEYS, C_AUTOKEYS, C_ANS, C_OK, C_CANCEL, C_AUTOGOTO, C_AUTOLIST, C_SHOT, C_TRY, C_ELSE, C_END, C_CLICK, C_DRAG };
+enum { C_SET=1, C_PRINT, C_MSG, C_PAUSE, C_WAIT, C_SPEED, C_QUIT, C_KEYS, C_AUTOKEYS, C_ANS, C_OK, C_CANCEL, C_AUTOGOTO, C_AUTOLIST, C_SHOT, C_TRY, C_ELSE, C_END, C_CLICK, C_DRAG, C_BROWSEKEYS, C_BROWSER, C_APLOT };
 
 typedef struct {
   KeyCode kc;
@@ -961,16 +973,34 @@ int script_load(void)
     else if(strcmp(word,"quit")==0){
       add_cmd(C_QUIT,line,"",0.0);
     }
-    else if(strcmp(word,"keys")==0||strcmp(word,"autokeys")==0){
+    else if(strcmp(word,"keys")==0||strcmp(word,"autokeys")==0||strcmp(word,"browsekeys")==0){
       SKEY *kk;int nk;char err[200];
       if(!Xup){load_error("%s:%d: %s needs the GUI",script_name,line,word);bad=1;continue;}
       if(parse_keys(arg,&kk,&nk,err)){
         load_error("%s:%d: %s",script_name,line,err);
         bad=1;continue;
       }
-      if(!add_cmd(word[0]=='k'?C_KEYS:C_AUTOKEYS,line,arg,0.0)){bad=1;continue;}
+      if(!add_cmd(word[0]=='k'?C_KEYS:(word[0]=='a'?C_AUTOKEYS:C_BROWSEKEYS),line,arg,0.0)){bad=1;continue;}
       cmds[ncmds-1].keys=kk;
       cmds[ncmds-1].nkeys=nk;
+    }
+    else if(strcmp(word,"browser")==0||strcmp(word,"aplot")==0){
+      static const char *bnames[]={"open","close",NULL};
+      static const char *anames[]={"edit","fit","range","redraw","print","gif","surface","close",NULL};
+      const char **names=(word[0]=='b')?bnames:anames;
+      char sub[64];
+      int k,found=0;
+      if(!Xup){load_error("%s:%d: %s needs the GUI",script_name,line,word);bad=1;continue;}
+      strncpy(sub,arg,sizeof(sub)-1);sub[sizeof(sub)-1]=0;
+      rtrim(sub);
+      for(k=0;sub[k];k++)sub[k]=(char)tolower((unsigned char)sub[k]);
+      for(k=0;names[k]!=NULL;k++)if(strcmp(sub,names[k])==0)found=1;
+      if(!found){
+        load_error(word[0]=='b'?"%s:%d: browser needs open or close":
+                   "%s:%d: aplot needs one of edit fit range redraw print gif surface close",script_name,line);
+        bad=1;continue;
+      }
+      add_cmd(word[0]=='b'?C_BROWSER:C_APLOT,line,sub,0.0);
     }
     else if(strcmp(word,"auto")==0){
       char tmp[512],*tk[8],*t;
@@ -1186,8 +1216,10 @@ int script_load(void)
 }
 
 /* Called once the window exists and just before the main loop starts. */
+void script_record_from_env(void);
 void script_start(void)
 {
+  script_record_from_env();
   if(script_name[0]==0)return;
   if(script_load()!=0){
     exit(2);
@@ -1215,6 +1247,17 @@ int file_selector(char *title,char *file,char *wild);
 char xppweb_script_pick[XPP_MAX_NAME];
 #endif
 
+/* default script name: the model name without .ode, plus .xps (model.ode -> model.xps) */
+static void default_script_name(char *buf,int n)
+{
+  char tmp[XPP_MAX_NAME];
+  int len;
+  strncpy(tmp,this_file,sizeof(tmp)-1);tmp[sizeof(tmp)-1]=0;
+  len=(int)strlen(tmp);
+  if(len>4&&strcasecmp(tmp+len-4,".ode")==0)tmp[len-4]=0;
+  snprintf(buf,n,"%s.xps",tmp);
+}
+
 void script_run_from_menu(void)
 {
   char filename[XPP_MAX_NAME];
@@ -1225,7 +1268,7 @@ void script_run_from_menu(void)
     err_msg("A script is already running -- a script cannot start another script");
     return;
   }
-  snprintf(filename,sizeof(filename),"%s.xps",this_file);
+  default_script_name(filename,sizeof(filename));
 #ifdef __EMSCRIPTEN__
   if(xppweb_script_pick[0]){
     snprintf(filename,sizeof(filename),"%s",xppweb_script_pick);
@@ -1385,6 +1428,23 @@ static void fill_key_event(XEvent *ev,Window win,SKEY *k)
 }
 
 
+static void fill_button_event(XEvent *ev,Window win)
+{
+  XButtonEvent *e;
+  memset(ev,0,sizeof(XEvent));
+  e=&ev->xbutton;
+  e->type=ButtonPress;
+  e->send_event=True;
+  e->display=display;
+  e->window=win;
+  e->root=DefaultRootWindow(display);
+  e->subwindow=None;
+  e->time=CurrentTime;
+  e->x=e->y=e->x_root=e->y_root=1;
+  e->button=Button1;
+  e->same_screen=True;
+}
+
 /* ------------------------------------------------------------------ shot
    Save the picture straight to a file, without going through the dialogs
    (so a script does not depend on which options forms a menu happens to
@@ -1538,9 +1598,35 @@ int script_poll(int *ms,XEvent *ev)
         script_fail(c->line,"auto goto: %s",err);
     }
     return 1;
+  case C_BROWSER:
+  case C_APLOT:
+    {
+      /* a button of the data browser / array plot window is pressed */
+      Window bw=0;
+      pc++;
+      if(c->type==C_BROWSER&&strcmp(c->arg,"open")==0)bw=top_button_window(5);
+      else if(c->type==C_BROWSER)bw=browser_button_window(c->arg);
+      else bw=aplot_button_window(c->arg);
+      if(bw==0){
+        script_fail(c->line,"%s %s: the %s window is not open",c->type==C_BROWSER?"browser":"aplot",c->arg,
+                    c->type==C_BROWSER?"data browser":"array plot");
+        return 1;
+      }
+      fill_button_event(ev,bw);
+      if(!opt_nopause&&key_delay>0.0)key_gap_until=now_sec()+key_delay;
+      return 3;
+    }
   case C_KEYS:
   case C_AUTOKEYS:
-    if(c->type==C_AUTOKEYS){
+  case C_BROWSEKEYS:
+    if(c->type==C_BROWSEKEYS){
+      win=browser_key_window();
+      if(win==0){
+        script_fail(c->line,"browsekeys: the data browser is not open (open it with: browser open)");
+        return 1;
+      }
+    }
+    else if(c->type==C_AUTOKEYS){
       win=auto_key_window();
       if(win==0){
         script_fail(c->line,"autokeys: the AUTO window is not open (open it with keys f a first)");
@@ -1954,4 +2040,569 @@ int script_filter_event(XEvent *ev)
     return 1;
   }
   return 0;
+}
+
+
+/* =========================================================================
+   RECORDING  --  File -> Record script
+
+   The recorder is the mirror image of the script engine above.  It writes
+   the commands that, replayed, repeat what the person did:
+
+     menu keys, typed or chosen with the mouse      keys i g
+     keys typed in the AUTO window                   autokeys r
+     the answer to a prompt (text, form, yes/no)     ans ... / ok / cancel
+     a click or a drag in the plot window            click x y / drag x1 y1 x2 y2
+     a parameter or initial condition that was edited  set a=1.3
+     a point picked in the AUTO diagram               auto goto lab 5
+
+   Keys typed into a prompt are NOT recorded as keys: the prompt is recorded
+   as one "ans" line when it closes.  Keys typed into the parameter boxes are
+   not recorded either; the value that was committed is (as a "set").
+   Consecutive keys are collected into one line.  Nothing is recorded while a
+   script runs (XPP_REC_TEST=1 in the environment lifts this; used for testing)
+   and XPP_RECORD=file starts a recording at start-up.  XPP_REC_ECHO=1 echoes
+   every recorded line to stderr.
+   ========================================================================= */
+#include <time.h>
+#include <unistd.h>
+extern char this_file[];
+extern char upar_names[MAXPAR][11],uvar_names[MAXODE][12];
+extern int NUPAR,NODE;
+int TwoChoice(char *c1,char *c2,char *q,char *key);
+int auto_owns_key(Window w);
+
+#define REC_MAXDEPTH 8
+static FILE *rec_fp=NULL;
+static char rec_name[512]="";
+static int rec_nokeys=0;        /* >0: keys are text being typed into a field */
+static int rec_depth=0;         /* prompts that are open */
+static int rec_test=0,rec_echo=0;
+static int rec_kind=0;          /* pending key line: 0 none, 1 keys, 2 autokeys */
+static char rec_buf[200];
+static char *rec_init[REC_MAXDEPTH];    /* what each open prompt showed when it opened */
+static int rec_traverse=0;
+
+/* the last key event that was written (a key can pass through two readers) */
+static unsigned long rec_ls=0;
+static Time rec_lt=0;
+static unsigned int rec_lk=0;
+static Window rec_lw=0;
+
+int script_recording(void){return rec_fp!=NULL;}
+static int rec_on(void){return rec_fp!=NULL&&(!active||rec_test);}
+
+static void rec_write(const char *line)
+{
+  if(rec_fp==NULL)return;
+  fseek(rec_fp,0,SEEK_END);
+  fputs(line,rec_fp);
+  fputc('\n',rec_fp);
+  fflush(rec_fp);
+  if(rec_echo){fprintf(stderr,"rec: %s\n",line);fflush(stderr);}
+}
+
+static long rec_pos=0;          /* where the pending key line starts in the file */
+
+/* The pending key line is kept on disk at all times (rewritten as it grows),
+   so a crash or a kill loses nothing. */
+static void rec_rewrite(void)
+{
+  if(rec_fp==NULL)return;
+  fseek(rec_fp,rec_pos,SEEK_SET);
+  if(rec_kind&&rec_buf[0]){fputs(rec_buf,rec_fp);fputc('\n',rec_fp);}
+  fflush(rec_fp);
+  if(ftruncate(fileno(rec_fp),(off_t)ftell(rec_fp))!=0){}
+}
+
+static void rec_flush(void)
+{
+  if(rec_kind&&rec_buf[0]&&rec_echo){fprintf(stderr,"rec: %s\n",rec_buf);fflush(stderr);}
+  rec_kind=0;
+  rec_buf[0]=0;
+}
+
+static void rec_token(int kind,const char *tok)
+{
+  const char *pre=(kind==1)?"keys":(kind==2?"autokeys":"browsekeys");
+  if(rec_kind!=kind||strlen(rec_buf)+strlen(tok)+2>=76){   /* new line (they are kept short) */
+    rec_flush();
+    rec_kind=kind;
+    fseek(rec_fp,0,SEEK_END);
+    rec_pos=ftell(rec_fp);
+    strcpy(rec_buf,pre);
+  }
+  strcat(rec_buf," ");
+  strcat(rec_buf,tok);
+  rec_rewrite();
+}
+
+/* the token that "keys" turns back into the character c */
+static void char_token(int c,char *out)
+{
+  if(c==' ')strcpy(out,"space");
+  else if(islower(c)||isdigit(c))sprintf(out,"%c",c);
+  else if(c=='"')strcpy(out,"'\"'");
+  else sprintf(out,"\"%c\"",c);     /* upper case and punctuation are typed literally */
+}
+
+void rec_nokey(int on)
+{
+  if(on)rec_nokeys++;
+  else if(rec_nokeys>0)rec_nokeys--;
+}
+
+int get_key_press(XEvent *ev);
+int get_key_press_nr(XEvent *ev)
+{
+  int r;
+  rec_nokeys++;
+  r=get_key_press(ev);
+  rec_nokeys--;
+  return r;
+}
+
+static int rec_force_kind=0;
+static int rec_context=0;
+
+/* The AUTO and data-browser key handlers say so when they take a key: whether a
+   key reaches them depends on the window under the pointer and on the input
+   focus, which only they know. */
+void rec_key_kind(int kind){rec_force_kind=kind;if(kind==2)rec_context=2;}
+
+/* While the AUTO window is handling a key or button, the keys its popup menus
+   read (r s: Run, Steady state) belong to the AUTO window too. */
+void rec_key_context(int kind){rec_context=kind;}
+
+void rec_key_event(XEvent *ev)
+{
+  XKeyEvent *k;
+  char buf[16],tok[16];
+  KeySym ks;
+  int n,kind;
+  kind=rec_force_kind?rec_force_kind:(rec_context?rec_context:1);
+  rec_force_kind=0;
+  if(rec_fp==NULL||!rec_on()||rec_nokeys>0||rec_depth>0)return;
+  if(ev->type!=KeyPress)return;
+  k=&ev->xkey;
+  if(k->serial!=0&&k->serial==rec_ls&&k->time==rec_lt&&k->keycode==rec_lk&&k->window==rec_lw)return;
+  n=XLookupString(k,buf,sizeof(buf)-1,&ks,NULL);
+  switch(ks){
+  case XK_Escape: strcpy(tok,"esc");break;
+  case XK_Return: case XK_KP_Enter: case XK_Linefeed: strcpy(tok,"enter");break;
+  case XK_BackSpace: strcpy(tok,"bksp");break;
+  case XK_Delete: strcpy(tok,"del");break;
+  case XK_Tab: strcpy(tok,"tab");break;
+  case XK_Up: strcpy(tok,"up");break;
+  case XK_Down: strcpy(tok,"down");break;
+  case XK_Left: strcpy(tok,"left");break;
+  case XK_Right: strcpy(tok,"right");break;
+  case XK_Home: strcpy(tok,"home");break;
+  case XK_End: strcpy(tok,"end");break;
+  case XK_Prior: strcpy(tok,"pgup");break;
+  case XK_Next: strcpy(tok,"pgdn");break;
+  default:
+    if(n==1&&buf[0]>=' '&&buf[0]<='~')char_token((unsigned char)buf[0],tok);
+    else return;                      /* Shift, Control, function keys, ... */
+  }
+  rec_ls=k->serial;rec_lt=k->time;rec_lk=k->keycode;rec_lw=k->window;
+  rec_token(kind,tok);
+}
+
+/* a menu entry chosen with the mouse stands for its hot key */
+void rec_menu_key(int ch)
+{
+  char tok[16];
+  if(!rec_on()||rec_depth>0||rec_nokeys>0)return;
+  if(ch==27)strcpy(tok,"esc");
+  else if(ch==13)strcpy(tok,"enter");
+  else if(ch>' '&&ch<='~')char_token(ch,tok);
+  else return;
+  rec_token(rec_context?rec_context:1,tok);
+}
+
+void rec_browse_key(const char *tok)
+{
+  if(!rec_on()||rec_depth>0)return;
+  rec_token(3,tok);
+}
+
+void rec_command(const char *line)
+{
+  if(!rec_on()||rec_depth>0)return;
+  rec_flush();
+  rec_write(line);
+}
+
+void rec_comment(const char *text)
+{
+  char c[300];
+  if(!rec_on()||rec_depth>0)return;
+  rec_flush();
+  snprintf(c,sizeof(c),"# %s",text);
+  rec_write(c);
+}
+
+void rec_esc(void)
+{
+  if(!rec_on()||rec_depth>0)return;
+  rec_token(1,"esc");
+}
+
+void rec_go(void)
+{
+  if(!rec_on()||rec_depth>0)return;
+  rec_token(1,"i");
+  rec_token(1,"g");
+}
+
+void rec_auto_key(int ch)
+{
+  char tok[16];
+  if(!rec_on()||rec_depth>0)return;
+  char_token(ch,tok);
+  rec_token(2,tok);
+  rec_context=2;
+}
+
+/* Grab mode in the AUTO window: the keys that move the cursor along the
+   diagram are replaced by one "auto goto" line when a point is chosen.  The
+   key that started Grab mode (g) is taken back. */
+void rec_auto_traverse_begin(void)
+{
+  if(!rec_on())return;
+  if(rec_kind==2){
+    int n=(int)strlen(rec_buf);
+    if(n>=2&&strcmp(rec_buf+n-2," g")==0){
+      rec_buf[n-2]=0;
+      if(strcmp(rec_buf,"autokeys")==0){rec_buf[0]=0;rec_kind=0;}
+      rec_rewrite();
+    }
+  }
+  rec_traverse++;
+  rec_nokeys++;
+}
+
+void rec_auto_traverse_end(void)
+{
+  if(rec_traverse>0){rec_traverse--;if(rec_nokeys>0)rec_nokeys--;}
+}
+
+void rec_auto_goto(const char *sym,int label,int branch,int nth)
+{
+  char line[160];
+  if(!rec_on())return;
+  rec_flush();
+  if(label>0)snprintf(line,sizeof(line),"auto goto lab %d",label);
+  else if(sym!=NULL&&nth>0)snprintf(line,sizeof(line),"auto goto %s %d branch %d",sym,nth,branch);
+  else {
+    rec_write("# a point without a label or a type was grabbed here; it cannot be written as \"auto goto\"");
+    return;
+  }
+  rec_write(line);
+}
+
+/* ---- prompts ---------------------------------------------------------- */
+static int rec_push(const char *init)
+{
+  if(!rec_on()||rec_depth>=REC_MAXDEPTH)return 0;
+  rec_flush();
+  rec_init[rec_depth]=init?strdup(init):NULL;
+  rec_depth++;
+  return 1;
+}
+
+static char *rec_pop(void)
+{
+  char *s;
+  if(rec_depth<=0)return NULL;
+  rec_depth--;
+  s=rec_init[rec_depth];
+  rec_init[rec_depth]=NULL;
+  return s;
+}
+
+/* a short comment that says what the following answer is for */
+static void rec_label(const char *label)
+{
+  char c[200];
+  int n,i;
+  if(label==NULL)return;
+  while(*label=='*'||isdigit((unsigned char)*label)){
+    if(*label=='*'&&isdigit((unsigned char)label[1])){label+=2;break;}
+    break;
+  }
+  snprintf(c,sizeof(c),"# %s",label);
+  for(i=0;c[i];i++)if(c[i]=='\n'||c[i]=='\r')c[i]=' ';
+  n=(int)strlen(c);
+  while(n>2&&(isspace((unsigned char)c[n-1])||c[n-1]==':'))c[--n]=0;
+  rec_write(c);
+}
+
+static void rec_ans_text(const char *text)
+{
+  char line[1200];
+  int n=(int)strlen(text);
+  int q=(n==0||isspace((unsigned char)text[0])||isspace((unsigned char)text[n-1])
+         ||strchr(text,'#')!=NULL||text[0]=='?'||text[0]=='"'||text[0]=='\'');
+  if(n>1000){rec_write("# the answer was too long to be recorded");return;}
+  if(q){
+    char qc=(strchr(text,'"')==NULL)?'"':'\'';
+    if(qc=='\''&&strchr(text,'\'')!=NULL)q=0;      /* both kinds: leave it bare */
+    else {snprintf(line,sizeof(line),"ans %c%s%c",qc,text,qc);rec_write(line);return;}
+  }
+  snprintf(line,sizeof(line),"ans %s",text);
+  rec_write(line);
+}
+
+int rec_text_begin(const char *init){return rec_push(init);}
+
+void rec_text_end(int h,int accepted,const char *label,const char *final)
+{
+  char *init;
+  if(!h)return;
+  init=rec_pop();
+  rec_label(label);
+  if(!accepted)rec_write("cancel");
+  else if(init!=NULL&&strcmp(init,final)==0)rec_write("ok");
+  else rec_ans_text(final);
+  if(init)free(init);
+}
+
+/* a form keeps its first values in one block of n*stride bytes */
+static char *rec_formvals[REC_MAXDEPTH];
+
+int rec_form_begin(int n,char **names,char *vals,int stride)
+{
+  char *copy;
+  (void)names;
+  if(!rec_on()||rec_depth>=REC_MAXDEPTH)return 0;
+  copy=(char *)malloc((size_t)n*(size_t)stride);
+  if(copy==NULL)return 0;
+  memcpy(copy,vals,(size_t)n*(size_t)stride);
+  if(!rec_push(NULL)){free(copy);return 0;}
+  rec_formvals[rec_depth-1]=copy;
+  return 1;
+}
+
+void rec_form_end(int h,int accepted,const char *title,int n,char **names,char *vals,int stride)
+{
+  char line[1200],*first;
+  int i,used=0,changed=0;
+  if(!h)return;
+  first=rec_formvals[rec_depth-1];
+  rec_formvals[rec_depth-1]=NULL;
+  { char *s=rec_pop(); if(s)free(s); }
+  rec_label(title);
+  if(!accepted)rec_write("cancel");
+  else {
+    used=snprintf(line,sizeof(line),"ans ");
+    for(i=0;i<n;i++){
+      const char *lb=names[i],*v=vals+(size_t)i*stride,*v0=first?first+(size_t)i*stride:"";
+      char name[80];
+      int k,m;
+      if(strcmp(v,v0)==0)continue;
+      if(strchr(v,'|')!=NULL||strchr(v,'#')!=NULL){
+        rec_write("# a field contained | or # and could not be recorded");
+        continue;
+      }
+      if(lb[0]=='*'&&isdigit((unsigned char)lb[1]))lb+=2;
+      strncpy(name,lb,sizeof(name)-1);name[sizeof(name)-1]=0;
+      m=(int)strlen(name);
+      while(m>0&&(isspace((unsigned char)name[m-1])||name[m-1]==':'))name[--m]=0;
+      for(k=0;name[k];k++)if(name[k]=='|'||name[k]=='=')name[k]='_';
+      if(used+strlen(name)+strlen(v)+4>=sizeof(line))continue;
+      used+=snprintf(line+used,sizeof(line)-used,"%s%s=%s",changed?"|":"",name,v);
+      changed++;
+    }
+    if(changed)rec_write(line);
+    else rec_write("ok");
+  }
+  if(first)free(first);
+}
+
+void rec_choice_end(int h,const char *prompt,int ch,const char *key)
+{
+  char *s;
+  char line[40];
+  if(!h)return;
+  s=rec_pop();
+  if(s)free(s);
+  rec_label(prompt);
+  ch=tolower((unsigned char)ch);
+  if(ch!=0&&((key[0]&&ch==tolower((unsigned char)key[0]))||(key[0]&&key[1]&&ch==tolower((unsigned char)key[1])))){
+    snprintf(line,sizeof(line),"ans %c",ch);
+    rec_write(line);
+  }
+  else rec_write("cancel");
+}
+
+/* ---- mouse ------------------------------------------------------------ */
+/* the same arithmetic as the click/drag lines use when a script is run */
+static void pixel_to_data(int ix,int iy,double *x,double *y)
+{
+  double dx,dy;
+  get_draw_area();
+  dx=MyGraph->xhi-MyGraph->xlo;
+  dy=MyGraph->yhi-MyGraph->ylo;
+  *x=MyGraph->xlo+(double)(ix-DLeft)*dx/(double)(DRight-DLeft);
+  *y=MyGraph->ylo+(double)(iy-DBottom)*dy/(double)(DTop-DBottom);
+}
+
+void rec_click(int ix,int iy)
+{
+  double x,y;
+  char line[120];
+  if(!rec_on()||rec_depth>0)return;
+  rec_flush();
+  if(DRight==DLeft||DTop==DBottom){snprintf(line,sizeof(line),"click pixel %d %d",ix,iy);rec_write(line);return;}
+  pixel_to_data(ix,iy,&x,&y);
+  snprintf(line,sizeof(line),"click %.10g %.10g",x,y);
+  rec_write(line);
+}
+
+void rec_drag(int x1,int y1,int x2,int y2)
+{
+  double a,b,c,d;
+  char line[200];
+  if(!rec_on()||rec_depth>0)return;
+  rec_flush();
+  if(DRight==DLeft||DTop==DBottom){snprintf(line,sizeof(line),"drag pixel %d %d %d %d",x1,y1,x2,y2);rec_write(line);return;}
+  pixel_to_data(x1,y1,&a,&b);
+  pixel_to_data(x2,y2,&c,&d);
+  snprintf(line,sizeof(line),"drag %.10g %.10g %.10g %.10g",a,b,c,d);
+  rec_write(line);
+}
+
+/* a parameter or initial condition was changed by hand */
+void rec_set(const char *name,double oldv,double newv)
+{
+  char line[160];
+  if(!rec_on()||rec_depth>0||oldv==newv)return;
+  rec_flush();
+  snprintf(line,sizeof(line),"set %s=%.12g",name,newv);
+  rec_write(line);
+}
+
+/* ---- start and stop ---------------------------------------------------- */
+static void rec_snapshot(void)
+{
+  char line[300];
+  int i,used;
+  double v;
+  rec_write("# state when the recording started");
+  used=snprintf(line,sizeof(line),"set ");
+  for(i=0;i<NUPAR;i++){
+    char item[160];
+    if(get_val(upar_names[i],&v)==0)continue;
+    snprintf(item,sizeof(item),"%s%s=%.12g",used>4?";":"",upar_names[i],v);
+    if(used+(int)strlen(item)>=72){rec_write(line);used=snprintf(line,sizeof(line),"set ");snprintf(item,sizeof(item),"%s=%.12g",upar_names[i],v);}
+    used+=snprintf(line+used,sizeof(line)-used,"%s",item);
+  }
+  if(used>4)rec_write(line);
+  used=snprintf(line,sizeof(line),"set ");
+  for(i=0;i<NODE;i++){
+    char item[160];
+    snprintf(item,sizeof(item),"%s%s=%.12g",used>4?";":"",uvar_names[i],last_ic[i]);
+    if(used+(int)strlen(item)>=72){rec_write(line);used=snprintf(line,sizeof(line),"set ");snprintf(item,sizeof(item),"%s=%.12g",uvar_names[i],last_ic[i]);}
+    used+=snprintf(line+used,sizeof(line)-used,"%s",item);
+  }
+  if(used>4)rec_write(line);
+}
+
+static void rec_atexit(void)
+{
+  /* leave a complete file behind however XPP ends */
+  if(rec_fp!=NULL){
+    rec_flush();
+    rec_write("# end of recording");
+    fclose(rec_fp);
+    rec_fp=NULL;
+  }
+}
+
+static int rec_open(const char *name,int snapshot)
+{
+  static int registered=0;
+  time_t t=time(NULL);
+  char line[600],*nl;
+  rec_fp=fopen(name,"w");
+  if(rec_fp==NULL)return 0;
+  if(!registered){atexit(rec_atexit);registered=1;}
+  strncpy(rec_name,name,sizeof(rec_name)-1);rec_name[sizeof(rec_name)-1]=0;
+  rec_kind=0;rec_buf[0]=0;rec_depth=0;rec_nokeys=0;rec_traverse=0;
+  rec_ls=0;rec_lt=0;rec_lk=0;rec_lw=0;
+  rec_echo=(getenv("XPP_REC_ECHO")!=NULL);
+  rec_test=(getenv("XPP_REC_TEST")!=NULL);
+  {char *ts=ctime(&t);nl=strchr(ts,'\n');if(nl)*nl=0;
+   snprintf(line,sizeof(line),"# XPPAUT script recorded %s",ts);}
+  rec_write(line);
+  snprintf(line,sizeof(line),"# model: %s",this_file);
+  rec_write(line);
+  rec_write("# Edit freely.  Run it with File -> Do script, or:  xppaut model.ode -script this_file.xps");
+  if(snapshot)rec_snapshot();
+  return 1;
+}
+
+void script_record_stop(void)
+{
+  if(rec_fp==NULL)return;
+  /* the keys that chose "Stop recording" are not part of the recording */
+  if(rec_kind==1){
+    int n=(int)strlen(rec_buf);
+    if(n>=4&&strcmp(rec_buf+n-4," f o")==0){
+      rec_buf[n-4]=0;
+      if(strcmp(rec_buf,"keys")==0){rec_buf[0]=0;rec_kind=0;}
+      rec_rewrite();
+    }
+  }
+  rec_flush();
+  rec_write("# end of recording");
+  fclose(rec_fp);
+  rec_fp=NULL;
+  while(rec_depth>0){char *s=rec_pop();if(s)free(s);}
+  if(Xup){
+    char m[600];
+    snprintf(m,sizeof(m),"Recording saved to %s",rec_name);
+    bottom_msg(0,m);
+  }
+}
+
+void script_record_from_menu(void)
+{
+  char filename[XPP_MAX_NAME];
+  int snap;
+  if(rec_fp!=NULL){script_record_stop();return;}
+  if(active){
+    err_msg("A script is running -- it cannot be recorded while it runs");
+    return;
+  }
+  default_script_name(filename,sizeof(filename));
+  if(!file_selector("Record script",filename,"*.xps"))return;
+  {
+    FILE *t=fopen(filename,"r");
+    if(t!=NULL){
+      fclose(t);
+      if(TwoChoice("YES","NO","File exists. Overwrite?","yn")!='y')return;
+    }
+  }
+  snap=(TwoChoice("YES","NO","Start with the current parameters?","yn")=='y');
+  if(!rec_open(filename,snap)){
+    err_msg("Cannot write the script file");
+    return;
+  }
+  if(Xup){
+    char m[600];
+    snprintf(m,sizeof(m),"Recording to %s -- File -> recOrd to stop",filename);
+    bottom_msg(0,m);
+  }
+}
+
+/* start a recording from the environment (used for testing and demos) */
+void script_record_from_env(void)
+{
+  const char *f=getenv("XPP_RECORD");
+  if(f!=NULL&&*f&&rec_fp==NULL){
+    if(!rec_open(f,0))fprintf(stderr,"XPP_RECORD: cannot write %s\n",f);
+  }
 }

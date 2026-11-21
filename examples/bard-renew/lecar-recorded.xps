@@ -1,0 +1,7 @@
+# Recorded with File -> recOrd script (new in XPPAUT 8.4, 21 Nov 2026): integrate,
+# nullclines, fit the window. Recording writes what you do as a script.
+# XPPAUT script recorded Sat Nov 21 17:33:11 2026
+# model: lecar.ode
+# Edit freely.  Run it with File -> Do script, or:  xppaut model.ode -script this_file.xps
+keys i g n n w f
+# end of recording

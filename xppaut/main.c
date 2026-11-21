@@ -1136,6 +1136,7 @@ while(1)
 void bye_bye()
 {
    int i;
+   script_record_stop();
 #ifdef __EMSCRIPTEN__
    { /* XPPAUT-Web: export figures, AUTO diagram and state for the page */
      void xw_before_quit(void);
@@ -1380,6 +1381,9 @@ void commander(ch)
 	 case 'd':
 	    script_run_from_menu();
 	    break;
+	 case 'o':
+	    script_record_from_menu();
+	    break;
                 } /* end file switch  */
 	        help();
             } /*  end file case   */ break;
@@ -1550,6 +1554,12 @@ void top_button_cross(Window w,int b)
       return;
     }
 }
+Window top_button_window(int i)
+{
+  if(i<0||i>=6)return 0;
+  return TopButton[i];
+}
+
 void top_button_press(Window w)
 {
   if(w==TopButton[0]){
@@ -1573,6 +1583,7 @@ void top_button_press(Window w)
 
   }
   if(w==TopButton[5]){
+    rec_command("browser open");     /* File -> Record script */
     make_new_browser();
 
   }

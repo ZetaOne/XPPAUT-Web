@@ -1,6 +1,7 @@
 
 
 #include "auto_x11.h"
+#include "xpp_script.h"
 #include "auto_nox.h"
 #include "init_conds.h"
 #include "derived.h"
@@ -309,6 +310,7 @@ void find_point(int ibr, int pt)
 /* What pressing Enter at the end of Grab mode does: make d the grabbed
    point -- fill in grabpt, set the parameters and initial conditions to the
    values at that point.  Shared by traverse_diagram() and auto_goto_point(). */
+static void rec_grabbed(DIAGRAM *d);
 void auto_grab_point(DIAGRAM *d)
 {
   int i;
@@ -335,6 +337,7 @@ void auto_grab_point(DIAGRAM *d)
   grabpt.index=d->index;
   for(i=0;i<NAutoPar;i++)
     constants[Auto_index_to_array[i]]=grabpt.par[i];
+  rec_grabbed(d);       /* File -> Record script */
 }
 
 /* ---- scripting: select a point of the bifurcation diagram, exactly as
@@ -358,6 +361,22 @@ static int ag_matches(DIAGRAM *d,int kind,const char *symb,int label,int branch)
   if(kind==AG_TYPE){get_bif_sym(sy,d->itp);return strcmp(sy,symb)==0;}
   if(kind==AG_LABEL)return d->lab>0&&d->lab==label;
   return 1;
+}
+
+/* File -> Record script: write the grabbed point as an "auto goto" line --
+   by its label if it has one, else as the n-th point of its type on its branch */
+static void rec_grabbed(DIAGRAM *d)
+{
+  char sy[3];
+  DIAGRAM *p;
+  int nth=0;
+  if(!script_recording())return;
+  get_bif_sym(sy,d->itp);
+  for(p=bifd;p!=NULL;p=p->next){
+    if(ag_matches(p,AG_TYPE,sy,0,d->ibr))nth++;
+    if(p==d)break;
+  }
+  rec_auto_goto(sy,d->lab,d->ibr,nth);
 }
 
 int auto_goto_point(int kind,const char *symb,int n,int label,int branch,char *err,int errsize)
@@ -430,7 +449,17 @@ void auto_list_points(void)
   fflush(stdout);
 }
 
+static void traverse_diagram_x(void);
+/* Grab mode: the keys that move along the diagram are not recorded; the point
+   that is chosen is (see auto_grab_point) */
 void traverse_diagram()
+{
+  rec_auto_traverse_begin();
+  traverse_diagram_x();
+  rec_auto_traverse_end();
+}
+
+static void traverse_diagram_x()
 {
   DIAGRAM *d,*dnew,*dold;
   int done=0;
@@ -759,7 +788,7 @@ int byeauto_(iflag)
 	  if(w==AutoW.abort){SBW;*iflag=1;return(1);}
           break;
         case KeyPress:
-	   ch=get_key_press(&event);
+	   ch=get_key_press_nr(&event);    /* Esc during a run is not recorded */
           if(ch==ESC){*iflag=1;return(0);}
 	  break;
 	  
@@ -1230,21 +1259,31 @@ void auto_enter(w,v)
 }
 
 
+void auto_button_x(XEvent ev);
+/* the real work is in auto_button_x(); the wrapper only tells the recorder when
+   the AUTO window is done with its popup menus */
 void auto_button(ev)
+     XEvent ev;
+{
+  auto_button_x(ev);
+  rec_key_context(0);
+}
+
+void auto_button_x(ev)
      XEvent ev;
 {
   Window w=ev.xbutton.window;
   if(Auto.exist==0)return;
-  if(w==AutoW.axes){SBW;auto_plot_par(); return;}
-  if(w==AutoW.numerics){SBW; auto_num_par(); return;}
-  if(w==AutoW.grab){SBW; auto_grab(); return;}
-  if(w==AutoW.run){SBW; auto_run(); return;}
-  if(w==AutoW.redraw){SBW; redraw_diagram(); return;}
-  if(w==AutoW.clear){SBW; draw_bif_axes(); return;}
-  if(w==AutoW.per){SBW; auto_per_par(); return;}
-  if(w==AutoW.param){SBW; auto_params(); return;}
+  if(w==AutoW.axes){SBW;rec_auto_key('a');auto_plot_par(); return;}
+  if(w==AutoW.numerics){SBW;rec_auto_key('n'); auto_num_par(); return;}
+  if(w==AutoW.grab){SBW;rec_auto_key('g'); auto_grab(); return;}
+  if(w==AutoW.run){SBW;rec_auto_key('r'); auto_run(); return;}
+  if(w==AutoW.redraw){SBW;rec_auto_key('d'); redraw_diagram(); return;}
+  if(w==AutoW.clear){SBW;rec_auto_key('c'); draw_bif_axes(); return;}
+  if(w==AutoW.per){SBW;rec_auto_key('u'); auto_per_par(); return;}
+  if(w==AutoW.param){SBW;rec_auto_key('p'); auto_params(); return;}
   if(w==AutoW.kill){SBW; auto_kill(); return;}
-  if(w==AutoW.file){SBW;auto_file(); return;}
+  if(w==AutoW.file){SBW;rec_auto_key('f');auto_file(); return;}
 }
 
 
@@ -1258,13 +1297,29 @@ void auto_kill()
 }
 
 /* window that receives scripted AUTO keys (0 if the AUTO window is not open) */
+/* does a key press in window w belong to the AUTO window? (File -> Record script) */
+int auto_owns_key(Window w)
+{
+  if(Auto.exist==0)return 0;
+  return (w==AutoW.base||w==AutoW.canvas);
+}
+
 Window auto_key_window(void)
 {
   if(Auto.exist==0)return 0;
   return AutoW.canvas;
 }
 
+void auto_keypress_x(XEvent ev,int *used);
 void auto_keypress(ev,used)
+     XEvent ev;
+     int *used;
+{
+  auto_keypress_x(ev,used);
+  rec_key_context(0);
+}
+
+void auto_keypress_x(ev,used)
      XEvent ev;
      int *used;
 {
@@ -1285,6 +1340,7 @@ void auto_keypress(ev,used)
  if(w==AutoW.base||w==AutoW.canvas||w2==AutoW.base)
  {
    *used=1;
+   rec_key_kind(2);                 /* recorded as autokeys (xpp_script.c) */
    ks=(char)get_key_press(&ev);
    /* XLookupString(&ev,buf,maxlen,&ks,&comp); */
 

@@ -1,4 +1,5 @@
 #include <stdlib.h> 
+int get_key_press_nr();
 #include <stdio.h>
 #include <string.h>
 #include <X11/Xlib.h>
@@ -102,7 +103,7 @@ void txtview_keypress(XEvent ev)
  Window w=ev.xkey.window;
  char ks;
  if(w==txtview.base||w==txtview.text){
-   ks=(char)get_key_press(&ev);
+   ks=(char)get_key_press_nr(&ev);
    if(ks==UP){txtview_press(txtview.up,0,0); return;}
    if(ks==DOWN){txtview_press(txtview.down,0,0); return;}
    if(ks==PGUP){txtview_press(txtview.pgup,0,0); return;}

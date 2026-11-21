@@ -1,5 +1,6 @@
 
 #include "edit_rhs.h"
+int get_key_press_nr();
 #include "init_conds.h"
 #include "browse.h"
 #include "auto_x11.h"
@@ -251,7 +252,7 @@ int e_box_event_loop(sb,pos,col)
 	break;
 	
 	case KeyPress:
-	ch=get_key_press(&ev);
+	ch=get_key_press_nr(&ev);
 	edit_window(w,pos,s,col,&done,ch);
        if(done!=0){
 	           if(done==DONE_ALL){status=DONE_ALL;break;}

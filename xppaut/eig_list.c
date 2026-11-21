@@ -1,4 +1,5 @@
 #include "eig_list.h"
+int get_key_press_nr();
 #include "many_pops.h"
 #include "pop_list.h"
 #include "ggets.h"
@@ -185,7 +186,7 @@ void eq_list_keypress(ev,used)
  if(w==eq_list.main||w==eq_list.base||w==eq_list.list)
  {
   *used=1;
-   ks=(char)get_key_press(&ev);
+   ks=(char)get_key_press_nr(&ev);
  
 
  

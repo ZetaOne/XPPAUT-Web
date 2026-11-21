@@ -1,4 +1,6 @@
 #include "browse.h"
+#include "xpp_script.h"
+int get_key_press_nr();
 #include <string.h>
 #include <strings.h>
 #include "parserslow.h"
@@ -1044,12 +1046,12 @@ XEvent ev;
   {
     done=1;
     while(done){
-      if(w==b->up)data_up(b);
-      if(w==b->down)data_down(b);
-      if(w==b->pgup)data_pgup(b);
-      if(w==b->pgdn)data_pgdn(b);
-      if(w==b->left)data_left(b);
-      if(w==b->right)data_right(b);
+      if(w==b->up){rec_browse_key("up");data_up(b);}
+      if(w==b->down){rec_browse_key("down");data_down(b);}
+      if(w==b->pgup){rec_browse_key("pgup");data_pgup(b);}
+      if(w==b->pgdn){rec_browse_key("pgdn");data_pgdn(b);}
+      if(w==b->left){rec_browse_key("left");data_left(b);}
+      if(w==b->right){rec_browse_key("right");data_right(b);}
       waitasec(100);
       if(XPending(display)>0)
 	  {
@@ -1065,35 +1067,35 @@ XEvent ev;
     return;
   }
 
- if(w==b->home){data_home(b); return;}
+ if(w==b->home){rec_browse_key("home");data_home(b); return;}
 
- if(w==b->end){data_end(b); return;}
+ if(w==b->end){rec_browse_key("end");data_end(b); return;}
 
- if(w==b->first){data_first(b); return;}
+ if(w==b->first){rec_browse_key("s");data_first(b); return;}
 
-if(w==b->last){data_last(b); return;}
+if(w==b->last){rec_browse_key("e");data_last(b); return;}
 
- if(w==b->restore){data_restore(b); return;}
+ if(w==b->restore){rec_browse_key("r");data_restore(b); return;}
 
- if(w==b->write){data_write(b); return;}
+ if(w==b->write){rec_browse_key("w");data_write(b); return;}
 
- if(w==b->get){data_get(b); return;}
+ if(w==b->get){rec_browse_key("g");data_get(b); return;}
  
- if(w==b->find){data_find(b); return;}
+ if(w==b->find){rec_browse_key("f");data_find(b); return;}
 
- if(w==b->repl){data_replace(b);return;}
+ if(w==b->repl){rec_browse_key("p");data_replace(b);return;}
  
- if(w==b->load){data_read(b);return; }
+ if(w==b->load){rec_browse_key("l");data_read(b);return; }
 
- if(w==b->addcol){data_add_col(b);return;}
+ if(w==b->addcol){rec_browse_key("a");data_add_col(b);return;}
 
- if(w==b->delcol){data_del_col(b);return;}
+ if(w==b->delcol){rec_browse_key("d");data_del_col(b);return;}
 
- if(w==b->unrepl){data_unreplace(b);return;}
+ if(w==b->unrepl){rec_browse_key("u");data_unreplace(b);return;}
 
- if(w==b->table){data_table(b);return;}
+ if(w==b->table){rec_browse_key("t");data_table(b);return;}
  
- if(w==b->close){kill_browser(b);return;}
+ if(w==b->close){rec_command("browser close");kill_browser(b);return;}
 
 }
 
@@ -1121,6 +1123,7 @@ int *used;
   *used=1;
   
 
+ rec_key_kind(3);                  /* recorded as browsekeys (xpp_script.c) */
  ks=(char)get_key_press(&ev);
 
 
@@ -1599,3 +1602,22 @@ void get_col_list(s,cl,n)
 
  
 
+
+
+/* ---- scripting (xpp_script.c): where the script's keys and button presses go ---- */
+Window browser_key_window(void)
+{
+  return my_browser.xflag?my_browser.base:0;
+}
+
+int browser_owns_key(Window w)
+{
+  return my_browser.xflag&&(w==my_browser.base||w==my_browser.main||w==my_browser.upper);
+}
+
+Window browser_button_window(const char *name)
+{
+  if(!my_browser.xflag)return 0;
+  if(strcmp(name,"close")==0)return my_browser.close;
+  return 0;
+}

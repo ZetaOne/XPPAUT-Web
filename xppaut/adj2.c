@@ -61,7 +61,6 @@ void orbit_back();
 void iso_back(int which);
 extern int METHOD,DelayFlag,NFlags,TORUS,itor[MAXODE];
 void extra();
-float *my_liap[2];
 
 
 
@@ -74,8 +73,6 @@ struct {
 } my_trans;
    
 int TRANPOSE_HERE=0;
-int LIAP_FLAG=0;
-int LIAP_N,LIAP_I;
 extern double NEWT_ERR;
 double ADJ_EPS=1.e-8,ADJ_ERR=1.e-3;
 int ADJ_MAXIT=20,ADJ_HERE=0,H_HERE=0,h_len,HODD_EV=0;
@@ -886,61 +883,6 @@ return(1);
 
 
 		
-/* this is some code for the maximal liapunov exponent
-   I assume you have computed an orbit and it is in storage
-   
-   at each time point, I use y+dy as an initial condition
-   I then integrate for one time step 
-   I subtract this from y(t+dt) and divide by the norm of dy.
-   I take the log of this and sum up the logs dividing by Ndt
-   to get an approximation
-*/
-
-void do_liapunov()
-{
-  double z;
-  int i;
-  double *x;
-  new_int("Range over parameters?(0/1)",&LIAP_FLAG);
-  if(LIAP_FLAG!=1){
-    hrw_liapunov(&z,0,NEWT_ERR);
-    return;
-  }
-  x=&MyData[0];
-  do_range(x,0); 
-  /* done the range */
-  for(i=0;i<LIAP_I;i++){
-    storage[0][i]=my_liap[0][i];
-    storage[1][i]=my_liap[1][i];
-  }
-  storind=LIAP_I;
-  refresh_browser(storind);
-  LIAP_FLAG=0;
-  free(my_liap[0]);
-  free(my_liap[1]);
-}
-
-void alloc_liap(int n)
-{
-  if(LIAP_FLAG==0)return;
-  my_liap[0]=(float *)malloc(sizeof(float)*(n+1));
-  my_liap[1]=(float *)malloc(sizeof(float)*(n+1));
-  LIAP_N=(n+1);
-  LIAP_I=0;
-}
-
-void do_this_liaprun(int i,double p)
-{
- double liap;
- if(LIAP_FLAG==0)return;
- my_liap[0][i]=p;
- hrw_liapunov(&liap,1,NEWT_ERR);
- my_liap[1][i]=liap;
- /* plintf("p=%g lambda=%g \n",p,liap); */
- LIAP_I++;
-}
-
-
 void norm_vec(v,mu,n) /* returns the length of the vector and the unit vector */
      double *v,*mu;
      int n;
@@ -958,58 +900,6 @@ void norm_vec(v,mu,n) /* returns the length of the vector and the unit vector */
 }
 
 
-int hrw_liapunov(double *liap,int batch,double eps)
-{
- double y[MAXODE];
- double yp[MAXODE],nrm,dy[MAXODE];
- double t0,t1;
- double sum=0.0;
- char bob[256];
- int istart=1;
- int i,j;
-  if(storind<2){
-   if(batch==0)err_msg("You need to compute an orbit first");
-   return(0);
- }
-
- /* lets make an initial random perturbation */
-   for(i=0;i<NODE;i++)
-      dy[i]=0; 
-   dy[0]=eps;
-   
-   for(j=0;j<(storind-1);j++){
-     t0=storage[0][j];
-     t1=storage[0][j+1];
-     istart=1;
-     for(i=0;i<NODE;i++)
-       y[i]=storage[i+1][j]+dy[i];
-     one_step_int(y,t0,t1,&istart);
-     for(i=0;i<NODE;i++)
-       yp[i]=(y[i]-storage[i+1][j+1]);
-     norm_vec(yp,&nrm,NODE);
-     nrm=nrm/eps;
-     if(nrm==0.0){
-       if(batch==0)err_msg("Liapunov:-infinity exponent!");
-       return 0; /* something wrong here */
-     }
-     sum=sum+log(nrm);
-    for(i=0;i<NODE;i++)
-      dy[i]=eps*yp[i];
-     /*  plintf("%d %g %g %g %g %g  \n",j,nrm,log(nrm),sum/((double)(j+1)),
-	 yp[0],yp[1]); */
-
-   }
-   t1=storage[0][storind-1]-storage[0][0];
-   if(t1!=0)
-     sum=sum/t1;
-   *liap=sum;
-   if(batch==0){
-     sprintf(bob,"Maximal exponent is %g",sum);
-     err_msg(bob);
-   }
-
- return 1; /*  success !! */
-}
  
 
 

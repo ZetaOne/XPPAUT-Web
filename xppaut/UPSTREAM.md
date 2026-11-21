@@ -1,7 +1,7 @@
 # Upstream source
 
 This directory is the official XPPAUT 8.0 source release by Bard Ermentrout,
-updated to XPPAUT 8.1, 8.2 and 8.4 with the source Bard sent in November 2026 (see
+updated to XPPAUT 8.1, 8.2 and 8.4 (including its update of 21 November) with the source Bard sent in November 2026 (see
 "XPPAUT 8.1", "XPPAUT 8.2" and "XPPAUT 8.4" below). Upstream files are kept unmodified apart from the
 patches listed here, so web-specific changes stay visible in git history.
 
@@ -214,3 +214,32 @@ for byte, in Bard's unmodified 8.4 build and in the browser (both engines).
 Notes for Bard: in his e-mail example the line `i g` must be `keys i g`
 ("unknown command"); and the manual's `keys g f a` (Auto-freeze) is `keys g f
 o` (the Freeze menu's keys are `f d e r k b c o`; `a` is ignored silently).
+
+### XPPAUT 8.4 update (Bard Ermentrout, 21 November 2026)
+
+`newversion.zip` (SHA-256 aaab20d4c343827d61a2104a7359b713078bf4ce241b6294dd413c40aa06a8e2):
+`xppsrc8.4.tgz` (SHA-256 96e069300ea4af358459b3cf9f4da75a7794d36f750ef26ac101690addef385d)
+and `xpp_doc.pdf` (the manual, updated; replaces the old one here and is
+served as `help/xpp_doc.pdf`). Version still 8.4.2. Merged three-way on top
+of the 19 November 8.4; three conflicts, all both sides adding code:
+`main.c` (`script_record_stop()` before our `xw_before_quit()`), `txtread.c`
+(our `<stdlib.h>` instead of `stdfix.h`, plus his `get_key_press_nr()`
+declaration, which matches the definition), `xpp_script.c` (his
+`default_script_name()`, then our page-picked script).
+
+- New file: `lyapunov.c` (Lyapunov exponents by the QR method, complete
+  spectrum for N < 8, own adaptive Dormand-Prince integrator in double
+  precision; Numerics -> stocHast -> Liapunov). Also in `web/objects.txt`.
+- Changed: `xpp_script.c/.h` (recording: File -> recOrd script, and the
+  `XPP_RECORD` environment variable), `menu.c`, `menus.h`, `main.c`,
+  `pop_list.c`, `dialog_box.c`, `ggets.c`, `init_conds.c`, `auto_x11.c`,
+  `browse.c`, `edit_rhs.c`, `eig_list.c`, `txtread.c`, `rubber.c`,
+  `arrayplot.c`, `adj2.c`, `Makefile`.
+
+Batch outputs: 144 SAME, 9 NOOUT. Lorenz (r=28): the browser gives lambda =
+0.8617, -0.0138, -14.5145, sum -13.6667 = divergence, Kaplan-Yorke 2.0584,
+the same as the desktop build (both engines). Recording in the browser gives
+the same file as the desktop build driven by xdotool ("keys i g n n", the
+stop keys left out). Examples: `examples/bard-renew/` (all script examples,
+formerly `examples/xpp84/`; old `xpp84/...` links still work), with
+`lorenz.ode` + `lorenz-lyapunov.xps` and `lecar-recorded.xps`.

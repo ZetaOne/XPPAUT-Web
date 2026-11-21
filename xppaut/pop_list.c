@@ -242,7 +242,21 @@ void scroll_popup(STRING_BOX *sb,SCROLLBOX *scrb)
 
 }
 
+int do_string_box_x(int n,int row,int col,char *title,char **names,char values[][MAX_LEN_SBOX],int maxchar);
+/* the form dialog; the real work is in do_string_box_x() */
 int do_string_box(n,row,col,title,names,values,maxchar)
+     int n,row,col,maxchar;
+     char **names,values[][MAX_LEN_SBOX],*title;
+
+{
+ int h,st;
+ h=rec_form_begin(n,names,(char *)values,MAX_LEN_SBOX);
+ st=do_string_box_x(n,row,col,title,names,values,maxchar);
+ rec_form_end(h,st==DONE_ALL,title,n,names,(char *)values,MAX_LEN_SBOX);
+ return(st);
+}
+
+int do_string_box_x(n,row,col,title,names,values,maxchar)
      int n,row,col,maxchar;
      char **names,values[][MAX_LEN_SBOX],*title;
 
@@ -1466,7 +1480,21 @@ void expose_choice(choice1,choice2,msg,c1,c2,wm,w)
 	if(w==c2)Ftext(0,0,choice2,c2);
 }
 
+int two_choice_x(char *choice1,char *choice2,char *string,char *key,int x,int y,Window w,char *title);
+/* the yes/no box; the real work is in two_choice_x() */
 int two_choice(choice1,choice2,string,key,x,y,w,title)
+ char *choice1,*choice2,*string,*key,*title;
+ int x,y;
+  Window w;
+ {
+  int h,v;
+  h=rec_text_begin(NULL);
+  v=two_choice_x(choice1,choice2,string,key,x,y,w,title);
+  rec_choice_end(h,string,v,key);
+  return(v);
+ }
+
+int two_choice_x(choice1,choice2,string,key,x,y,w,title)
  char *choice1,*choice2,*string,*key,*title;
  int x,y;
   Window w;
@@ -1627,6 +1655,7 @@ Window *root,hwin;
 			     for(i=0;i<n;i++){
 			     if(ev.xbutton.window==p.w[i]){
 				value=(int)p.key[i];
+				rec_menu_key(value);   /* File -> Record script */
 				done=1;
 				}
 			     }	

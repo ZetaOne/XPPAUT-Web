@@ -10,6 +10,7 @@ mkdir -p "$root/public/wasm" "$root/public/odes"
 cp "$root/build/wasm/xppaut.mjs" "$root/build/wasm/xppaut.wasm" "$root/public/wasm/"
 rm -rf "$root/public/help"
 cp -r "$root/xppaut/help" "$root/public/help"
+cp "$root/xppaut/xpp_doc.pdf" "$root/public/help/xpp_doc.pdf" # Bard Ermentrout's manual (updated November 2026)
 mkdir -p "$root/public/wasm/jspi"
 cp "$root/build/wasm-jspi/xppaut.mjs" "$root/build/wasm-jspi/xppaut.wasm" "$root/public/wasm/jspi/"
 # example models from every folder of the XPP release, with the animation,
@@ -19,7 +20,7 @@ python3 - "$root" <<'EOF'
 import json, os, shutil, sys
 root = sys.argv[1]
 groups = [  # folders relative to the project
-    ("xpp84", "8.4-scripting-xpp", "examples/xpp84"),
+    ("bard-renew", "bard-renew", "examples/bard-renew"),
     ("xpp82", "New in XPPAUT 8.2", "examples/xpp82"),
     ("xpp81", "New in XPPAUT 8.1", "examples/xpp81"),
     ("ode", "XPP examples", "xppaut/ode"),

@@ -1,0 +1,8 @@
+# The full Lyapunov spectrum of the Lorenz system (new in XPPAUT 8.4, 21 Nov
+# 2026): integrate, then Numerics -> stocHast -> Liapunov with its defaults.
+# The exponents appear in a message box and in XPP's output.
+keys i g                  # integrate: the exponents continue from the last point
+keys u h l                # Numerics -> stocHast -> Liapunov
+ok                        # its form: accept the values shown
+keys esc                  # leave the Numerics menu
+msg "Lyapunov exponents of Lorenz: about 0.9, 0, -14.6 (sum = -13.667)"

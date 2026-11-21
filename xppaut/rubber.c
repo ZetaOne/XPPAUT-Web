@@ -31,7 +31,7 @@ int rubber(x1,y1,x2,y2,w,f)
   int state=0;
   if(script_is_active()){            /* a script can supply the drag (xpp_script.c) */
     int r=script_mouse_drag(x1,y1,x2,y2);
-    if(r==1)return(1);
+    if(r==1){rec_drag(*x1,*y1,*x2,*y2);return(1);}
     if(r<0)return(0);
   }
   xor_flag=1;
@@ -105,7 +105,9 @@ int rubber(x1,y1,x2,y2,w,f)
 	*y1=dragy;
 	*x2=oldx;
 	*y2=oldy;
+	rec_drag(dragx,dragy,oldx,oldy);   /* File -> Record script */
         }
+        else rec_esc();
 
   XSelectInput(display,w,KeyPressMask|ButtonPressMask|ExposureMask|
 ButtonReleaseMask|ButtonMotionMask);

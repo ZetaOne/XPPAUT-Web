@@ -481,7 +481,8 @@ let groups: ExampleGroup[] = []
 
 /** "ode/lecar.ode" -> group and file name; a bare name means the main folder */
 function splitId(id: string): [ExampleGroup | undefined, string] {
-  const [g, n] = id.includes('/') ? [id.slice(0, id.indexOf('/')), id.slice(id.indexOf('/') + 1)] : ['ode', id]
+  let [g, n] = id.includes('/') ? [id.slice(0, id.indexOf('/')), id.slice(id.indexOf('/') + 1)] : ['ode', id]
+  if (g === 'xpp84') g = 'bard-renew' // the script examples' earlier group (old links)
   const group = groups.find((x) => x.id === g)
   return [group?.odes.includes(n) ? group : undefined, n]
 }

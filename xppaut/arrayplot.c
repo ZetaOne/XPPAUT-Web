@@ -1,4 +1,5 @@
 #include "arrayplot.h"
+#include "xpp_script.h"
 #include "array_print.h"
 #include "surface.h"
 
@@ -88,6 +89,7 @@ FILE *ap_fp;
 GC aplot_gc;
 static Window aplot_wsurf;
 int first_aplot_press;
+static int aplot_scroll_noted=0;
 int do_range(double *, int);
 extern double MyData[MAXODE];
 
@@ -259,6 +261,7 @@ void do_array_plot_events(ev)
     /*printf("%d\n",ev.xmotion.y-first_aplot_press); */
     aplot.nstart=aplot.nstart-ev.xmotion.y+first_aplot_press;
     if(aplot.nstart<0)aplot.nstart=0;
+    if(!aplot_scroll_noted){rec_comment("the array plot was scrolled with the mouse here (not recorded)");aplot_scroll_noted=1;}
     redraw_aplot(aplot);}
     break;
   case ConfigureNotify:
@@ -279,8 +282,10 @@ void do_array_plot_events(ev)
     wborder(ev.xexpose.window,1,aplot);
     break;
   case ButtonPress:
-    if(ev.xany.window==aplot.wplot)
+    if(ev.xany.window==aplot.wplot){
       first_aplot_press=ev.xbutton.y;
+      aplot_scroll_noted=0;
+    }
     /*apbutton(ev.xbutton.window,aplot);*/
       apbutton(ev.xbutton.window);
     break;
@@ -412,30 +417,53 @@ void apbutton(w)
      Window w;
 {
   if(w==aplot.wedit){
+    rec_command("aplot edit");
     editaplot(&aplot);
   }
   if(w==aplot.wfit){
+    rec_command("aplot fit");
     fit_aplot();
   }
   if(w==aplot.wrange){
+    rec_command("aplot range");
     set_up_aplot_range();
 
   }
   if(w==aplot.wredraw){
+    rec_command("aplot redraw");
     redraw_aplot(aplot);
   }
   if(w==aplot.wprint){
+    rec_command("aplot print");
     print_aplot(&aplot);
   }
   if(w==aplot.wclose){
+    rec_command("aplot close");
     destroy_aplot();
   }
   if(w==aplot.wgif){
+    rec_command("aplot gif");
     gif_aplot();
   }
   if(w==aplot_wsurf){
+    rec_command("aplot surface");
     surface_create();
   }
+}
+
+/* scripting (xpp_script.c): the window behind a button name, 0 if the array plot is not open */
+Window aplot_button_window(const char *name)
+{
+  if(aplot.alive==0)return 0;
+  if(strcmp(name,"edit")==0)return aplot.wedit;
+  if(strcmp(name,"fit")==0)return aplot.wfit;
+  if(strcmp(name,"range")==0)return aplot.wrange;
+  if(strcmp(name,"redraw")==0)return aplot.wredraw;
+  if(strcmp(name,"print")==0)return aplot.wprint;
+  if(strcmp(name,"close")==0)return aplot.wclose;
+  if(strcmp(name,"gif")==0)return aplot.wgif;
+  if(strcmp(name,"surface")==0)return aplot_wsurf;
+  return 0;
 }
 
 void draw_scale(ap)

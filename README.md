@@ -41,7 +41,7 @@ Last). Click a preview to play the full 2-minute video.*
   and [8.1](#new-in-xppaut-81).
 - **AUTO** for steady states, periodic orbits and bifurcation diagrams, now also
   of delay equations.
-- **227 example models** from the XPPAUT release and for the new 8.1, 8.2 and 8.4 features, or your own `.ode` file with
+- **228 example models** from the XPPAUT release and for the new 8.1, 8.2 and 8.4 features, or your own `.ode` file with
   its `.ani`, `.tab`, `.dat` and `.xps` (script) files (pick them together, or drag and drop
   them onto the page; a model whose table file is missing asks for it).
 - **Window panels**: drag, resize, close, save as PNG, or pop out into a
@@ -67,6 +67,16 @@ Last). Click a preview to play the full 2-minute video.*
   your browser.
 
 ## New in XPPAUT 8.4: scripting
+
+**Latest from Bard Ermentrout (21 November 2026):** scripts can now be
+**recorded** (File → **recOrd script**: XPP writes what you do as a script,
+ready to run again; the same menu entry stops it); the **Lyapunov
+exponents** (Numerics → stocHast → Liapunov) give the complete spectrum for
+systems of fewer than 8 equations, computed in double precision with their
+own adaptive integrator, with error estimates, the check that their sum
+equals the flow's divergence, and the Kaplan–Yorke dimension; small fixes;
+and Bard's manual, updated after 12 years:
+[xpp_doc.pdf](https://zetaone.github.io/XPPAUT-Web/help/xpp_doc.pdf).
 
 XPPAUT 8.4 (November 2026) can run **scripts**: plain text files (`.xps`) of
 commands that XPP carries out for you, for reproducing a figure exactly, for a
@@ -100,7 +110,7 @@ shot pp.ps          # save the picture (.ps or .svg), no dialogs
   is the last button of the Cmd panel. XPP's File → **Do script** (keys F D;
   also under More… in the Cmd panel) works too. A link can also run a script
   as soon as the model opens:
-  [`?ode=xpp84/lecar.ode&script=lecar-nullclines.xps`](https://zetaone.github.io/XPPAUT-Web/?ode=xpp84/lecar.ode&script=lecar-nullclines.xps).
+  [`?ode=bard-renew/lecar.ode&script=lecar-nullclines.xps`](https://zetaone.github.io/XPPAUT-Web/?ode=bard-renew/lecar.ode&script=lecar-nullclines.xps).
 - **Writing scripts**: **New script** (under **Files**, and in the Scripts
   menu) and **Edit** open a script editor, like Edit .ode. **Save and run**
   runs it at once; no restart is needed. **Add scripts…** (or Open .ode
@@ -108,7 +118,7 @@ shot pp.ps          # save the picture (.ps or .svg), no dialogs
 - **Pictures as PNG**: in XPPAUT-Web, `shot fig.png` (or `shot auto fig.png`)
   saves the graph (or the AUTO diagram) as it is on screen, at twice the
   size, ready to view on a phone. Desktop XPPAUT saves `.ps` or `.svg`.
-- **Examples**: the group **8.4-scripting-xpp** in the Model list, with what
+- **Examples**: the group **bard-renew**, first in the Model list, with what
   scripts do best: work that would take many clicks and dialogs by hand, done
   the same way every time.
   - `hh.ode` (Hodgkin–Huxley): an f–I sweep, eight currents one after
@@ -123,8 +133,12 @@ shot pp.ps          # save the picture (.ps or .svg), no dialogs
     label: steady states, the Hopf point and folds, the periodic orbits, and
     two-parameter curves of the Hopf point (both directions, with a
     generalised Hopf point) and of a fold (`wc-auto.xps`).
-  - `lecar.ode` (Morris–Lecar) with five shorter scripts, including Bard's
-    example above, scripted mouse clicks, and an AUTO diagram.
+  - `lecar.ode` (Morris–Lecar) with six shorter scripts, including Bard's
+    example above, scripted mouse clicks, an AUTO diagram, and one made with
+    the recorder (`lecar-recorded.xps`).
+  - `lorenz.ode` (Lorenz): the full **Lyapunov spectrum** in one script
+    (`lorenz-lyapunov.xps`): about 0.86, 0 and −14.51, summing to the flow's
+    divergence −13.667, Kaplan–Yorke dimension 2.06.
   - `hutch.ode` (Hutchinson delay equation): an AUTO sweep over three
     starting values that carries on when a pass has no Hopf point
     (`try … else … end`), with the periodic orbits from each Hopf point
