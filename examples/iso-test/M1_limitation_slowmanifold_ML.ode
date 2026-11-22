@@ -19,6 +19,11 @@
 #      layer magnified 10^4 times); Restore (keys r).
 #   4. The same with z8 (10^8 times) and z11 (10^11 times), each in a new window.
 #
+#  A vertical stack of dots at the centre of windows 2 and 3: those are the runs of the
+#  finer zooms (windows 3 and 4), which all lie within 1e-8 (or 1e-11) of the layer, so on
+#  the coarser scale they fall at position 0, one above the other.  Ignore them there; the
+#  next window spreads them out.
+#
 #  WHAT YOU SEE: the phase against the position across the layer.  On a scale where the
 #  grid is fine enough the phase changes smoothly; here, at every zoom, neighbouring
 #  starting points can still have very different phases.

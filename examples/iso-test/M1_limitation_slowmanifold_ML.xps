@@ -26,7 +26,7 @@ keys esc
 keys v 2
 ans X-axis=z4|Y-axis=theta|Xmin=-1|Ymin=0|Xmax=1|Ymax=1|Xlabel=(w-0.258357)*1e4|Ylabel=phase
 keys r
-msg "Zoom 10^4: phase against position across the layer (spacing 1e-06 in w)"
+msg "Zoom 10^4: phase against position across the layer (spacing 1e-06 in w); the stack at 0 = the finer zooms, spread out in the next window"
 wait 3
 keys m c
 keys u c a
@@ -38,7 +38,7 @@ keys esc
 keys v 2
 ans X-axis=z8|Y-axis=theta|Xmin=-1|Ymin=0|Xmax=1|Ymax=1|Xlabel=(w-0.258357)*1e8|Ylabel=phase
 keys r
-msg "Zoom 10^8: phase against position across the layer (spacing 1e-10 in w)"
+msg "Zoom 10^8: phase against position across the layer (spacing 1e-10 in w); the stack at 0 = the finer zooms, spread out in the next window"
 wait 3
 keys m c
 keys u c a
