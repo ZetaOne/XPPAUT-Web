@@ -1,0 +1,101 @@
+# M1_HH.ode -- isochrons by BRUTE FORCE (method M1), reduced Hodgkin-Huxley neuron (Osinga & Moehlis 2010, eq. 4.1)
+#
+# ======================================================================================
+# WHAT TO DO IN THE XPPAUT WINDOW   (or run M1_HH.xps: File > Do script, which does
+#                                    all of it; XPPAUT 8.4 or XPPAUT-Web)
+# ======================================================================================
+#  A. The phase map, coloured (every dot = one starting point, colour = its phase)
+#   1. nUmerics > Color code > Another quantity:  theta,  Choose,  Min 0,  Max 1
+#      (keys u c a), then Esc back to the main menu
+#   2. Initialconds > 2par range                                              (keys i 2)
+#        Vary1 px    Start1 -90   End1 52
+#        Vary2 py    Start2 0.3   End2 0.8
+#        Steps 50    Steps2 50    Crv(1) Array(2): 2
+#        Reset storage: N   (keep every run: one dot each)
+#        Use old ic's: Y    (every run starts from its own (px, py); with N each run
+#                            would go on from where the last one ended)
+#        Cycle color: N   Movie: N
+#      Ok.  2500 runs; each leaves one dot at its starting point (px, py), coloured by
+#      its phase.  The picture is the PHASE MAP: the colour bands are the isochrons.
+#
+#  B. Isochrons as dots (only the starting points whose phase is close to k/niso)
+#   3. nUmerics > Color code > No color (keys u c n), Esc
+#   4. Erase (e);  Viewaxes > 2D:  X-axis px0,  Y-axis isoy   (or: set yp=isoy)
+#   5. Initialconds > 2par range again (as in 2; Steps 80 x 80).  Dots land only where
+#      the phase is within tol of 0, 1/niso, 2/niso, ...: niso isochrons at once.
+#      Change niso or tol in the Param window.
+#
+#  C. Look at one point:  Param px=-50, py=0.55;  Viewaxes > 2D: t, theta;  Initialconds
+#      > Go: theta jumps to its final value after the first spike (here 0.269).
+#
+# ======================================================================================
+# THE METHOD (M1, brute force)
+# ======================================================================================
+#  Ingredients (computed once, numbers below):  the limit cycle Γ, its period T, a phase
+#  zero gamma0 on Γ (the point of Γ with the largest v), and a spike threshold thr.
+#
+#  For every starting point x0 = (px, py) on a grid:
+#   step 1  integrate x0 for a time trans, long enough to settle onto Γ
+#           (Γ attracts by about 10^20 per period)
+#   step 2  record s = the time of an upward crossing of v = thr after settling
+#   step 3  the same crossing for the cycle itself: starting at gamma0, Γ first crosses
+#           thr upward at t = tc0.  x0 is then late by (s - tc0) compared with gamma0,
+#           so its ASYMPTOTIC PHASE (clock reading) is
+#                theta(x0) = (tc0 - s)/T   mod 1
+#   step 4  the isochron of phase th = the set of grid points with theta = th:
+#           the colour bands, or the dots whose theta is within tol of th
+#
+#  Why it works: x0 and the point of Γ with phase theta(x0) approach each other, so they
+#  cross thr at the same times once x0 has settled.  Only forward integration is needed.
+#  What it costs: one full integration per grid point; the grid sets the resolution.
+#  Its limitation: see M1_limitation_pileup_HH.ode (all phases crowd into the
+#  equilibrium x* = (-59.6044, 0.402577) inside Γ, which no grid resolves).
+# ======================================================================================
+
+# --- the model: the reduced Hodgkin-Huxley neuron of Osinga & Moehlis (2010), eq. (4.1):
+#     m = minf(v) (fast), h = 0.8 - n;  I = 10 (repetitive firing)
+am(x)=0.1*(x+40)/(1-exp(-(x+40)/10))
+bm(x)=4*exp(-(x+65)/18)
+an(x)=0.01*(x+55)/(1-exp(-(x+55)/10))
+bn(x)=0.125*exp(-(x+65)/80)
+minf(x)=am(x)/(am(x)+bm(x))
+fx(x,y)=iapp-gna*minf(x)^3*(0.8-y)*(x-ena)-gk*y^4*(x-ek)-gl*(x-el)
+fy(x,y)=an(x)*(1-y)-bn(x)*y
+par iapp=10,gna=120,gk=36,gl=0.3,ena=50,ek=-77,el=-54.4
+
+# --- the ingredients: Γ has period per; it crosses v = thr upward for the first time
+#     tc0 after gamma0 = (44.706379, 0.45973791), the point of Γ with the largest v
+par per=11.84628522, thr=-20, tc0=11.74002818
+
+# --- step 1: the starting point x0 = (px, py), written as v = px + dx, n = py + dy so
+#     that px and py are parameters and 2par range can vary them
+par px=-50, py=0.55
+dx'=fx(px+dx,py+dy)
+dy'=fy(px+dx,py+dy)
+init dx=0,dy=0
+aux v=px+dx
+aux n=py+dy
+
+# --- step 2: s = time of the latest upward crossing of v = thr (tl stays -1 until one)
+tl'=0
+init tl=-1
+global 1 px+dx-thr {tl=t}
+
+# --- step 3: the asymptotic phase (-1: no spike yet, e.g. a start at the equilibrium)
+thx=if(tl>0)then(mod((tc0-tl)/per,1))else(-1)
+aux theta=thx
+
+# --- step 4: isochrons as dots: isoy = py when theta is within tol of a multiple of
+#     1/niso, otherwise off the picture
+par niso=10, tol=0.012
+aux isoy=if((thx>=0)&(abs(mod(thx*niso+0.5,1)-0.5)<tol*niso))then(py)else(-0.7)
+aux px0=px
+aux py0=py
+
+# --- numerics: settle for 6 periods, then store only the last 1.3 periods
+@ meth=rk4, dt=0.01, trans=71.08, total=86.5, bound=1e5, maxstor=4000000
+#     every run of a range starts again from dx = dy = 0, tl = -1 ("Use old ic's" = Y,
+#     XPP's default; with N each run would go on from where the last one ended)
+@ rangereset=no, rangeoldic=yes
+@ xp=px0, yp=py0, xlo=-90, xhi=52, ylo=0.3, yhi=0.8, lt=-4, colormap=1
+done

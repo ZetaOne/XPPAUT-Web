@@ -27,6 +27,7 @@ groups = [  # folders relative to the project
     ("tstauto", "AUTO test models", "xppaut/tstauto"),
     ("canonical", "Canonical models", "xppaut/canonical"),
     ("help", "Examples from the help pages", "xppaut/help/odes"),
+    ("iso-test", "iso-test", "examples/iso-test"),
 ]
 index = []
 for gid, label, src in groups:

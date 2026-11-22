@@ -1,0 +1,20 @@
+# M1_limitation_pileup_ML.xps -- runs M1_limitation_pileup_ML.ode in one go (the steps at the top of the .ode).
+#   XPPAUT 8.4:  File > Do script > M1_limitation_pileup_ML.xps    (or: xppaut M1_limitation_pileup_ML.ode -script M1_limitation_pileup_ML.xps)
+#   XPPAUT-Web:  the Test-Isochrons page's "Open in XPPAUT-Web" loads both files and runs it
+speed 0.3
+msg "M1 near the equilibrium x* = (-23.09182, 0.1580528): a box 2 by 0.02, coloured by phase"
+keys u c a
+ans theta
+ans c
+ans 0
+ans 1
+keys esc
+keys i 2
+ans Vary1=px|Start1=-24.0918|End1=-22.0918|Vary2=py|Start2=0.148053|End2=0.168053|Steps=40|Steps2=40|Reset storage (Y/N)=N|Use old ic's (Y/N)=Y|Cycle color (Y/N)=N|Movie(Y/N)=N|Crv(1) Array(2)=2
+msg "Every phase (every colour) appears in this small box. Now a box 10 times smaller:"
+wait 4
+keys e
+set xlo=-23.19182;xhi=-22.99182;ylo=0.1570528;yhi=0.1590528
+keys i 2
+ans Vary1=px|Start1=-23.1918|End1=-22.9918|Vary2=py|Start2=0.157053|End2=0.159053|Steps=40|Steps2=40|Reset storage (Y/N)=N|Use old ic's (Y/N)=Y|Cycle color (Y/N)=N|Movie(Y/N)=N|Crv(1) Array(2)=2
+msg "Still every phase: no grid resolves the isochrons at x*. M1 cannot draw them here."
