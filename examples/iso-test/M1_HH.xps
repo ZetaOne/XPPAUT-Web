@@ -1,28 +1,39 @@
 # M1_HH.xps -- runs M1_HH.ode in one go (the steps at the top of the .ode).
 #   XPPAUT 8.4:  File > Do script > M1_HH.xps    (or: xppaut M1_HH.ode -script M1_HH.xps)
-#   XPPAUT-Web:  the Test-Isochrons page's "Open in XPPAUT-Web" loads both files and runs it
+#   XPPAUT-Web:  pick it under Scripts (group iso-test), or open the link with ?script=
 speed 0.3
-msg "M1, brute force: integrate every starting point of a grid, read its phase from its spikes"
+msg "M1, brute force: integrate every starting point of a grid and read its phase from its spikes"
 
-# A. the phase map: colour each dot by its asymptotic phase theta (0..1, periodic colours)
+# A. window 1: the phase map, each starting point coloured by its phase theta (periodic colours)
+keys v 2
+ans X-axis=vs|Y-axis=ns|Xmin=-90|Ymin=0.3|Xmax=52|Ymax=0.8|Xlabel=v|Ylabel=n
 keys u c a
 ans theta
 ans c
 ans 0
 ans 1
 keys esc
-msg "2par range over the starting point (px, py): 50 x 50 = 2500 runs, one dot each"
+msg "2par range over the starting point: 70 x 70 = 4900 runs, one dot each (a few minutes)"
 keys i 2
-ans Vary1=px|Start1=-90|End1=52|Vary2=py|Start2=0.3|End2=0.8|Steps=50|Steps2=50|Reset storage (Y/N)=N|Use old ic's (Y/N)=Y|Cycle color (Y/N)=N|Movie(Y/N)=N|Crv(1) Array(2)=2
-msg "The phase map: points with the same colour have the same phase. Colour bands = isochrons."
+ans Vary1=vs|Start1=-90|End1=52|Vary2=ns|Start2=0.3|End2=0.8|Steps=70|Steps2=70|Reset storage (Y/N)=N|Use old ic's (Y/N)=Y|Cycle color (Y/N)=N|Movie(Y/N)=N|Crv(1) Array(2)=2
+keys n n
+msg "Window 1: the phase map; points of one colour have the same phase, so the colour bands are the isochrons. Nullclines on top."
 wait 4
 
-# B. isochrons as dots: keep only the starting points with theta within tol of k/niso
+# B. window 2: the same runs, only the starting points whose phase is near 0, 0.1, ..., 0.9
+#    (a new window copies the colour settings but not the quantity: set it, then switch
+#    colour off for this window)
+keys m c
+keys u c a
+ans theta
+ans c
+ans 0
+ans 1
+keys esc
 keys u c n
 keys esc
-keys e
-set yp=isoy
-msg "Now only the points whose phase is 0, 0.1, ..., 0.9 (within tol): ten isochrons"
-keys i 2
-ans Vary1=px|Start1=-90|End1=52|Vary2=py|Start2=0.3|End2=0.8|Steps=80|Steps2=80|Reset storage (Y/N)=N|Use old ic's (Y/N)=Y|Cycle color (Y/N)=N|Movie(Y/N)=N|Crv(1) Array(2)=2
-msg "Ten isochrons by brute force. They crowd into the equilibrium x*: see M1_limitation_pileup_HH."
+keys v 2
+ans X-axis=vb|Y-axis=nb|Xmin=-90|Ymin=0.3|Xmax=52|Ymax=0.8|Xlabel=v|Ylabel=n
+keys r
+keys n n
+msg "Done. Window 2: ten isochrons (phase 0, 0.1, ..., 0.9) by brute force. M1's limitation: they pile up at the equilibrium x*, see M1_limitation_pileup_HH."
