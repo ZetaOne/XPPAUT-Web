@@ -251,7 +251,7 @@ void init_ar_ic()
     ar_ic[i].index0=-1;
     ar_ic[i].formula[0]=0;
     ar_ic[i].n=0;
-    ar_ic[i].var[i]=0;
+    ar_ic[i].var[0]=0;
     ar_ic[i].type=0;
   }
 }

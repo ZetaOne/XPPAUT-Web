@@ -1,4 +1,4 @@
-# Scripting (new in XPPAUT 8.4): the Morris-Lecar model with six scripts.
+# Scripting (new in XPPAUT 8.4): the Morris-Lecar model with seven scripts.
 # A script is a text file (.xps) of commands that XPP carries out for you:
 # set parameters, press menu keys, answer dialogs, click in the plot, drive
 # AUTO, loop, and save figures. Bard Ermentrout's manual: script_doc.html.
@@ -13,6 +13,8 @@
 #                         (sweep_0.05.ps, ...) and all runs in sweep.ps
 #   lecar-mouse.xps       scripted mouse: a text label, a zoom rectangle,
 #                         and three runs started by clicks (mIce)
+#   lecar-two-diagrams.xps  two diagrams in one AUTO window, numbered on
+#                         (the second starts at label 6, not 1)
 #   lecar-recorded.xps    made with File -> recOrd script (new): XPP writes
 #                         what you do as a script, ready to run again
 #   lecar-auto.xps        AUTO: steady states, the first Hopf point, the

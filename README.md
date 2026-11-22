@@ -78,6 +78,12 @@ equals the flow's divergence, and the Kaplan–Yorke dimension; small fixes;
 and Bard's manual, updated after 12 years:
 [xpp_doc.pdf](https://zetaone.github.io/XPPAUT-Web/help/xpp_doc.pdf).
 
+**23 November 2026:** a fix to AUTO, found by the author of XPP-Lab: after
+**Clear grab**, a new diagram started next to an old one now numbers its
+points after the old ones, instead of starting again at label 1 (so no two
+points share a label). Example: `lecar-two-diagrams.xps`. Saved diagrams now
+keep every digit.
+
 XPPAUT 8.4 (November 2026) can run **scripts**: plain text files (`.xps`) of
 commands that XPP carries out for you, for reproducing a figure exactly, for a
 tutorial with pauses, or for a parameter sweep. Bard Ermentrout's manual:
@@ -133,9 +139,10 @@ shot pp.ps          # save the picture (.ps or .svg), no dialogs
     label: steady states, the Hopf point and folds, the periodic orbits, and
     two-parameter curves of the Hopf point (both directions, with a
     generalised Hopf point) and of a fold (`wc-auto.xps`).
-  - `lecar.ode` (Morris–Lecar) with six shorter scripts, including Bard's
-    example above, scripted mouse clicks, an AUTO diagram, and one made with
-    the recorder (`lecar-recorded.xps`).
+  - `lecar.ode` (Morris–Lecar) with seven shorter scripts, including Bard's
+    example above, scripted mouse clicks, AUTO diagrams (also two in one
+    window, `lecar-two-diagrams.xps`), and one made with the recorder
+    (`lecar-recorded.xps`).
   - `lorenz.ode` (Lorenz): the full **Lyapunov spectrum** in one script
     (`lorenz-lyapunov.xps`): about 0.86, 0 and −14.51, summing to the flow's
     divergence −13.667, Kaplan–Yorke dimension 2.06.

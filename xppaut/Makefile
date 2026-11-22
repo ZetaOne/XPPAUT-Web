@@ -42,7 +42,7 @@ CC= gcc -std=c99 -pedantic -D_XOPEN_SOURCE=600 -Wall
 #  to create univeral mac app, lipo -create -output xppmac  xppx86 xpparm
 # for I86
 #  -target x86_64-apple-macos10.12  
-CFLAGS= -g -pedantic -O2   -DNOERRNO -DNON_UNIX_STDIO -DAUTO -DCVODE_YES  -DHAVEDLL -DMYSTR1=$(MAJORVER) -DMYSTR2=$(MINORVER)  -I/opt/X11/include
+CFLAGS= -g -pedantic -O2   -DNOERRNO -DNON_UNIX_STDIO -DAUTO -DCVODE_YES  -DHAVEDLL -DMYSTR1=$(MAJORVER) -DMYSTR2=$(MINORVER)  -I/opt/X11/include 
 # add this line for x86
 #-target x86_64-apple-macos10.12
 #LDFLAGS=  -m64 -L/usr/lib -L/usr/lib64

@@ -483,6 +483,11 @@ int user_construct(int argc, char **argv);
 int user_destruct();
 #endif
 
+/* see gogoauto.c: restart-data switches set by do_auto() */
+extern int auto_append_s;
+extern int auto_lab_floor;
+extern int auto_br_floor;
+
 #endif
 
 

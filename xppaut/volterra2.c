@@ -197,6 +197,7 @@ void init_sums(t0,n,dt,i0,iend,ishift)
    double sum[MAXODE],al,alpbet,mu;
    int nvar=FIX_VAR+NODE+NMarkov;
    int l,ioff,ker,i;
+   if(NKernel==0)return; /* no integrals: no history is kept */
    SETVAR(0,t);
    SETVAR(PrimeStart,tp);
    for(l=0;l<nvar;l++)SETVAR(l+1,Memory[l][ishift]);
@@ -330,8 +331,9 @@ int volterra(y,t,dt,nt,neq,istart,work)
       }
     for(i=NODE;i<NODE+FIX_VAR;i++)       /* pass 2 for fixed variables      */   
       SETVAR(i+1,evaluate(my_ode[i]));
-    for(i=0;i<NODE+FIX_VAR+NMarkov;i++)
-      Memory[i][0]=get_ivar(i+1);        /* save everything                 */
+    if(NKernel>0) /* the history exists only for models with integrals */
+      for(i=0;i<NODE+FIX_VAR+NMarkov;i++)
+        Memory[i][0]=get_ivar(i+1);      /* save everything                 */
     CurrentPoint=1;
     *istart=0;
   }
@@ -429,9 +431,11 @@ int volt_step(y,t,dt,neq,yg,yp,yp2,ytemp,errvec,jac)
 /*  for(i=NODE;i<NODE+FIX_VAR;i++)
    SETVAR(i+1,evaluate(my_ode[i])); */
  for(i=0;i<NODE;i++)y[i]=yg[i];
- ind=CurrentPoint%MaxPoints;
- for(i=0;i<NODE+FIX_VAR+NMarkov;i++)
-   Memory[i][ind]=GETVAR(i+1);
+ if(NKernel>0){ /* the history exists only for models with integrals */
+   ind=CurrentPoint%MaxPoints;
+   for(i=0;i<NODE+FIX_VAR+NMarkov;i++)
+     Memory[i][ind]=GETVAR(i+1);
+ }
  CurrentPoint++;
    
 

@@ -1698,7 +1698,7 @@ int add_ani_rline(a,x1,y1,col,thick)
  err=chk_ani_color(col,&index);
  if(err==1)
    {
-     a->col[0]=index;
+     a->col[0]=-index; /* a named colour is -index, as in the other commands */
    }
  else
    {

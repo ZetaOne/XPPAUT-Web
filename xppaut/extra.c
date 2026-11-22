@@ -215,7 +215,6 @@ void add_export_list(char *in,char *out)
   int l1=strlen(in);
   int l2=strlen(out);
   int i;
-  /* XPPAUT-Web: +1 for the terminating NUL (was a 1-byte heap overflow) */
   in_out.lin=(char *)malloc(l1+1);
   in_out.lout=(char *)malloc(l2+1);
   strcpy(in_out.lin,in);
@@ -223,12 +222,12 @@ void add_export_list(char *in,char *out)
   i=get_export_count(in);
   in_out.in=(int *)malloc((i+1)*sizeof(int));
   in_out.intype=(int *)malloc((i+1)*sizeof(int));
-  in_out.vin=(double *)malloc((i+1)*sizeof(double));
+  in_out.vin=(double *)calloc(i+1,sizeof(double));
   in_out.nin=i;
   i=get_export_count(out);
   in_out.out=(int *)malloc((i+1)*sizeof(int));
   in_out.outtype=(int *)malloc((i+1)*sizeof(int));
-  in_out.vout=(double *)malloc((i+1)*sizeof(double));
+  in_out.vout=(double *)calloc(i+1,sizeof(double)); /* zero if the library is missing */
   in_out.nout=i;
   /* plintf(" in %d out %d \n",in_out.nin,in_out.nout); */
 

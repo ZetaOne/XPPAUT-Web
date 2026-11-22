@@ -172,6 +172,21 @@ void add_diagram(ibr,ntot,itp,lab,nfpar,a,uhi,ulo,u0,ubar,
  
 }
 
+/* Highest label and branch number of the points in the diagram (0 when empty) */
+void diagram_max_ids(int *maxlab, int *maxbr)
+{
+  DIAGRAM *d;
+  int l,b;
+  *maxlab=0;
+  *maxbr=0;
+  for(d=bifd;d!=NULL;d=d->next){
+    l=abs(d->lab);
+    b=abs(d->ibr);
+    if(l>*maxlab)*maxlab=l;
+    if(b>*maxbr)*maxbr=b;
+  }
+}
+
 extern DIAGRAM *CUR_DIAGRAM;
 void dde_po_clear_saved(void);
 
@@ -602,10 +617,12 @@ int save_diagram(fp,n)
     fprintf(fp,"%d %d %d %d %d %d %d %d %d %d %d %d\n", 
 	    d->calc,d->ibr,d->ntot,d->itp,d->lab,d->index,d->nfpar,
 	    d->icp1,d->icp2,d->icp3,d->icp4,d->flag2);
-    for(i=0;i<8;i++)fprintf(fp,"%g ",d->par[i]);
-    fprintf(fp,"%g %g \n",d->norm,d->per);
+    /* every number with %.17g: a saved diagram reads back as it was (the
+       loader reads %lg, so older files with fewer digits still load) */
+    for(i=0;i<8;i++)fprintf(fp,"%.17g ",d->par[i]);
+    fprintf(fp,"%.17g %.17g \n",d->norm,d->per);
     
-    for(i=0;i<n;i++)fprintf(fp,"%f %f %f %f %f %f\n",d->u0[i],d->uhi[i],d->ulo[i],
+    for(i=0;i<n;i++)fprintf(fp,"%.17g %.17g %.17g %.17g %.17g %.17g\n",d->u0[i],d->uhi[i],d->ulo[i],
 			    d->ubar[i],d->evr[i],d->evi[i]);
     d=d->next;
     if(d==NULL)break;

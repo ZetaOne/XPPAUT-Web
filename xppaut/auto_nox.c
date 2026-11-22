@@ -455,6 +455,9 @@ int chk_auto_bnds(int ix,int iy)
 void renamef(old,new)
 char *old,*new;
 {
+#ifdef _WIN32
+ remove(new); /* rename() fails on Windows when the target exists */
+#endif
  rename(old,new);
 }
 
@@ -508,6 +511,7 @@ char *old,*new;
  int c;
  /*  printf("Appending old=%s new=%s\n",old,new); */
  fo=fopen(old,"r");
+ if(fo==NULL)return; /* nothing to append (AUTO wrote no restart data) */
  fn=fopen(new,"r");
  if(fn==NULL){
      fclose(fo);
@@ -544,11 +548,13 @@ void close_auto(flg)  /* labels compatible with A2K  */
      int flg;
 {
   char string[1000];
-  /*    if(fp8_is_open){
-      fclose(fp8);
-      fp8_is_open=0;
-    }
-  */
+  /* fort.8 must be closed before it is renamed or appended: Windows cannot
+     rename an open file, and POSIX would leave the open stream pointing at
+     the renamed file */
+  if(fp8_is_open){
+    fclose(fp8);
+    fp8_is_open=0;
+  }
   if(flg==0) {/*Overwrite*/
     sprintf(string,"%s.b",this_auto_file);
     renamef(fort7,string);
@@ -556,7 +562,10 @@ void close_auto(flg)  /* labels compatible with A2K  */
     renamef(fort9,string);
 
     sprintf(string,"%s.s",this_auto_file);
-    renamef(fort8,string);
+    if(auto_append_s) /* new start, diagram kept: keep the earlier restart data */
+      appendf(fort8,string);
+    else
+      renamef(fort8,string);
   }
   else {/*APPEND*/
     sprintf(string,"%s.b",this_auto_file);
@@ -644,10 +653,36 @@ int dde_po_pd2_run(void);
 int dde_po_tr2_run(void);
 int dde_po_get_orbit(int ibr,int lab,double per,int maxrows,int *nrow,double **ts,double **us);
 extern int MAXSTOR;
+/* If AUTO stopped with a parameter that is NaN or infinite, or far outside
+   the Par min/max window (AUTO checks the window only after a step, so it
+   can be overshot by about a step but not by more than the window itself),
+   put back the values the model had before the run.  Otherwise the model is
+   left at the last point, as it always was. */
+static void restore_auto_params(int n,const double *saved)
+{
+  int i,bad=0;
+  double lo=Auto.rl0,hi=Auto.rl1,w,x;
+  if(lo>hi){x=lo;lo=hi;hi=x;}
+  w=hi-lo;
+  for(i=0;i<n;i++){
+    x=constants[Auto_index_to_array[i]];
+    if(!isfinite(x)){bad=1;break;}
+    if(i==Auto.icp1&&(x<lo-w||x>hi+w)){bad=1;break;}
+  }
+  if(!bad)return;
+  for(i=0;i<n;i++)
+    constants[Auto_index_to_array[i]]=saved[i];
+  evaluate_derived();
+  redo_all_fun_tables();
+  plintf("AUTO ended with a parameter outside its range or not finite: parameters restored to their values before the run\n");
+}
+
 void do_auto(iold,isave,itp)
      int iold,isave;
      int itp;
 {
+      int i_par,npar_saved;
+      double par_saved[8];
       /* AUTO evaluates delayed arguments as the steady state x(t-tau)=x(t)
          (see func() in autpp.c).  That is right for equilibria and their
          fold curves, but periodic orbits, BVPs and homoclinics of a delay
@@ -709,6 +744,23 @@ void do_auto(iold,isave,itp)
 		*/
  
     open_auto(iold); /* this copies the relevant files .s  to fort.3 */
+    /* A new start (nothing copied to fort.3) whose diagram is kept: fort.3 is
+       empty, so AUTO would number its labels and branch from 1 again and the
+       new .s would overwrite the restart data of the points already in the
+       diagram.  Number after the diagram's own and keep its restart data. */
+    auto_append_s=0;
+    auto_lab_floor=0;
+    auto_br_floor=0;
+    if(iold==NO_OPEN_3&&NBifs>1){
+      diagram_max_ids(&auto_lab_floor,&auto_br_floor);
+      auto_append_s=1;
+    }
+    /* AUTO writes each trial parameter value into the model and leaves the
+       last one there; remember the values the model had */
+    npar_saved=NAutoPar;
+    if(npar_saved>8)npar_saved=8;
+    for(i_par=0;i_par<npar_saved;i_par++)
+      par_saved[i_par]=constants[Auto_index_to_array[i_par]];
     go_go_auto(); /* this complets the initialization and calls the 
                       main routines 
 		  */
@@ -717,6 +769,10 @@ void do_auto(iold,isave,itp)
     close_auto(isave); /* this copies fort.8 to the .s file and other 
                           irrelevant stuff 
 		       */
+    auto_append_s=0;
+    auto_lab_floor=0;
+    auto_br_floor=0;
+    restore_auto_params(npar_saved,par_saved);
     
     if(RestartLabel!=0){
       printf("RestartLabel=%d itp=%d ips=%d nfpar=%d ilp=%d isw=%d isp=%d A2p=%d \n",RestartLabel,Auto.itp, Auto.ips,Auto.nfpar,Auto.ilp,Auto.isw,Auto.isp,AutoTwoParam);
@@ -2875,10 +2931,10 @@ void save_auto_numerics(fp)
    fprintf(fp,"%d ",AutoPar[i]);
   fprintf(fp,"%d\n",NAutoUzr);
   for(i=0;i<9;i++)
-    fprintf(fp,"%g %d\n",outperiod[i],UzrPar[i]);
+    fprintf(fp,"%.17g %d\n",outperiod[i],UzrPar[i]);
  fprintf(fp,"%d %d %d \n",Auto.ntst,Auto.nmx,Auto.npr);
- fprintf(fp,"%g %g %g \n",Auto.ds,Auto.dsmin,Auto.dsmax);
- fprintf(fp,"%g %g %g %g\n",Auto.rl0,Auto.rl1,Auto.a0,Auto.a1);
+ fprintf(fp,"%.17g %.17g %.17g \n",Auto.ds,Auto.dsmin,Auto.dsmax);
+ fprintf(fp,"%.17g %.17g %.17g %.17g\n",Auto.rl0,Auto.rl1,Auto.a0,Auto.a1);
  fprintf(fp,"%d %d %d %d %d %d %d\n",aauto.iad,aauto.mxbf,aauto.iid,aauto.itmx,aauto.itnw,aauto.nwtn,aauto.iads);
 }
 
@@ -2911,7 +2967,7 @@ void load_auto_numerics(fp)
 void save_auto_graph(fp)
      FILE *fp;
 {
-  fprintf(fp,"%g %g %g %g %d %d \n",Auto.xmin,Auto.ymin,Auto.xmax,Auto.ymax,
+  fprintf(fp,"%.17g %.17g %.17g %.17g %d %d \n",Auto.xmin,Auto.ymin,Auto.xmax,Auto.ymax,
 	Auto.var,Auto.plot);
 }
 

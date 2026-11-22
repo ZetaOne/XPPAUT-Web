@@ -1999,7 +1999,7 @@ fnhbae(iap_type *iap, rap_type *rap, doublereal *par, integer *icp, logical *chn
   doublereal rev;
   integer isw;
 
-  ev = (doublecomplex *)malloc(sizeof(doublecomplex)*(iap->ndim+64));
+  ev = (doublecomplex *)calloc(iap->ndim+64,sizeof(doublecomplex)); /* send_eigen() reads all ndim entries; eig() fills only ndm */
 
 
   /* Local */
@@ -4564,6 +4564,14 @@ newlab(iap_type *iap, rap_type *rap)
 
   mbr = 0;
   mlab = 0;
+  /* A new start whose diagram is kept finds an empty fort.3 here: the
+     labels and the branch of the diagram so far are the floors. */
+  if (auto_br_floor > mbr) {
+    mbr = auto_br_floor;
+  }
+  if (auto_lab_floor > mlab) {
+    mlab = auto_lab_floor;
+  }
   rewind(fp3);
 
  L1:

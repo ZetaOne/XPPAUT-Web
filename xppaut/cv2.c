@@ -44,8 +44,16 @@ void start_cv(y,t,n,tout,atol,rtol)
 
 void end_cv()
 {
-  N_VFree(ycv);
-  CVodeFree(cvode_mem);
+  /* free only what was allocated (integrate() may stop before start_cv() ran),
+     and clear the pointers so that a second call frees nothing twice */
+  if(ycv!=NULL){
+    N_VFree(ycv);
+    ycv=NULL;
+  }
+  if(cvode_mem!=NULL){
+    CVodeFree(cvode_mem);
+    cvode_mem=NULL;
+  }
 }
  
 static void cvf(n,t,y,ydot,fdata)

@@ -1117,6 +1117,7 @@ void find_ker(string,alt)   /* this extracts the integral operators from the str
 	inum++;
 	i++;
       }
+      num[inum]=0; /* terminate it: atof() ran on into the stack */
       mu=atof(num);
       fflag=1;
       *alt=1;
@@ -1470,6 +1471,9 @@ int nnn;
       subsk(new,big,jj,is_array); 
      
  
+   /* a line with no statements leaves v unset; the Markov clean-up below
+      tests v.type after the loop */
+   memset(&v,0,sizeof(v));
    done=parse_a_string(big,&v);
 
    if(done==-1){
@@ -1760,7 +1764,7 @@ void compile_em() /* Now we try to keep track of markov, fixed, etc as
  char vnames[MAXODE1][MAXVNAM],fnames[MAXODE1][MAXVNAM],anames[MAXODE1][MAXVNAM];
  char mnames[MAXODE1][MAXVNAM];
  double z,xlo,xhi;
- char tmp[50],big[MAXEXPLEN],formula[MAXEXPLEN],*my_string,*junk,*ptr,name[10];
+ char tmp[MAXEXPLEN],big[MAXEXPLEN],formula[MAXEXPLEN],*my_string,*junk,*ptr,name[MAXEXPLEN]; /* names of 10 characters are allowed: room for the terminating zero */
  int nmark=0,nfix=0,naux=0,nvar=0,nn,alt,in,i,ntab=0,nufun=0;
  int in1,in2,iflag;
  int fon;
@@ -2232,6 +2236,21 @@ void strpiece(dest,src,i0,ie)
   dest[ie-i0+1]=0;
 }
 
+/* A comment may follow a statement on the same line:   par a=1   # the rate
+   A # that is not the first character of the line and is not inside (), {} or [] starts the comment.
+   (A # inside braces is part of an integral kernel, int{kernel#variable}, and a line that begins with # is
+   a comment or an include.)  Returns 1 if a comment was removed. */
+static int strip_trailing_comment(char *s)
+{
+  int i,depth=0;
+  for(i=0;s[i];i++){
+    if(s[i]=='('||s[i]=='{'||s[i]=='[')depth++;
+    else if(s[i]==')'||s[i]=='}'||s[i]==']'){if(depth>0)depth--;}
+    else if(s[i]=='#'&&depth==0&&i>0){s[i]=0;return 1;}
+  }
+  return 0;
+}
+
 int parse_a_string(s1,v)
      char *s1;
      VAR_INFO *v;
@@ -2253,6 +2272,7 @@ int parse_a_string(s1,v)
     return 0;
   }
     remove_blanks(s1); 
+  if(strip_trailing_comment(s1))n1=(int)strlen(s1)-1;
 
   strcpy(s1old,s1);
   strupr(s1);
@@ -2637,7 +2657,9 @@ void read_a_line(fp,s)
 
   while(ok){
     ok=0;
-    fgets(temp,MAXEXPLEN,fp);
+    /* end of file (a model without "done"): an empty line, not the buffer
+       as it was left by the previous call */
+    if(fgets(temp,MAXEXPLEN,fp)==NULL)temp[0]=0;
 
      nn=strlen(temp)+1;
      if((save_eqn[NLINES]=(char *)malloc(nn))==NULL)exit(0);
@@ -2670,7 +2692,7 @@ void read_a_line(fp,s)
     }
   */
       
-  if(s[n-1]=='\n'||s[n-1]=='\r')s[n-1]=' ';
+  if(n>0&&(s[n-1]=='\n'||s[n-1]=='\r'))s[n-1]=' ';
   s[n]=' ';
   s[n+1]=0;
   

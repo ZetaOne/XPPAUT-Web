@@ -1,0 +1,14 @@
+# Two diagrams in one AUTO window (fixed in XPPAUT 8.4, 23 Nov 2026): after
+# Clear grab, a new start with the old diagram kept (Destroy...? No) numbers
+# its points after the old ones (labels 6, 7 on branch 2) instead of
+# starting again at 1. "auto list" shows the labels in XPP's output.
+set iapp=-0.1
+keys i g i l i l
+keys f a
+autokeys r s
+autokeys f c
+set iapp=0.4
+keys i g i l i l
+autokeys r s
+ans n
+auto list

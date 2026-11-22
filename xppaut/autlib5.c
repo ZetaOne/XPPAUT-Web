@@ -870,6 +870,10 @@ inho(iap_type *iap, integer *icp, doublereal *par)
        have created it. */
   for(i=0;i<4;i++)
     beyn_1.iflag[i]=0;
+  /* eigho() tests ieigc against 0 to see if it has met an eigenvector before:
+     it must not start as whatever the heap held */
+  for(i=0;i<2;i++)
+    blhme_1.ieigc[i]=0;
     
 
 /* Reads from fort.11 specific constants for homoclinic continuation. */

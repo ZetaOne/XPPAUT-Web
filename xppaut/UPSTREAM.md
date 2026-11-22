@@ -1,7 +1,7 @@
 # Upstream source
 
 This directory is the official XPPAUT 8.0 source release by Bard Ermentrout,
-updated to XPPAUT 8.1, 8.2 and 8.4 (including its update of 21 November) with the source Bard sent in November 2026 (see
+updated to XPPAUT 8.1, 8.2 and 8.4 (including its updates of 21 and 23 November) with the source Bard sent in November 2026 (see
 "XPPAUT 8.1", "XPPAUT 8.2" and "XPPAUT 8.4" below). Upstream files are kept unmodified apart from the
 patches listed here, so web-specific changes stay visible in git history.
 
@@ -26,7 +26,7 @@ Changes to upstream files are marked with `XPPAUT-Web:` comments.
 | File | Change | Why |
 |---|---|---|
 | `extra.c` | Gave the no-DLL stub functions proper return types and defined `MAXW` there | The no-DLL branch did not compile with clang (and `MAXW` was only defined in the DLL branch) |
-| `extra.c` | `add_export_list`: `malloc(l1)` to `malloc(l1+1)` (same for `l2`) | 1-byte heap overflow; any `.ode` using `export` aborts on Ubuntu's gcc and would corrupt the heap in WebAssembly |
+| `extra.c` | ~~`add_export_list`: `malloc(l1)` to `malloc(l1+1)`~~ | Fixed upstream in the 23 November 2026 source; no longer a patch |
 | `auto_nox.c` | `auto_start_at_homoclinic`: `do_auto(opn,close,...)` to `do_auto(opn,cls,...)` | Typo passed the address of libc `close` as the save flag, so AUTO appended to `.b`/`.d` files instead of overwriting them |
 | `gogoauto.c` | `dump_params` given a `void` return type | Implicit `int` is an error in clang |
 | `parserslow.h`, `parserslow2.c` | `strupr`/`strlwr` return `char *` (and return their argument) | Emscripten's libc declares them returning `char *`; callers ignore the result |
@@ -243,3 +243,25 @@ the same file as the desktop build driven by xdotool ("keys i g n n", the
 stop keys left out). Examples: `examples/bard-renew/` (all script examples,
 formerly `examples/xpp84/`; old `xpp84/...` links still work), with
 `lorenz.ode` + `lorenz-lyapunov.xps` and `lecar-recorded.xps`.
+
+### XPPAUT 8.4 update (Bard Ermentrout, 23 November 2026)
+
+`xppsrc8.4.tgz` (SHA-256 903e2fcecf34613daaa084cc4741aedbb74c906a39615434e5e02f1f4948a326),
+merged three-way on top of the 21 November source. The one conflict,
+`extra.c`, is our old patch: Bard now allocates `l1+1`, `l2+1` himself, so
+our patch is dropped (marked in the table above).
+
+- AUTO labels (a fix found by the author of XPP-Lab): after Clear grab, a
+  new start whose old diagram is kept numbered its labels and branches from
+  1 again. `diagram_max_ids()` (`diagram.c/.h`) and `auto_nox.c` now start
+  after the diagram's own, and keep the restart data of the old points.
+- Saved diagrams use `%.17g` (they read back exactly); other changes in
+  `aniparse.c`, `autlib1.c`, `autlib5.c`, `auto_c.h`, `cv2.c`, `form_ode.c`,
+  `gogoauto.c`, `integrate.c`, `load_eqn.c`, `parserslow2.c`, `simplenet.c`,
+  `volterra2.c`, `Makefile`.
+
+Batch outputs: 144 SAME, 9 NOOUT. Checked with `lecar-two-diagrams.xps`
+(two steady-state diagrams, Clear grab between, the old one kept): the second
+diagram's points are labels 6 and 7 on branch 2 in the desktop build and in
+the browser (both engines); the 19 November build gave labels 1 and 2 on
+branch 1 again.

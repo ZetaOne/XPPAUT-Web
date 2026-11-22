@@ -14,6 +14,12 @@ int global_conpar_type=CONPAR_DEFAULT;
 int global_setubv_type=SETUBV_DEFAULT;
 int global_num_procs=1;
 int global_verbose_flag=0;
+/* Set by do_auto() (auto_nox.c) for a new start whose diagram is kept:
+   keep AUTO's restart data (.s) from earlier runs, and number the labels and
+   the branch of the new run after the diagram's own.  All 0 otherwise. */
+int auto_append_s=0;
+int auto_lab_floor=0;
+int auto_br_floor=0;
 extern int fp8_is_open;
 extern char fort3[200], fort7[200], fort8[200],fort9[200];
 
@@ -50,12 +56,15 @@ int go_go_auto() /* this is the entry  at this point, xAuto has been set */
   rap_type rap;
   function_list list;
   int irs=xAuto.irs;
+  /* Binary mode: findlb() steps backwards through fort.3 with relative
+     fseek(), which only lands on the right record if a line end is one byte
+     (it is not in Windows text mode, where CRLF is translated). */
   if(irs>0){
-          fp3 = fopen(fort3,"r");
+          fp3 = fopen(fort3,"rb");
   }
   else
     {
-            fp3 = fopen(fort3,"w+");
+            fp3 = fopen(fort3,"w+b");
     }
   
 
