@@ -1,0 +1,55 @@
+# M1_limitation_slowmanifold_ML.xps -- runs M1_limitation_slowmanifold_ML.ode in one go (the steps at the top of the .ode).
+#   XPPAUT 8.4:  File > Do script > M1_limitation_slowmanifold_ML.xps    (or: xppaut M1_limitation_slowmanifold_ML.ode -script M1_limitation_slowmanifold_ML.xps)
+#   XPPAUT-Web:  pick it under Scripts (group iso-test), or open the link with ?script=
+speed 0.3
+msg "M1 along the repelling slow manifold: 800 starting points at v = -10 (a slice and three zooms into a layer); a minute or two"
+keys v 2
+ans X-axis=vs|Y-axis=ws|Xmin=-70|Ymin=0.0|Xmax=50|Ymax=0.65|Xlabel=v|Ylabel=w
+keys u c a
+ans theta
+ans c
+ans 0
+ans 1
+keys esc
+keys n n
+keys i r
+ans Range over=j|Steps=799|Start=0|End=799|Reset storage (Y/N)=N|Use old ic's (Y/N)=Y|Cycle color (Y/N)=N|Movie(Y/N)=N
+msg "The colour jumps where the slice meets a thin layer next to the V-nullcline (w = 0.258357). Next: three zooms, each in a new window"
+wait 4
+keys m c
+keys u c a
+ans theta
+ans c
+ans 0
+ans 1
+keys esc
+keys v 2
+ans X-axis=z4|Y-axis=theta|Xmin=-1|Ymin=0|Xmax=1|Ymax=1|Xlabel=(w-0.258357)*1e4|Ylabel=phase
+keys r
+msg "Zoom 10^4: phase against position across the layer (spacing 1e-06 in w)"
+wait 3
+keys m c
+keys u c a
+ans theta
+ans c
+ans 0
+ans 1
+keys esc
+keys v 2
+ans X-axis=z8|Y-axis=theta|Xmin=-1|Ymin=0|Xmax=1|Ymax=1|Xlabel=(w-0.258357)*1e8|Ylabel=phase
+keys r
+msg "Zoom 10^8: phase against position across the layer (spacing 1e-10 in w)"
+wait 3
+keys m c
+keys u c a
+ans theta
+ans c
+ans 0
+ans 1
+keys esc
+keys v 2
+ans X-axis=z11|Y-axis=theta|Xmin=-1|Ymin=0|Xmax=1|Ymax=1|Xlabel=(w-0.258357)*1e11|Ylabel=phase
+keys r
+msg "Zoom 10^11: phase against position across the layer (spacing 1e-13 in w)"
+wait 3
+msg "Done. M1's limitation: within 2e-4 in w the phase runs through the whole cycle, and only a grid spacing of about 1e-10 resolves it."

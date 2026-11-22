@@ -55,8 +55,10 @@
 #  Why it works: x0 and the point of Γ with phase theta(x0) approach each other, so they
 #  cross thr at the same times once x0 has settled.  Only forward integration is needed.
 #  What it costs: one full integration per grid point; the grid sets the resolution.
-#  Its limitation: see M1_limitation_pileup_HH.ode (all phases crowd into the
-#  equilibrium x* = (-59.6044, 0.402577) inside Γ, which no grid resolves).
+#  Its limitation: see M1_limitation_slowmanifold_HH.ode.  Osinga & Moehlis (2010)
+#  show that all isochrons come exponentially close to the repelling slow manifold (an
+#  "almost phaseless set") and arbitrarily close to the equilibrium x* = (-59.6044, 0.402577)
+#  (the phaseless set); across such thin layers a grid cannot resolve the phase.
 #
 #  How this file is laid out (XPP draws nullclines only when the plot axes are variables):
 #   (vs, ns)  the starting point, as variables that barely move (their equations are

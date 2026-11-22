@@ -1,0 +1,94 @@
+# M1_limitation_slowmanifold_ML.ode -- where BRUTE FORCE (method M1) fails: the repelling slow manifold,
+#                Morris-Lecar oscillator
+#
+# ======================================================================================
+# WHAT TO DO IN THE XPPAUT WINDOW   (or run M1_limitation_slowmanifold_ML.xps: File > Do script)
+# ======================================================================================
+#  A slice of starting points at v = -10, from w = 0.0 to 0.65, crosses a thin layer just
+#  below the V-nullcline, at w = 0.2583565585.  Across that layer the asymptotic phase runs
+#  through (almost) every value from 0 to 1.
+#   1. Viewaxes > 2D: X-axis vs, Y-axis ws, Xlabel v, Ylabel w (window as below);
+#      nUmerics > Color code > Another quantity: theta, Choose, 0, 1;  Nullcline > New
+#   2. Initialconds > Range over j, from 0 to 799, Steps 799, Reset storage N, Use old
+#      ic's Y.  j = 0..199 is the slice from w = 0.0 to 0.65 (window 1: coloured by
+#      phase; the colour jumps where the slice meets the layer, next to the V-nullcline);
+#      j = 200..799 are three zooms into the layer, for windows 2-4.
+#   3. Makewindow > Create; in the new window set the colour quantity again (a new window
+#      copies the colour settings but not the quantity); Viewaxes > 2D: X-axis z4, Y-axis
+#      theta, X from -1 to 1, Y from 0 to 1 (z4 = (w - 0.2583565585)*1e4, the position across the
+#      layer magnified 10^4 times); Restore (keys r).
+#   4. The same with z8 (10^8 times) and z11 (10^11 times), each in a new window.
+#
+#  WHAT YOU SEE: the phase against the position across the layer.  On a scale where the
+#  grid is fine enough the phase changes smoothly; here, at every zoom, neighbouring
+#  starting points can still have very different phases.
+#  Morris-Lecar: at 10^4 magnification (spacing 1e-6 in w) the phase still covers the
+#  whole cycle, with jumps of up to 0.3 between neighbours; at 10^8 (spacing 1e-10) it
+#  changes smoothly (jumps below 0.03).  A grid needs a spacing of about 1e-10 here.
+#
+# WHY M1 FAILS HERE (Osinga & Moehlis, SIAM J. Appl. Dyn. Syst. 9 (2010), pp. 1223-1224):
+#  "all isochrons come exponentially close to xr", the orbit along the repelling slow
+#  manifold; "extreme phase sensitivity can occur on a codimension-one set in the interior
+#  of B(Γ)"; "the density of the isochrons is not arbitrarily small but depends on the
+#  ratio ε << 1 between the slow and fast time scales"; they call the repelling slow
+#  manifold an "almost phaseless set".  M1 gives each grid point one phase, so across a
+#  layer thinner than the grid spacing the isochrons merge or alias; refining the grid
+#  costs N^2 integrations and cannot keep up with an exponentially thin layer.  M3
+#  (continuation) follows each isochron as a curve, parameterised by arclength.
+#  (The layer position here was found by zooming in with this same file; that it is the
+#  repelling slow manifold is inferred from its place next to the V-nullcline, where the
+#  paper puts that manifold.)
+#
+# THE METHOD: as M1_ML.ode (steps 1-4 there).  Extra here: w0 holds the starting w
+#  exactly (copied at t = 1e-6, before the marker variables drift by eps*F), and z4, z8,
+#  z11 = (w0 - lay)*10^k: XPP stores plot data in single precision, which cannot show
+#  differences of 1e-10 at w = 0.258, so the zoomed windows plot these scaled offsets.
+# ======================================================================================
+
+# --- the model: Morris-Lecar (Rinzel & Ermentrout's parameters, i = 100: oscillating)
+minf(x)=.5*(1+tanh((x-va1)/va2))
+winf(x)=.5*(1+tanh((x-va3)/va4))
+tauw(x)=1/cosh((x-va3)/(2*va4))
+fx(x,y)=(i-gl*(x-vl)-gca*minf(x)*(x-vca)-gk*y*(x-vk))/c
+fy(x,y)=phi*(winf(x)-y)/tauw(x)
+par i=100,c=20,gl=2,vl=-60,gca=4.4,vca=120,gk=8,vk=-84
+par va1=-1.2,va2=18,va3=2,va4=30,phi=0.04
+
+# --- the ingredients (see M1_ML.ode)
+par per=85.29064, thr=-8.505133, tc0=77.87963
+
+# --- step 1: the starting points.  One Range over j = 0..799 covers all four windows:
+#     j = 0..199 the whole slice from w = ylo to yhi; j = 200..399, 400..599, 600..799 the
+#     layer lay +- 1e-4, +- 1e-8, +- 1e-11.  At t = 1e-6 an event puts the starting point
+#     y0 = ystart(j) (computed in double precision) into the trajectory (V, W), the
+#     marker (vs, ws) that window 1 plots, and w0.  (One Range keeps all the runs in XPP's
+#     storage, so every window can redraw them; a second Range would replace them.)
+par j=0, vlay=-10, ylo=0.0, yhi=0.65, lay=0.2583565585
+hw(k)=if(k<1.5)then(1e-4)else(if(k<2.5)then(1e-8)else(1e-11))
+ystart(i)=if(i<199.5)then(ylo+(yhi-ylo)*i/199)else(lay+hw(flr(i/200))*(2*(i-200*flr(i/200))/199-1))
+par eps=1e-9
+vs'=eps*fx(vs,ws)
+ws'=eps*fy(vs,ws)
+w0'=0
+init vs=-10,ws=0.2583565585,w0=0.2583565585
+V'=fx(V,W)
+W'=fy(V,W)
+init V=-10,W=0.2583565585
+global 1 t-1e-6 {V=vlay;W=ystart(j);vs=vlay;ws=ystart(j);w0=ystart(j)}
+
+# --- steps 2 and 3: the asymptotic phase at every upward crossing of v = thr
+theta'=0
+init theta=-1
+global 1 V-thr {theta=mod((tc0-t)/per,1)}
+
+# --- the position across the layer, magnified (lay = the layer, found by zooming in)
+aux z4=(w0-lay)*1e4
+aux z8=(w0-lay)*1e8
+aux z11=(w0-lay)*1e11
+
+#     (bound 1e12: XPP stops a run when any column, aux included, passes it; z11 is large
+#      for starting points far from the layer)
+@ meth=rk4, dt=0.1, trans=341.163, total=452.04, nout=50, bound=1e12, maxstor=1000000
+@ rangereset=no, rangeoldic=yes
+@ xp=vs, yp=ws, xlo=-70, xhi=50, ylo=0.0, yhi=0.65, lt=-3, colormap=1, nmesh=200
+done

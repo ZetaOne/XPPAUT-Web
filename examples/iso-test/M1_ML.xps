@@ -36,4 +36,4 @@ keys v 2
 ans X-axis=vb|Y-axis=wb|Xmin=-70|Ymin=0|Xmax=50|Ymax=0.65|Xlabel=v|Ylabel=w
 keys r
 keys n n
-msg "Done. Window 2: ten isochrons (phase 0, 0.1, ..., 0.9) by brute force. M1's limitation: they pile up at the equilibrium x*, see M1_limitation_pileup_ML."
+msg "Done. Window 2: ten isochrons (phase 0, 0.1, ..., 0.9) by brute force. M1's limitation: near the repelling slow manifold the isochrons crowd together beyond any grid; see M1_limitation_slowmanifold_ML."

@@ -1,0 +1,96 @@
+# M1_limitation_slowmanifold_HH.ode -- where BRUTE FORCE (method M1) fails: the repelling slow manifold,
+#                reduced Hodgkin-Huxley neuron (Osinga & Moehlis 2010, eq. 4.1)
+#
+# ======================================================================================
+# WHAT TO DO IN THE XPPAUT WINDOW   (or run M1_limitation_slowmanifold_HH.xps: File > Do script)
+# ======================================================================================
+#  A slice of starting points at v = -55, from n = 0.3 to 0.8, crosses a thin layer just
+#  below the V-nullcline, at n = 0.432617061759.  Across that layer the asymptotic phase runs
+#  through (almost) every value from 0 to 1.
+#   1. Viewaxes > 2D: X-axis vs, Y-axis ns, Xlabel v, Ylabel n (window as below);
+#      nUmerics > Color code > Another quantity: theta, Choose, 0, 1;  Nullcline > New
+#   2. Initialconds > Range over j, from 0 to 799, Steps 799, Reset storage N, Use old
+#      ic's Y.  j = 0..199 is the slice from n = 0.3 to 0.8 (window 1: coloured by
+#      phase; the colour jumps where the slice meets the layer, next to the V-nullcline);
+#      j = 200..799 are three zooms into the layer, for windows 2-4.
+#   3. Makewindow > Create; in the new window set the colour quantity again (a new window
+#      copies the colour settings but not the quantity); Viewaxes > 2D: X-axis z4, Y-axis
+#      theta, X from -1 to 1, Y from 0 to 1 (z4 = (n - 0.432617061759)*1e4, the position across the
+#      layer magnified 10^4 times); Restore (keys r).
+#   4. The same with z8 (10^8 times) and z11 (10^11 times), each in a new window.
+#
+#  WHAT YOU SEE: the phase against the position across the layer.  On a scale where the
+#  grid is fine enough the phase changes smoothly; here, at every zoom, neighbouring
+#  starting points can still have very different phases.
+#  Reduced Hodgkin-Huxley: at every zoom, down to 10^11 magnification (spacing 1e-13 in
+#  n), the phase still jumps by about 0.36 between two neighbours: the transition is
+#  sharper than any of these grids can resolve.
+#
+# WHY M1 FAILS HERE (Osinga & Moehlis, SIAM J. Appl. Dyn. Syst. 9 (2010), pp. 1223-1224):
+#  "all isochrons come exponentially close to xr", the orbit along the repelling slow
+#  manifold; "extreme phase sensitivity can occur on a codimension-one set in the interior
+#  of B(Γ)"; "the density of the isochrons is not arbitrarily small but depends on the
+#  ratio ε << 1 between the slow and fast time scales"; they call the repelling slow
+#  manifold an "almost phaseless set".  M1 gives each grid point one phase, so across a
+#  layer thinner than the grid spacing the isochrons merge or alias; refining the grid
+#  costs N^2 integrations and cannot keep up with an exponentially thin layer.  M3
+#  (continuation) follows each isochron as a curve, parameterised by arclength.
+#  (The layer position here was found by zooming in with this same file; that it is the
+#  repelling slow manifold is inferred from its place next to the V-nullcline, where the
+#  paper puts that manifold.)
+#
+# THE METHOD: as M1_HH.ode (steps 1-4 there).  Extra here: n0 holds the starting n
+#  exactly (copied at t = 1e-6, before the marker variables drift by eps*F), and z4, z8,
+#  z11 = (n0 - lay)*10^k: XPP stores plot data in single precision, which cannot show
+#  differences of 1e-10 at n = 0.433, so the zoomed windows plot these scaled offsets.
+# ======================================================================================
+
+# --- the model: the reduced Hodgkin-Huxley neuron of Osinga & Moehlis (2010), eq. (4.1):
+#     m = minf(v) (fast), h = 0.8 - n;  I = 10 (repetitive firing)
+am(x)=0.1*(x+40)/(1-exp(-(x+40)/10))
+bm(x)=4*exp(-(x+65)/18)
+an(x)=0.01*(x+55)/(1-exp(-(x+55)/10))
+bn(x)=0.125*exp(-(x+65)/80)
+minf(x)=am(x)/(am(x)+bm(x))
+fx(x,y)=iapp-gna*minf(x)^3*(0.8-y)*(x-ena)-gk*y^4*(x-ek)-gl*(x-el)
+fy(x,y)=an(x)*(1-y)-bn(x)*y
+par iapp=10,gna=120,gk=36,gl=0.3,ena=50,ek=-77,el=-54.4
+
+# --- the ingredients (see M1_HH.ode)
+par per=11.84628522, thr=-20, tc0=11.74002818
+
+# --- step 1: the starting points.  One Range over j = 0..799 covers all four windows:
+#     j = 0..199 the whole slice from n = ylo to yhi; j = 200..399, 400..599, 600..799 the
+#     layer lay +- 1e-4, +- 1e-8, +- 1e-11.  At t = 1e-6 an event puts the starting point
+#     y0 = ystart(j) (computed in double precision) into the trajectory (V, N), the
+#     marker (vs, ns) that window 1 plots, and n0.  (One Range keeps all the runs in XPP's
+#     storage, so every window can redraw them; a second Range would replace them.)
+par j=0, vlay=-55, ylo=0.3, yhi=0.8, lay=0.432617061759
+hw(k)=if(k<1.5)then(1e-4)else(if(k<2.5)then(1e-8)else(1e-11))
+ystart(i)=if(i<199.5)then(ylo+(yhi-ylo)*i/199)else(lay+hw(flr(i/200))*(2*(i-200*flr(i/200))/199-1))
+par eps=1e-9
+vs'=eps*fx(vs,ns)
+ns'=eps*fy(vs,ns)
+n0'=0
+init vs=-55,ns=0.432617061759,n0=0.432617061759
+V'=fx(V,N)
+N'=fy(V,N)
+init V=-55,N=0.432617061759
+global 1 t-1e-6 {V=vlay;N=ystart(j);vs=vlay;ns=ystart(j);n0=ystart(j)}
+
+# --- steps 2 and 3: the asymptotic phase at every upward crossing of v = thr
+theta'=0
+init theta=-1
+global 1 V-thr {theta=mod((tc0-t)/per,1)}
+
+# --- the position across the layer, magnified (lay = the layer, found by zooming in)
+aux z4=(n0-lay)*1e4
+aux z8=(n0-lay)*1e8
+aux z11=(n0-lay)*1e11
+
+#     (bound 1e12: XPP stops a run when any column, aux included, passes it; z11 is large
+#      for starting points far from the layer)
+@ meth=rk4, dt=0.01, trans=71.0777, total=86.4779, nout=100, bound=1e12, maxstor=1000000
+@ rangereset=no, rangeoldic=yes
+@ xp=vs, yp=ns, xlo=-90, xhi=52, ylo=0.3, yhi=0.8, lt=-3, colormap=1, nmesh=200
+done
