@@ -1,0 +1,107 @@
+# M3_LambdaOmega.ode -- isochrons by BOUNDARY VALUE CONTINUATION (method M3, Osinga &
+#              Moehlis 2010) on a model whose isochrons are KNOWN EXACTLY, all in XPP's AUTO
+#
+#   u' = A u - B v,   v' = A v + B u,   A = 1 - u^2 - v^2,   B = 1 + q (1 - u^2 - v^2)
+#
+# ======================================================================================
+# THE EXACT ANSWER
+# ======================================================================================
+#  In polar coordinates:  r' = r (1 - r^2),  theta' = 1 + q (1 - r^2).
+#  Γ is the circle r = 1, period T = 2 pi (B = 1 on Γ), for every q.
+#  The phase  psi = theta - q ln r  has  psi' = 1 + q(1 - r^2) - q (1 - r^2) = 1,  so the
+#  isochron of phase th0 is the LOGARITHMIC SPIRAL  theta = th0 + q ln r:
+#     u = r cos(th0 + q ln r),   v = r sin(th0 + q ln r),   0 < r < infinity.
+#  It winds into the origin (the unstable focus) and out to infinity.  q = 0: straight rays
+#  (the "radial isochron clock"); the larger q (the shear), the tighter the spirals.
+#  Here q = 2: inward, r shrinks by e^(-2 pi / q) = 0.043 per turn.
+#
+# ======================================================================================
+# WHAT TO DO IN THE XPPAUT WINDOW   (or run M3_LambdaOmega.xps: File > Do script, which does
+#                                    all of it; XPPAUT 8.4 or XPPAUT-Web)
+# ======================================================================================
+#  Nothing has to be computed beforehand: Γ, T, gamma0 = (cos th0, sin th0) and the direction
+#  e of the isochron at gamma0, (cos th0 - q sin th0, sin th0 + q cos th0)/sqrt(1+q^2), are
+#  known; gu0, gv0, ev, ew are derived parameters (!), so changing th0 or q updates them.
+#   1. Initialconds > Go (keys i g): the starting solution, Γ from gamma0 for k = 2 periods
+#      (time rescaled to 0..1).  File > Auto (keys f a): the AUTO diagram, v0 = v(0) against
+#      p = u(0), IS the isochron.
+#   2. AUTO Numerics: Ntst 100  Nmax 92  Ds -0.01  Dsmin 1e-8  Dsmax 0.05  Par Min -2.5
+#      Par Max 2.5  Norm Max 3.5  ITNW 8.  Run > Bdry Value (r b): the isochron of phase 0
+#      from gamma0 = (1, 0) INTO the origin; the LPs are its folds in u (each half turn).
+#   3. The other way, as a new branch from a fresh start: set p = 1 (Parameters) and
+#      u = 1, v = 0, dl = 0, v0 = 0 (ICs), Initialconds > Go; AUTO Numerics Nmax 300
+#      Ds 0.01, Run > Bdry Value: OUTWARD, until u leaves -2.5..2.5 or Norm Max stops it.
+#   4. ANOTHER ISOCHRON: Parameters th0 = 1.5707963 (pi/2), then p = gu0 = 0 and ICs
+#      u = 0, v = 1, dl = 0, v0 = 1; Go; repeat steps 2 and 3 (for th0 = pi/2 and pi, Ds +0.01
+#      is the inward direction).  Any th0 works: start at p = u = cos th0, v = v0 = sin th0.
+#   --- the comparison with the exact spirals ---
+#   5. Exact spirals: View axes 2D xe, ye (the aux columns: the exact isochron of phase th0
+#      for ln r from smin to smax); for each th0: set th0, Go, Graphic stuff > Freeze (black).
+#   6. AUTO File > Write pts: M3_LambdaOmega_isochrons.dat.  Data browser > Load it; its
+#      columns sit in t, u, v, dl, v0.  Replace (p):  u := t  (u(0); v already holds v(0)),
+#      dl := flr((v0-1)/2)  (branches 1,2 -> 0, 3,4 -> 1, ...: which isochron),
+#      v0 := sin(2*(atan2(v,u)-q*ln(sqrt(u^2+v^2))))/2  (= the phase error, for all four),
+#      t := log(sqrt(u^2+v^2))/log(10)  (log10 r).
+#   7. Window (a): Color code (u c a) by dl, -0.5..3.5, Line type -3 (filled circles of radius 3; a negative line type draws points): the computed
+#      points on the exact black spirals.  Window (b): the same near the origin (|u|,|v| <
+#      0.03; the spirals go on turning).  Window (c): the phase error v0 against log10 r:
+#      below 1e-5 (Write pts keeps 6 digits) everywhere from r = 1e-4 to r = 3.5.
+#
+# ======================================================================================
+# THE METHOD (M3), AS IN M3_ML.ode / M3_HH.ode
+# ======================================================================================
+#   u(s) = x(s kT) on 0 <= s <= 1 (u' = kT F),  ENDS on the straight piece of the isochron
+#   u(1) = gamma0 + dl e,  STARTS at p = u(0).  dl' = 0 and v0' = 0 (v0 = v(0)) give XPP's
+#   AUTO one boundary condition per equation: 4 equations, 4 conditions, 1 parameter p.
+#   Pseudo-arclength continuation in p from dl = 0 (Γ itself) sweeps u(0) along the isochron,
+#   round its folds.
+#
+#  Limitation (as in M3_limitation_linear_*): from radius r the orbit needs about ln(1/r)
+#  time units to get back near Γ.  With k = 2 (4 pi = 12.6) the end point is still far from
+#  Γ once r < 1e-4, dl grows, and the points leave the isochron (phase error 0.1 .. 0.8).
+#  Nmax 92 stops before that.  k = 3 reaches about r = 1e-7.
+#  Contraction: Floquet exponent -2, 10^5.5 per period: backward integration (M2) loses
+#  5.5 digits per period; M3 integrates nothing backward.
+# ======================================================================================
+
+# --- the continuation parameter p = u(0) (first, so that it is AUTO's Par1)
+par p=1
+
+# --- the model
+par q=2
+a(u,v)=1-u^2-v^2
+b(u,v)=1+q*(1-u^2-v^2)
+
+# --- the isochron's phase, gamma0 and the direction e there (derived from th0 and q)
+par th0=0
+!gu0=cos(th0)
+!gv0=sin(th0)
+!ev=(cos(th0)-q*sin(th0))/sqrt(1+q^2)
+!ew=(sin(th0)+q*cos(th0))/sqrt(1+q^2)
+par per=6.283185307179586, k=2
+
+# --- the segment in rescaled time, u' = kT F(u); dl and v0 = v(0) constant along it
+u'=k*per*(a(u,v)*u-b(u,v)*v)
+v'=k*per*(a(u,v)*v+b(u,v)*u)
+dl'=0
+v0'=0
+init u=1,v=0,dl=0,v0=0
+
+# --- boundary conditions (u' = u at s = 1, u = u at s = 0)
+bndry u'-gu0-dl'*ev
+bndry v'-gv0-dl'*ew
+bndry u-p
+bndry v0-v
+
+# --- the EXACT isochron of phase th0 (for the comparison only; s = ln r from smin to smax
+#     as t runs over 0..1)
+par smin=-9.5, smax=1.5
+aux xe=exp(smin+(smax-smin)*t)*cos(q*(smin+(smax-smin)*t)+th0)
+aux ye=exp(smin+(smax-smin)*t)*sin(q*(smin+(smax-smin)*t)+th0)
+
+@ meth=rk4, dt=0.0001, total=1, maxstor=200000, bound=1e6
+@ xp=u, yp=v, xlo=-2.5, xhi=2.5, ylo=-2.5, yhi=2.5
+@ ntst=100, ncol=4, nmax=92, npr=100000, ds=-0.01, dsmin=1e-8, dsmax=0.05, parmin=-2.5, parmax=2.5
+@ normmax=3.5, epsl=1e-8, epsu=1e-8, epss=1e-6
+@ autovar=v0, autoxmin=-2.5, autoxmax=2.5, autoymin=-2.5, autoymax=2.5
+done

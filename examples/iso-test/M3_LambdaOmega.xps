@@ -1,0 +1,127 @@
+# M3_LambdaOmega.xps -- method M3 (boundary value continuation) in XPP's own AUTO for four
+# isochrons of the lambda-omega oscillator, and the comparison with the exact spirals
+# theta = th0 + q ln r.  File > Do script in XPPAUT 8.4 (or XPPAUT-Web).  Explained in the .ode.
+speed 0.1
+set lt=1
+msg "Step 1: Gamma (the unit circle) from gamma0 = (1, 0), k = 2 periods; freeze it"
+keys i g
+keys g f f
+ans Color=0|Key=Gamma|Name=Gamma
+keys f a
+msg "Step 2: the isochron of phase 0, from gamma0 = (1, 0): inward to the origin, then outward"
+set th0=0.0;p=1;u=1;v=0;dl=0;v0=0
+keys i g
+autokeys n
+ans Ntst=100|Nmax=92|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.05|Par Min=-2.5|Par Max=2.5|Norm Max=3.5|ITNW=8
+autokeys r b
+set th0=0.0;p=1;u=1;v=0;dl=0;v0=0
+keys i g
+autokeys n
+ans Nmax=300|Ds=0.01
+autokeys r b
+msg "Step 3: the isochron of phase pi/2, from gamma0 = (0, 1): inward to the origin, then outward"
+set th0=1.5707963267948966;p=0;u=0;v=1;dl=0;v0=1
+keys i g
+autokeys n
+ans Ntst=100|Nmax=92|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.05|Par Min=-2.5|Par Max=2.5|Norm Max=3.5|ITNW=8
+autokeys r b
+set th0=1.5707963267948966;p=0;u=0;v=1;dl=0;v0=1
+keys i g
+autokeys n
+ans Nmax=300|Ds=-0.01
+autokeys r b
+msg "Step 4: the isochron of phase pi, from gamma0 = (-1, 0): inward to the origin, then outward"
+set th0=3.141592653589793;p=-1;u=-1;v=0;dl=0;v0=0
+keys i g
+autokeys n
+ans Ntst=100|Nmax=92|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.05|Par Min=-2.5|Par Max=2.5|Norm Max=3.5|ITNW=8
+autokeys r b
+set th0=3.141592653589793;p=-1;u=-1;v=0;dl=0;v0=0
+keys i g
+autokeys n
+ans Nmax=300|Ds=-0.01
+autokeys r b
+msg "Step 5: the isochron of phase 3pi/2, from gamma0 = (0, -1): inward to the origin, then outward"
+set th0=4.71238898038469;p=0;u=0;v=-1;dl=0;v0=-1
+keys i g
+autokeys n
+ans Ntst=100|Nmax=92|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.05|Par Min=-2.5|Par Max=2.5|Norm Max=3.5|ITNW=8
+autokeys r b
+set th0=4.71238898038469;p=0;u=0;v=-1;dl=0;v0=-1
+keys i g
+autokeys n
+ans Nmax=300|Ds=0.01
+autokeys r b
+msg "Step 6: the exact spirals theta = th0 + q ln r (aux xe, ye), frozen in black"
+keys v 2
+ans X-axis=xe|Y-axis=ye|Xmin=-2.5|Ymin=-2.5|Xmax=2.5|Ymax=2.5|Xlabel=u|Ylabel=v
+set th0=0.0
+keys i g
+keys g f f
+ans Color=0|Key=exact 0|Name=exact0
+set th0=1.5707963267948966
+keys i g
+keys g f f
+ans Color=0|Key=exact pi/2|Name=exact1
+set th0=3.141592653589793
+keys i g
+keys g f f
+ans Color=0|Key=exact pi|Name=exact2
+set th0=4.71238898038469
+keys i g
+keys g f f
+ans Color=0|Key=exact 3pi/2|Name=exact3
+msg "Step 7: AUTO File > Write pts, load in the data browser, phase error by Replace"
+autokeys f w
+ans M3_LambdaOmega_isochrons.dat
+browser open
+browsekeys l
+ans M3_LambdaOmega_isochrons.dat
+browsekeys p
+ans u
+ans t
+browsekeys p
+ans dl
+ans flr((v0-1)/2)
+browsekeys p
+ans v0
+ans sin(2*(atan2(v,u)-q*ln(sqrt(u^2+v^2))))/2
+browsekeys p
+ans t
+ans ln(sqrt(u^2+v^2))/ln(10)
+browser close
+set lt=-3
+msg "Step 8: window (a) -- AUTO's points (colour = which isochron) on the exact spirals (black)"
+keys u c a
+ans dl
+ans c
+ans -0.5
+ans 3.5
+keys esc
+keys v 2
+ans X-axis=u|Y-axis=v|Xmin=-2.5|Ymin=-2.5|Xmax=2.5|Ymax=2.5|Xlabel=u|Ylabel=v
+keys r
+msg "Step 9: window (b) -- near the origin (the spirals keep turning)"
+keys m c
+keys u c a
+ans dl
+ans c
+ans -0.5
+ans 3.5
+keys esc
+keys v 2
+ans X-axis=u|Y-axis=v|Xmin=-0.03|Ymin=-0.03|Xmax=0.03|Ymax=0.03|Xlabel=u|Ylabel=v
+keys r
+msg "Step 9: window (c) -- the phase error of every point against log10 r"
+keys m c
+set lt=-2
+keys u c a
+ans dl
+ans c
+ans -0.5
+ans 3.5
+keys esc
+keys v 2
+ans X-axis=t|Y-axis=v0|Xmin=-4.5|Ymin=-1e-05|Xmax=0.7|Ymax=1e-05|Xlabel=log10 r|Ylabel=phase error
+keys r
+msg "Done. Four isochrons by M3 in XPP's AUTO lie on the exact spirals theta = th0 + q ln r: phase error below 1e-5 (the 6 digits of Write pts) from r = 1e-4 to 3.5. Try other th0 or q: see the .ode"
