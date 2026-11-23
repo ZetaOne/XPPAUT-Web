@@ -1,0 +1,105 @@
+# M3_HH.ode -- the isochron of phase 0 by BOUNDARY VALUE CONTINUATION (method M3,
+#              Osinga & Moehlis 2010), reduced Hodgkin-Huxley neuron (Osinga & Moehlis 2010), all inside XPP's AUTO
+#
+# ======================================================================================
+# WHAT TO DO IN THE XPPAUT WINDOW   (or run M3_HH.xps: File > Do script, which does
+#                                    all of it; XPPAUT 8.4 or XPPAUT-Web)
+# ======================================================================================
+#   1. Initialconds > Go (keys i g): the starting solution.  From gamma0, k = 2 periods
+#      of Γ in rescaled time 0..1 (it ends at gamma0 again).  The main window shows Γ.
+#   2. File > Auto (keys f a) opens the AUTO window.  Its axes are already set
+#      (Hi-lo, Y-axis w0, Main Parm p): the diagram IS the isochron, w(0) against v(0).
+#   3. AUTO Numerics (n):  Ntst 200  Nmax 470  Ds -0.01  Dsmin 1e-8  Dsmax 0.5
+#        Par Min -100  Par Max 55  Norm Max 1e6  ITNW 8                         (OK)
+#   4. Run > Bdry Value (r b): the isochron from gamma0 to the LEFT, through Γ's inside,
+#      up to n = 0.68 (the top of the first excursion), back down almost on top of
+#      itself, and into x* = (-59.60, 0.4026).
+#      LP = fold of the curve in v (it turns back in v; the continuation goes on round it).
+#      Nmax 470 stops where the curve gets too tight to see; further in, the end point
+#      drifts off the straight piece (column dl in the AUTO output grows).
+#   5. The other way, as a new branch from the start: in the main window set p = 44.706379
+#      (Parameters) and v = 44.706379, w = 0.45973791, dl = 0, w0 = 0.45973791 (ICs), Initialconds > Go;
+#      in AUTO: Numerics Ds 0.01 Nmax 60, Run > Bdry Value: the isochron from gamma0 to the
+#      RIGHT (outside Γ).  (Left first, and a fresh start rather than grabbing point 1: the
+#      other ways make XPP's AUTO very slow or fail on the second run.)
+#   6. Grab a point of the diagram (the script takes the top fold, LP 2), then in the main window
+#      Initialconds > Go: that point's orbit segment (from the isochron point, 2 periods,
+#      onto gamma0).
+#
+# ======================================================================================
+# THE METHOD (M3, Osinga & Moehlis 2010, section 3)
+# ======================================================================================
+#  Ingredients: as M2 (Γ, T, gamma0 = (44.706379, 0.45973791), the direction e =
+#  (0.9999999906, -0.0001371078909) of the isochron at gamma0, its straight piece near Γ).
+#   step 1  rescale time: an orbit segment x(t), 0 <= t <= kT, becomes u(s) = x(s kT),
+#           0 <= s <= 1, with u' = kT F(u).
+#   step 2  ask it to END on the straight piece of the isochron:  u(1) = gamma0 + dl e.
+#           Then u(0) lies on the isochron of phase 0 (k whole periods back from it).
+#   step 3  AUTO solves for the WHOLE segment at once (collocation: a piecewise polynomial
+#           on Ntst mesh intervals), not by integrating from u(0).  So the 10^20.2-fold
+#           contraction per period, which defeats M2's backward integration, never
+#           amplifies anything: no exponentially small starting distances are needed.
+#   step 4  start from a known solution (dl = 0: Γ itself, from gamma0 for k periods) and
+#           follow the one-parameter family of segments by pseudo-arclength continuation.
+#           The start points u(0) sweep out the isochron.
+#
+#  How it is put into XPP's AUTO (which wants exactly one boundary condition per equation):
+#   - dl (the end point's place on the straight piece) is a variable with dl' = 0;
+#   - w0' = 0 with w0(0) = w(0): a constant copy of w(0), so Hi-lo of w0 is w(0);
+#   - the continuation parameter is p = v(0).
+#  4 equations, 4 boundary conditions, 1 free parameter (p).  AUTO's diagram, w0 against p,
+#  is then the isochron itself, folds included.
+#
+#  Check (pyauto-xpp): the curve lies on the isochron of the paper's own method (the
+#  replication of Osinga & Moehlis, stages k = 1..4); every point where scipy (rtol 1e-12)
+#  can measure the phase has phase 0.  On the way back down from n = 0.68 the curve runs
+#  within an exponentially thin distance of the way up: there the isochrons crowd against
+#  the repelling slow manifold (the paper's "almost phaseless set"), a change of 1e-9 in n
+#  changes the phase, and no forward check (M1, scipy) can decide.
+#  This is where the other methods fail.  M2 (backward integration) cannot get off the
+#  straight piece: one period contracts 10^20.2-fold, beyond double precision (see
+#  M2_limitation_contraction_HH.ode).  M1 (a grid of forward runs) cannot resolve the
+#  slow-manifold layer (M1_limitation_slowmanifold_HH.ode).  M3 never integrates backward and
+#  never needs a grid: it follows the isochron through the layer.
+#  Why k = 2: the end point must stay where the isochron is straight (|dl| small).  With
+#  k = 1 that fails: see M3_limitation_linear_HH.ode.
+# ======================================================================================
+
+# --- the continuation parameter p = v(0) (first, so that it is AUTO's Par1)
+par p=44.706379
+
+# --- the model: the reduced Hodgkin-Huxley neuron of Osinga & Moehlis (2010), eq. (4.1):
+#     m = minf(v) (fast), h = 0.8 - n;  I = 10 (repetitive firing).  Here w is n.
+am(x)=0.1*(x+40)/(1-exp(-(x+40)/10))
+bm(x)=4*exp(-(x+65)/18)
+an(x)=0.01*(x+55)/(1-exp(-(x+55)/10))
+bn(x)=0.125*exp(-(x+65)/80)
+minf(x)=am(x)/(am(x)+bm(x))
+fx(x,y)=iapp-gna*minf(x)^3*(0.8-y)*(x-ena)-gk*y^4*(x-ek)-gl*(x-el)
+fy(x,y)=an(x)*(1-y)-bn(x)*y
+par iapp=10,gna=120,gk=36,gl=0.3,ena=50,ek=-77,el=-54.4
+
+# --- the ingredients
+par per=11.84628522, k=2
+par gv0=44.706379, gw0=0.45973791, ev=0.9999999906, ew=-0.0001371078909
+
+# --- step 1: the segment in rescaled time, u' = kT F(u)
+v'=k*per*fx(v,w)
+w'=k*per*fy(v,w)
+# --- dl and the copy w0 of w(0): constants along the segment
+dl'=0
+w0'=0
+init v=44.706379,w=0.45973791,dl=0,w0=0.45973791
+
+# --- step 2: the boundary conditions (v' here means v at s = 1, v means v at s = 0)
+bndry v'-gv0-dl'*ev
+bndry w'-gw0-dl'*ew
+bndry v-p
+bndry w0-w
+
+@ meth=rk4, dt=0.0001, total=1, maxstor=200000, bound=1e6
+@ xp=v, yp=w, xlo=-100, xhi=55, ylo=0.3, yhi=0.8
+@ ntst=200, ncol=4, nmax=470, npr=100000, ds=-0.01, dsmin=1e-8, dsmax=0.5, parmin=-100, parmax=55
+@ normmax=1e6, epsl=1e-8, epsu=1e-8, epss=1e-6
+@ autovar=w0, autoxmin=-100, autoxmax=55, autoymin=0.3, autoymax=0.8
+done

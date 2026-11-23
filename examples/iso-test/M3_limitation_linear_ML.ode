@@ -1,0 +1,66 @@
+# M3_limitation_linear_ML.ode -- the LIMITATION of method M3 (boundary value continuation),
+#              Morris-Lecar oscillator: the end point must stay on the STRAIGHT piece of the isochron
+#
+# ======================================================================================
+# WHAT TO DO IN THE XPPAUT WINDOW   (or run M3_limitation_linear_ML.xps: File > Do script)
+# ======================================================================================
+#   The same steps as M3_ML.ode, with k = 1 (segments one period long) instead of 3:
+#   1. Initialconds > Go (keys i g): Γ from gamma0, one period.   2. File > Auto (keys f a).
+#   3. AUTO Numerics: Ntst 100  Nmax 900  Ds -0.01  Dsmin 1e-8  Dsmax 0.5  Par Min -80
+#      Par Max 60  Norm Max 1e6  ITNW 8  (Ds -0.01: to the left first).
+#   4. Run > Bdry Value (r b): to the left.   5. As step 5 of M3_ML.ode: back to the
+#      start values, Go, Numerics Ds 0.01 Nmax 60, Run > Bdry Value: to the right.
+#
+# ======================================================================================
+# WHAT GOES WRONG, AND WHY
+# ======================================================================================
+#  M3 asks each segment to end on the STRAIGHT piece gamma0 + dl e of the isochron.  That
+#  straight piece is the isochron only near Γ (|dl| small; here |dl| below about 0.05).
+#  With one period, points far along the isochron cannot reach that small piece in time:
+#  past v = -20 the continuation has to push dl far out, the end point leaves the
+#  isochron, and from there on the start points u(0) are NOT on the isochron of phase 0:
+#  the curve runs off to (-80, 0.50), a branch of points whose phase is about 0.28, not 0.
+#  Watch the column dl in the AUTO output (the terminal lines / the point's data):
+#  small = good point, large = wrong point.
+#  Checked (pyauto-xpp): 139 of 139 points with |dl| < 0.05 have phase 0;
+#  the points with |dl| > 0.3 have phase about 0.28.
+#  The cure (Osinga & Moehlis): longer segments, k = 2, 3, ... periods: the end point then
+#  needs only a tiny dl.  That is M3_ML.ode (k = 3).
+# ======================================================================================
+
+# --- the continuation parameter p = v(0) (first, so that it is AUTO's Par1)
+par p=33.32581
+
+# --- the model: Morris-Lecar (Rinzel & Ermentrout's parameters, i = 100: oscillating)
+minf(x)=.5*(1+tanh((x-va1)/va2))
+winf(x)=.5*(1+tanh((x-va3)/va4))
+tauw(x)=1/cosh((x-va3)/(2*va4))
+fx(x,y)=(i-gl*(x-vl)-gca*minf(x)*(x-vca)-gk*y*(x-vk))/c
+fy(x,y)=phi*(winf(x)-y)/tauw(x)
+par i=100,c=20,gl=2,vl=-60,gca=4.4,vca=120,gk=8,vk=-84
+par va1=-1.2,va2=18,va3=2,va4=30,phi=0.04
+
+# --- the ingredients
+par per=85.29064, k=1
+par gv0=33.32581, gw0=0.3054107, ev=79.91397, ew=-0.1163597
+
+# --- step 1: the segment in rescaled time, u' = kT F(u)
+v'=k*per*fx(v,w)
+w'=k*per*fy(v,w)
+# --- dl and the copy w0 of w(0): constants along the segment
+dl'=0
+w0'=0
+init v=33.32581,w=0.3054107,dl=0,w0=0.3054107
+
+# --- step 2: the boundary conditions (v' here means v at s = 1, v means v at s = 0)
+bndry v'-gv0-dl'*ev
+bndry w'-gw0-dl'*ew
+bndry v-p
+bndry w0-w
+
+@ meth=rk4, dt=0.0001, total=1, maxstor=200000, bound=1e6
+@ xp=v, yp=w, xlo=-80, xhi=60, ylo=0, yhi=0.65
+@ ntst=100, ncol=4, nmax=900, npr=100000, ds=-0.01, dsmin=1e-8, dsmax=0.5, parmin=-80, parmax=60
+@ normmax=1e6, epsl=1e-8, epsu=1e-8, epss=1e-6
+@ autovar=w0, autoxmin=-80, autoxmax=60, autoymin=0, autoymax=0.65
+done

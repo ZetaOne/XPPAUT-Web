@@ -1,0 +1,98 @@
+# M3_ML.ode -- the isochron of phase 0 by BOUNDARY VALUE CONTINUATION (method M3,
+#              Osinga & Moehlis 2010), Morris-Lecar oscillator, all inside XPP's AUTO
+#
+# ======================================================================================
+# WHAT TO DO IN THE XPPAUT WINDOW   (or run M3_ML.xps: File > Do script, which does
+#                                    all of it; XPPAUT 8.4 or XPPAUT-Web)
+# ======================================================================================
+#   1. Initialconds > Go (keys i g): the starting solution.  From gamma0, k = 3 periods
+#      of Γ in rescaled time 0..1 (it ends at gamma0 again).  The main window shows Γ.
+#   2. File > Auto (keys f a) opens the AUTO window.  Its axes are already set
+#      (Hi-lo, Y-axis w0, Main Parm p): the diagram IS the isochron, w(0) against v(0).
+#   3. AUTO Numerics (n):  Ntst 300  Nmax 185  Ds -0.01  Dsmin 1e-8  Dsmax 0.5
+#        Par Min -80  Par Max 60  Norm Max 1e6  ITNW 8                         (OK)
+#   4. Run > Bdry Value (r b): the isochron from gamma0 to the LEFT, through Γ's inside,
+#      round the equilibrium x* = (-23.09, 0.158) in a tightening spiral.
+#      LP = fold of the curve in v (it turns back in v; the continuation goes on round it).
+#      Nmax 185 stops where the curve gets too tight to see; further in, the end point
+#      drifts off the straight piece (column dl in the AUTO output grows).
+#   5. The other way, as a new branch from the start: in the main window set p = 33.32581
+#      (Parameters) and v = 33.32581, w = 0.3054107, dl = 0, w0 = 0.3054107 (ICs), Initialconds > Go;
+#      in AUTO: Numerics Ds 0.01 Nmax 60, Run > Bdry Value: the isochron from gamma0 to the
+#      RIGHT (outside Γ).  (Left first, and a fresh start rather than grabbing point 1: the
+#      other ways make XPP's AUTO very slow or fail on the second run.)
+#   6. Grab a point of the diagram (the script takes the first fold, LP 1), then in the main window
+#      Initialconds > Go: that point's orbit segment (from the isochron point, 3 periods,
+#      onto gamma0).
+#
+# ======================================================================================
+# THE METHOD (M3, Osinga & Moehlis 2010, section 3)
+# ======================================================================================
+#  Ingredients: as M2 (Γ, T, gamma0 = (33.32581, 0.3054107), the direction e =
+#  (79.91397, -0.1163597) of the isochron at gamma0, its straight piece near Γ).
+#   step 1  rescale time: an orbit segment x(t), 0 <= t <= kT, becomes u(s) = x(s kT),
+#           0 <= s <= 1, with u' = kT F(u).
+#   step 2  ask it to END on the straight piece of the isochron:  u(1) = gamma0 + dl e.
+#           Then u(0) lies on the isochron of phase 0 (k whole periods back from it).
+#   step 3  AUTO solves for the WHOLE segment at once (collocation: a piecewise polynomial
+#           on Ntst mesh intervals), not by integrating from u(0).  So the 10^4.3-fold
+#           contraction per period, which defeats M2's backward integration, never
+#           amplifies anything: no exponentially small starting distances are needed.
+#   step 4  start from a known solution (dl = 0: Γ itself, from gamma0 for k periods) and
+#           follow the one-parameter family of segments by pseudo-arclength continuation.
+#           The start points u(0) sweep out the isochron.
+#
+#  How it is put into XPP's AUTO (which wants exactly one boundary condition per equation):
+#   - dl (the end point's place on the straight piece) is a variable with dl' = 0;
+#   - w0' = 0 with w0(0) = w(0): a constant copy of w(0), so Hi-lo of w0 is w(0);
+#   - the continuation parameter is p = v(0).
+#  4 equations, 4 boundary conditions, 1 free parameter (p).  AUTO's diagram, w0 against p,
+#  is then the isochron itself, folds included.
+#
+#  Check (pyauto-xpp, against M1 and a scipy integration): every point where the phase
+#  can be measured is on the isochron of phase 0.  Near x* the isochrons are packed so
+#  tightly that a change of 1e-7 in w changes the phase completely: there no forward
+#  check is possible, and AUTO's points are as good as its tolerances.
+#  Compared with M2: backward integration needs starting distances that shrink 10^4.3-fold
+#  per period, so it stops after a few periods (M2_limitation_contraction_ML.ode); M3 follows
+#  the whole inner branch, into the spiral round x*.
+#  Why k = 3: the end point must stay where the isochron is straight (|dl| small).  With
+#  k = 1 that fails: see M3_limitation_linear_ML.ode.
+# ======================================================================================
+
+# --- the continuation parameter p = v(0) (first, so that it is AUTO's Par1)
+par p=33.32581
+
+# --- the model: Morris-Lecar (Rinzel & Ermentrout's parameters, i = 100: oscillating)
+minf(x)=.5*(1+tanh((x-va1)/va2))
+winf(x)=.5*(1+tanh((x-va3)/va4))
+tauw(x)=1/cosh((x-va3)/(2*va4))
+fx(x,y)=(i-gl*(x-vl)-gca*minf(x)*(x-vca)-gk*y*(x-vk))/c
+fy(x,y)=phi*(winf(x)-y)/tauw(x)
+par i=100,c=20,gl=2,vl=-60,gca=4.4,vca=120,gk=8,vk=-84
+par va1=-1.2,va2=18,va3=2,va4=30,phi=0.04
+
+# --- the ingredients
+par per=85.29064, k=3
+par gv0=33.32581, gw0=0.3054107, ev=79.91397, ew=-0.1163597
+
+# --- step 1: the segment in rescaled time, u' = kT F(u)
+v'=k*per*fx(v,w)
+w'=k*per*fy(v,w)
+# --- dl and the copy w0 of w(0): constants along the segment
+dl'=0
+w0'=0
+init v=33.32581,w=0.3054107,dl=0,w0=0.3054107
+
+# --- step 2: the boundary conditions (v' here means v at s = 1, v means v at s = 0)
+bndry v'-gv0-dl'*ev
+bndry w'-gw0-dl'*ew
+bndry v-p
+bndry w0-w
+
+@ meth=rk4, dt=0.0001, total=1, maxstor=200000, bound=1e6
+@ xp=v, yp=w, xlo=-80, xhi=60, ylo=0, yhi=0.65
+@ ntst=300, ncol=4, nmax=185, npr=100000, ds=-0.01, dsmin=1e-8, dsmax=0.5, parmin=-80, parmax=60
+@ normmax=1e6, epsl=1e-8, epsu=1e-8, epss=1e-6
+@ autovar=w0, autoxmin=-80, autoxmax=60, autoymin=0, autoymax=0.65
+done
