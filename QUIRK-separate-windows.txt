@@ -1,0 +1,40 @@
+XPPAUT-Web quirks found while testing iso-test/M3_HH (2026-11-23)
+====================================================================
+
+1. "Separate windows" mode: an older window goes blank when it is enlarged
+--------------------------------------------------------------------------
+Setting: Settings > separate windows on (localStorage xpp-separate = 1).
+
+How to see it:
+  - Load iso-test/M3_HH.ode with script M3_HH.xps (or any script that makes two
+    or more extra windows with Makewindow > Create, e.g. "keys m c" twice).
+  - The script makes window (b) "W vs T" and then window (c) "W vs V"; each one
+    pops out into its own browser window.
+  - Enlarge the pop-ups.  Only the newest one, the active XPP window (c), is
+    redrawn.  Window (b) stays blank: white, with no axes and no curve.
+    Clicking in it and pressing r (Restore) does not bring it back.
+  - Make them in the other order, (c) and then (b): now (c) stays blank and (b) is
+    drawn.  So the plot data is fine; the problem is redrawing a window that is not
+    the active one.
+
+Possible cause (src/xpp.ts, popOut):
+  - The pop-up is opened at the canvas size at that moment
+    (window.open(..., width = p.canvas.width, height = p.canvas.height)).  A new
+    Makewindow window is small at first (about 162 x 99), so its pop-up opens
+    small too.
+  - A resize in the first 1000 ms is ignored, by design.
+  - When the window is enlarged later, XPP redraws only its current window.
+    The other pop-ups keep a blank canvas until they get an expose/redraw.
+
+In the default in-page mode (separate windows off) all three windows (a), (b), (c)
+are drawn correctly; they are stacked, so drag them apart.
+
+2. Window (c) of M3_HH shows the nullclines twice (web only)
+-------------------------------------------------------------
+In the zoomed window (c) (V -60.75..-58.25, n 0.398..0.408) each nullcline
+appears twice: the coarse one computed for window (a)'s range is redrawn along
+with the new fine one from "Nullcline > New".  Native XPP 8.4 shows a single
+line.
+
+Neither of these is fixed: XPPAUT-Web's code was not touched.  The M3_HH.ode
+header mentions quirk 1.
