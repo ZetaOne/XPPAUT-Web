@@ -64,5 +64,7 @@ bndry w0-w
 @ xp=v, yp=w, xlo=-100, xhi=55, ylo=0.3, yhi=0.8
 @ ntst=100, ncol=4, nmax=900, npr=100000, ds=-0.01, dsmin=1e-8, dsmax=0.5, parmin=-100, parmax=55
 @ normmax=1e6, epsl=1e-8, epsu=1e-8, epss=1e-6
+# nullcline colours as in the paper: V-nullcline green (7), n-nullcline red (1)
+@ xnc=7, ync=1
 @ autovar=w0, autoxmin=-100, autoxmax=55, autoymin=0.3, autoymax=0.8
 done

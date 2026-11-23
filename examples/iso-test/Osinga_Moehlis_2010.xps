@@ -1,0 +1,1056 @@
+# Osinga_Moehlis_2010.xps -- the figures of Osinga & Moehlis (2010) with XPPAUT 8.4 scripting (see Osinga_Moehlis_2010.ode).
+# File > Do script in XPPAUT 8.4 or XPPAUT-Web.  It pauses after each figure: press Enter.
+# Each figure is also saved as osinga_figN.svg (osinga_figNa.svg ... for the panels).
+speed 0.05
+
+# ======================================================================================
+# Figure 1: the periodic orbit Gamma of the reduced Hodgkin-Huxley model
+# ======================================================================================
+keys g f r
+try
+  keys m k
+  ans y
+end
+keys g f r
+set lt=1
+keys u c n
+keys esc
+msg "Figure 1: the periodic orbit Gamma of the reduced Hodgkin-Huxley model"
+keys v 2
+ans X-axis=v|Y-axis=w|Xmin=-90|Ymin=0.3|Xmax=52|Ymax=0.8|Xlabel=V|Ylabel=n
+set k=1;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+keys n n
+keys g f f
+ans Color=0|Key=Gamma|Name=Gamma
+shot osinga_fig1b.svg
+keys m c
+keys v 2
+ans X-axis=tt|Y-axis=v|Xmin=0|Ymin=-90|Xmax=5|Ymax=50|Xlabel=t/T|Ylabel=V
+set k=5;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+shot osinga_fig1.svg
+pause "Figure 1 done: Enter for the next figure"
+
+# ======================================================================================
+# Figure 2: 20 isochrons, phases 0, 0.05, ..., 0.95 (stage 1: one-period segments)
+# ======================================================================================
+keys g f r
+try
+  keys m k
+  ans y
+end
+keys g f r
+set lt=1
+keys u c n
+keys esc
+msg "Figure 2: 20 isochrons, phases 0, 0.05, ..., 0.95 (stage 1: one-period segments)"
+keys f a
+try
+  autokeys f r
+  ans y
+end
+msg "Figure 2: the isochron of phase 0.00, one way (1 of 40)"
+set k=1;gv0=44.706379;gw0=0.45973791;ev=0.9999999906;ew=-0.0001371081336
+set p=44.706379;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+autokeys n
+ans Ntst=100|Nmax=42|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.00, the other way (2 of 40)"
+set k=1;gv0=44.706379;gw0=0.45973791;ev=0.9999999906;ew=-0.0001371081336
+set p=44.706379;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+autokeys n
+ans Ntst=100|Nmax=537|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.05, one way (3 of 40)"
+set k=1;gv0=13.134267;gw0=0.6659985344;ev=0.9999999804;ew=-0.0001977672528
+set p=13.134267;total=1;v=13.134267;w=0.6659985344;dl=0;w0=0.6659985344
+keys i g
+autokeys n
+ans Ntst=100|Nmax=149|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.05, the other way (4 of 40)"
+set k=1;gv0=13.134267;gw0=0.6659985344;ev=0.9999999804;ew=-0.0001977672528
+set p=13.134267;total=1;v=13.134267;w=0.6659985344;dl=0;w0=0.6659985344
+keys i g
+autokeys n
+ans Ntst=100|Nmax=405|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.10, one way (5 of 40)"
+set k=1;gv0=-43.209251;gw0=0.7218528622;ev=0.9999999538;ew=-0.0003040143374
+set p=-43.209251;total=1;v=-43.209251;w=0.7218528622;dl=0;w0=0.7218528622
+keys i g
+autokeys n
+ans Ntst=100|Nmax=347|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.10, the other way (6 of 40)"
+set k=1;gv0=-43.209251;gw0=0.7218528622;ev=0.9999999538;ew=-0.0003040143374
+set p=-43.209251;total=1;v=-43.209251;w=0.7218528622;dl=0;w0=0.7218528622
+keys i g
+autokeys n
+ans Ntst=100|Nmax=199|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.15, one way (7 of 40)"
+set k=1;gv0=-74.800262;gw0=0.6753613273;ev=0.9999999647;ew=-0.0002656288278
+set p=-74.800262;total=1;v=-74.800262;w=0.6753613273;dl=0;w0=0.6753613273
+keys i g
+autokeys n
+ans Ntst=100|Nmax=394|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.15, the other way (8 of 40)"
+set k=1;gv0=-74.800262;gw0=0.6753613273;ev=0.9999999647;ew=-0.0002656288278
+set p=-74.800262;total=1;v=-74.800262;w=0.6753613273;dl=0;w0=0.6753613273
+keys i g
+autokeys n
+ans Ntst=100|Nmax=93|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.20, one way (9 of 40)"
+set k=1;gv0=-74.341077;gw0=0.6276244738;ev=0.999999931;ew=-0.0003716000761
+set p=-74.341077;total=1;v=-74.341077;w=0.6276244738;dl=0;w0=0.6276244738
+keys i g
+autokeys n
+ans Ntst=100|Nmax=368|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.20, the other way (10 of 40)"
+set k=1;gv0=-74.341077;gw0=0.6276244738;ev=0.999999931;ew=-0.0003716000761
+set p=-74.341077;total=1;v=-74.341077;w=0.6276244738;dl=0;w0=0.6276244738
+keys i g
+autokeys n
+ans Ntst=100|Nmax=94|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.25, one way (11 of 40)"
+set k=1;gv0=-73.591287;gw0=0.5852388994;ev=0.9999998627;ew=-0.0005239529344
+set p=-73.591287;total=1;v=-73.591287;w=0.5852388994;dl=0;w0=0.5852388994
+keys i g
+autokeys n
+ans Ntst=100|Nmax=344|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.25, the other way (12 of 40)"
+set k=1;gv0=-73.591287;gw0=0.5852388994;ev=0.9999998627;ew=-0.0005239529344
+set p=-73.591287;total=1;v=-73.591287;w=0.5852388994;dl=0;w0=0.5852388994
+keys i g
+autokeys n
+ans Ntst=100|Nmax=98|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.30, one way (13 of 40)"
+set k=1;gv0=-72.707435;gw0=0.5478874794;ev=0.9999997181;ew=-0.0007509096079
+set p=-72.707435;total=1;v=-72.707435;w=0.5478874794;dl=0;w0=0.5478874794
+keys i g
+autokeys n
+ans Ntst=100|Nmax=332|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.30, the other way (14 of 40)"
+set k=1;gv0=-72.707435;gw0=0.5478874794;ev=0.9999997181;ew=-0.0007509096079
+set p=-72.707435;total=1;v=-72.707435;w=0.5478874794;dl=0;w0=0.5478874794
+keys i g
+autokeys n
+ans Ntst=100|Nmax=102|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.35, one way (15 of 40)"
+set k=1;gv0=-71.700325;gw0=0.5152586036;ev=0.9999993985;ew=-0.001096787173
+set p=-71.700325;total=1;v=-71.700325;w=0.5152586036;dl=0;w0=0.5152586036
+keys i g
+autokeys n
+ans Ntst=100|Nmax=312|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.35, the other way (16 of 40)"
+set k=1;gv0=-71.700325;gw0=0.5152586036;ev=0.9999993985;ew=-0.001096787173
+set p=-71.700325;total=1;v=-71.700325;w=0.5152586036;dl=0;w0=0.5152586036
+keys i g
+autokeys n
+ans Ntst=100|Nmax=104|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.40, one way (17 of 40)"
+set k=1;gv0=-70.588076;gw0=0.487072255;ev=0.9999987296;ew=-0.001593992498
+set p=-70.588076;total=1;v=-70.588076;w=0.487072255;dl=0;w0=0.487072255
+keys i g
+autokeys n
+ans Ntst=100|Nmax=295|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.40, the other way (18 of 40)"
+set k=1;gv0=-70.588076;gw0=0.487072255;ev=0.9999987296;ew=-0.001593992498
+set p=-70.588076;total=1;v=-70.588076;w=0.487072255;dl=0;w0=0.487072255
+keys i g
+autokeys n
+ans Ntst=100|Nmax=108|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.45, one way (19 of 40)"
+set k=1;gv0=-69.397102;gw0=0.4630668462;ev=0.9999975926;ew=-0.002194273064
+set p=-69.397102;total=1;v=-69.397102;w=0.4630668462;dl=0;w0=0.4630668462
+keys i g
+autokeys n
+ans Ntst=100|Nmax=286|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.45, the other way (20 of 40)"
+set k=1;gv0=-69.397102;gw0=0.4630668462;ev=0.9999975926;ew=-0.002194273064
+set p=-69.397102;total=1;v=-69.397102;w=0.4630668462;dl=0;w0=0.4630668462
+keys i g
+autokeys n
+ans Ntst=100|Nmax=112|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.50, one way (21 of 40)"
+set k=1;gv0=-68.158882;gw0=0.4429858968;ev=0.9999962926;ew=-0.00272300962
+set p=-68.158882;total=1;v=-68.158882;w=0.4429858968;dl=0;w0=0.4429858968
+keys i g
+autokeys n
+ans Ntst=100|Nmax=283|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.50, the other way (22 of 40)"
+set k=1;gv0=-68.158882;gw0=0.4429858968;ev=0.9999962926;ew=-0.00272300962
+set p=-68.158882;total=1;v=-68.158882;w=0.4429858968;dl=0;w0=0.4429858968
+keys i g
+autokeys n
+ans Ntst=100|Nmax=116|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.55, one way (23 of 40)"
+set k=1;gv0=-66.905386;gw0=0.4265674874;ev=0.9999956635;ew=-0.002944997052
+set p=-66.905386;total=1;v=-66.905386;w=0.4265674874;dl=0;w0=0.4265674874
+keys i g
+autokeys n
+ans Ntst=100|Nmax=291|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.55, the other way (24 of 40)"
+set k=1;gv0=-66.905386;gw0=0.4265674874;ev=0.9999956635;ew=-0.002944997052
+set p=-66.905386;total=1;v=-66.905386;w=0.4265674874;dl=0;w0=0.4265674874
+keys i g
+autokeys n
+ans Ntst=100|Nmax=122|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.60, one way (25 of 40)"
+set k=1;gv0=-65.664231;gw0=0.4135388778;ev=0.9999963713;ew=-0.002693936919
+set p=-65.664231;total=1;v=-65.664231;w=0.4135388778;dl=0;w0=0.4135388778
+keys i g
+autokeys n
+ans Ntst=100|Nmax=287|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.60, the other way (26 of 40)"
+set k=1;gv0=-65.664231;gw0=0.4135388778;ev=0.9999963713;ew=-0.002693936919
+set p=-65.664231;total=1;v=-65.664231;w=0.4135388778;dl=0;w0=0.4135388778
+keys i g
+autokeys n
+ans Ntst=100|Nmax=126|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.65, one way (27 of 40)"
+set k=1;gv0=-64.454644;gw0=0.4036179238;ev=0.9999981502;ew=-0.001923436116
+set p=-64.454644;total=1;v=-64.454644;w=0.4036179238;dl=0;w0=0.4036179238
+keys i g
+autokeys n
+ans Ntst=100|Nmax=297|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.65, the other way (28 of 40)"
+set k=1;gv0=-64.454644;gw0=0.4036179238;ev=0.9999981502;ew=-0.001923436116
+set p=-64.454644;total=1;v=-64.454644;w=0.4036179238;dl=0;w0=0.4036179238
+keys i g
+autokeys n
+ans Ntst=100|Nmax=131|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.70, one way (29 of 40)"
+set k=1;gv0=-63.28476;gw0=0.3965215496;ev=0.9999997831;ew=-0.0006585807239
+set p=-63.28476;total=1;v=-63.28476;w=0.3965215496;dl=0;w0=0.3965215496
+keys i g
+autokeys n
+ans Ntst=100|Nmax=294|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.70, the other way (30 of 40)"
+set k=1;gv0=-63.28476;gw0=0.3965215496;ev=0.9999997831;ew=-0.0006585807239
+set p=-63.28476;total=1;v=-63.28476;w=0.3965215496;dl=0;w0=0.3965215496
+keys i g
+autokeys n
+ans Ntst=100|Nmax=137|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.75, one way (31 of 40)"
+set k=1;gv0=-62.149603;gw0=0.3919806361;ev=0.9999994235;ew=0.001073824175
+set p=-62.149603;total=1;v=-62.149603;w=0.3919806361;dl=0;w0=0.3919806361
+keys i g
+autokeys n
+ans Ntst=100|Nmax=299|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.75, the other way (32 of 40)"
+set k=1;gv0=-62.149603;gw0=0.3919806361;ev=0.9999994235;ew=0.001073824175
+set p=-62.149603;total=1;v=-62.149603;w=0.3919806361;dl=0;w0=0.3919806361
+keys i g
+autokeys n
+ans Ntst=100|Nmax=164|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.80, one way (33 of 40)"
+set k=1;gv0=-61.027067;gw0=0.3897622061;ev=0.999994534;ew=0.003306362767
+set p=-61.027067;total=1;v=-61.027067;w=0.3897622061;dl=0;w0=0.3897622061
+keys i g
+autokeys n
+ans Ntst=100|Nmax=306|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.80, the other way (34 of 40)"
+set k=1;gv0=-61.027067;gw0=0.3897622061;ev=0.999994534;ew=0.003306362767
+set p=-61.027067;total=1;v=-61.027067;w=0.3897622061;dl=0;w0=0.3897622061
+keys i g
+autokeys n
+ans Ntst=100|Nmax=313|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.85, one way (35 of 40)"
+set k=1;gv0=-59.863685;gw0=0.3897078016;ev=0.9999805225;ew=0.006241360433
+set p=-59.863685;total=1;v=-59.863685;w=0.3897078016;dl=0;w0=0.3897078016
+keys i g
+autokeys n
+ans Ntst=100|Nmax=317|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.85, the other way (36 of 40)"
+set k=1;gv0=-59.863685;gw0=0.3897078016;ev=0.9999805225;ew=0.006241360433
+set p=-59.863685;total=1;v=-59.863685;w=0.3897078016;dl=0;w0=0.3897078016
+keys i g
+autokeys n
+ans Ntst=100|Nmax=309|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.90, one way (37 of 40)"
+set k=1;gv0=-58.514743;gw0=0.3918305291;ev=0.9999427067;ew=0.0107043575
+set p=-58.514743;total=1;v=-58.514743;w=0.3918305291;dl=0;w0=0.3918305291
+keys i g
+autokeys n
+ans Ntst=100|Nmax=319|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.90, the other way (38 of 40)"
+set k=1;gv0=-58.514743;gw0=0.3918305291;ev=0.9999427067;ew=0.0107043575
+set p=-58.514743;total=1;v=-58.514743;w=0.3918305291;dl=0;w0=0.3918305291
+keys i g
+autokeys n
+ans Ntst=100|Nmax=309|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.95, one way (39 of 40)"
+set k=1;gv0=-56.346665;gw0=0.3967376106;ev=0.9997379815;ew=0.02289035443
+set p=-56.346665;total=1;v=-56.346665;w=0.3967376106;dl=0;w0=0.3967376106
+keys i g
+autokeys n
+ans Ntst=100|Nmax=320|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: the isochron of phase 0.95, the other way (40 of 40)"
+set k=1;gv0=-56.346665;gw0=0.3967376106;ev=0.9997379815;ew=0.02289035443
+set p=-56.346665;total=1;v=-56.346665;w=0.3967376106;dl=0;w0=0.3967376106
+keys i g
+autokeys n
+ans Ntst=100|Nmax=307|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.3|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 2: all isochrons to a file (AUTO File > Write pts), back in the data browser, colour = phase"
+autokeys f w
+ans osinga_fig2.dat
+keys v 2
+ans X-axis=v|Y-axis=w|Xmin=-90|Ymin=0.3|Xmax=52|Ymax=0.8|Xlabel=V|Ylabel=n
+set k=1;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+keys g f f
+ans Color=0|Key=Gamma|Name=Gamma
+browser open
+browsekeys l
+ans osinga_fig2.dat
+browsekeys p
+ans v
+ans t
+browsekeys p
+ans dl
+ans flr((w0-1)/2)/20
+browser close
+keys u c a
+ans dl
+ans c
+ans 0
+ans 1
+keys esc
+set lt=0
+keys r
+keys n n
+shot osinga_fig2.svg
+pause "Figure 2 done: Enter for the next figure"
+
+# ======================================================================================
+# Figure 3: the 0-phase isochron I(gamma0), coloured by arclength
+# ======================================================================================
+keys g f r
+try
+  keys m k
+  ans y
+end
+keys g f r
+set lt=1
+keys u c n
+keys esc
+msg "Figure 3: the 0-phase isochron I(gamma0), coloured by arclength"
+try
+  autokeys f r
+  ans y
+end
+autokeys u 5
+ans Uzr1=p=-45|Uzr2=p=-40|Uzr3=p=-55|Uzr4=p=-50|Uzr5=p=-59.2
+keys v 2
+ans X-axis=v|Y-axis=w|Xmin=-90|Ymin=0.3|Xmax=52|Ymax=0.8|Xlabel=V|Ylabel=n
+set k=3;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+keys g f f
+ans Color=0|Key=Gamma|Name=Gamma
+msg "Figure 3: the right-hand piece (k = 3 periods, Ntst 600)"
+set k=3;gv0=44.706379;gw0=0.45973791;ev=0.9999999906;ew=-0.0001371081336
+set p=44.706379;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+autokeys n
+ans Ntst=600|Nmax=60|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.5|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 3: the left-hand piece, coarse steps (about a minute)"
+set k=3;gv0=44.706379;gw0=0.45973791;ev=0.9999999906;ew=-0.0001371081336
+set p=44.706379;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+autokeys n
+ans Ntst=600|Nmax=412|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.5|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 3: on with fine steps through the excursions and the spiral (a few minutes)"
+auto goto last
+autokeys n
+ans Nmax=892|Ds=-0.01|Dsmax=0.1
+autokeys r
+autokeys f w
+ans osinga_iso0.dat
+browser open
+browsekeys l
+ans osinga_iso0.dat
+browsekeys p
+ans v
+ans t
+browsekeys p
+ans dl
+ans @v
+browsekeys p
+ans w0
+ans @w
+browsekeys p
+ans t
+ans &sqrt(dl^2+w0^2)
+browsekeys p
+ans t
+ans t-21.4
+browsekeys p
+ans dl
+ans 0-t
+browsekeys p
+ans w0
+ans fx(v,w)
+browser close
+msg "Figure 3(a): the isochron in the phase plane, colour = arclength (red near gamma, blue at the end)"
+keys u c a
+ans dl
+ans c
+ans -190
+ans -85
+keys esc
+keys v 2
+ans X-axis=v|Y-axis=w|Xmin=-90|Ymin=0.3|Xmax=52|Ymax=0.8|Xlabel=V|Ylabel=n
+keys r
+keys n n
+shot osinga_fig3a.svg
+msg "Figure 3(b): n against arclength"
+keys m c
+keys u c a
+ans dl
+ans c
+ans -190
+ans -85
+keys esc
+keys v 2
+ans X-axis=t|Y-axis=w|Xmin=-10|Ymin=0.39|Xmax=200|Ymax=0.7|Xlabel=arclength|Ylabel=n
+keys r
+shot osinga_fig3b.svg
+msg "Figure 3(c): the spiral round x*"
+keys m c
+keys u c a
+ans dl
+ans c
+ans -190
+ans -85
+keys esc
+keys v 2
+ans X-axis=v|Y-axis=w|Xmin=-60.75|Ymin=0.398|Xmax=-58.25|Ymax=0.408|Xlabel=V|Ylabel=n
+keys r
+keys n n
+shot osinga_fig3c.svg
+msg "Figure 3(d): dV/dt along the isochron against arclength"
+keys m c
+keys u c a
+ans dl
+ans c
+ans -190
+ans -85
+keys esc
+keys v 2
+ans X-axis=t|Y-axis=w0|Xmin=90|Ymin=-1|Xmax=200|Ymax=4.5|Xlabel=arclength|Ylabel=dV/dt
+keys r
+shot osinga_fig3d.svg
+shot osinga_fig3.svg
+pause "Figure 3 done: Enter for the next figure"
+
+# ======================================================================================
+# Figure 4: jump-left and jump-right orbits at V = -45 and -40 (one period)
+# ======================================================================================
+keys g f r
+try
+  keys m k
+  ans y
+end
+keys g f r
+set lt=1
+keys u c n
+keys esc
+msg "Figure 4: jump-left and jump-right orbits at V = -45 and -40 (one period)"
+set meth=cvode;dt=0.0001;toler=1e-12;atol=1e-12
+msg "Figure 4(a)"
+keys v 2
+ans X-axis=v|Y-axis=w|Xmin=-90|Ymin=0.3|Xmax=52|Ymax=0.8|Xlabel=V|Ylabel=n
+browser open
+browsekeys l
+ans osinga_iso0.dat
+browsekeys p
+ans v
+ans t
+browser close
+keys g f f
+ans Color=8|Key=isochron|Name=isochron
+set k=1;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+keys g f f
+ans Color=0|Key=Gamma|Name=Gamma
+auto goto UZ 3
+print p
+print w0
+set k=3;total=0.3333333
+keys i g
+keys g f f
+ans Color=3|Key=V=-45,jump-left|Name=V=-45,jum
+auto goto UZ 6
+print p
+print w0
+set k=3;total=0.3333333
+keys i g
+keys g f f
+ans Color=7|Key=V=-45,jump-right|Name=V=-45,jum
+auto goto UZ 4
+print p
+print w0
+set k=3;total=0.3333333
+keys i g
+keys g f f
+ans Color=1|Key=V=-40,jump-left|Name=V=-40,jum
+auto goto UZ 5
+print p
+print w0
+set k=3;total=0.3333333
+keys i g
+keys g f f
+ans Color=10|Key=V=-40,jump-right|Name=V=-40,jum
+keys n n
+keys r
+shot osinga_fig4a.svg
+msg "Figure 4(c)"
+keys m c
+keys v 2
+ans X-axis=tt|Y-axis=v|Xmin=0|Ymin=-90|Xmax=1|Ymax=50|Xlabel=t/T|Ylabel=V
+set k=1;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+keys g f f
+ans Color=0|Key=Gamma|Name=Gamma
+auto goto UZ 3
+print p
+print w0
+set k=3;total=0.3333333
+keys i g
+keys g f f
+ans Color=3|Key=V=-45,jump-left|Name=V=-45,jum
+auto goto UZ 6
+print p
+print w0
+set k=3;total=0.3333333
+keys i g
+keys g f f
+ans Color=7|Key=V=-45,jump-right|Name=V=-45,jum
+auto goto UZ 4
+print p
+print w0
+set k=3;total=0.3333333
+keys i g
+keys g f f
+ans Color=1|Key=V=-40,jump-left|Name=V=-40,jum
+auto goto UZ 5
+print p
+print w0
+set k=3;total=0.3333333
+keys i g
+keys g f f
+ans Color=10|Key=V=-40,jump-right|Name=V=-40,jum
+keys r
+shot osinga_fig4c.svg
+set meth=rk4;dt=0.0001
+shot osinga_fig4.svg
+pause "Figure 4 done: Enter for the next figure"
+
+# ======================================================================================
+# Figure 5: jump-left and jump-right orbits at V = -55 and -50 (two periods)
+# ======================================================================================
+keys g f r
+try
+  keys m k
+  ans y
+end
+keys g f r
+set lt=1
+keys u c n
+keys esc
+msg "Figure 5: jump-left and jump-right orbits at V = -55 and -50 (two periods)"
+msg "Figure 5: AUTO labels only one of the three V = -55 points here (UZ points without a label cannot be grabbed), so: the V = -50 pair and one V = -55 orbit"
+set meth=cvode;dt=0.0001;toler=1e-12;atol=1e-12
+msg "Figure 5(a)"
+keys v 2
+ans X-axis=v|Y-axis=w|Xmin=-90|Ymin=0.3|Xmax=52|Ymax=0.8|Xlabel=V|Ylabel=n
+browser open
+browsekeys l
+ans osinga_iso0.dat
+browsekeys p
+ans v
+ans t
+browser close
+keys g f f
+ans Color=8|Key=isochron|Name=isochron
+set k=1;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+keys g f f
+ans Color=0|Key=Gamma|Name=Gamma
+auto goto UZ 8
+print p
+print w0
+set k=3;total=0.6666667
+keys i g
+keys g f f
+ans Color=3|Key=V=-55|Name=V=-55
+auto goto UZ 13
+print p
+print w0
+set k=3;total=0.6666667
+keys i g
+keys g f f
+ans Color=1|Key=V=-50,jump-left|Name=V=-50,jum
+auto goto UZ 14
+print p
+print w0
+set k=3;total=0.6666667
+keys i g
+keys g f f
+ans Color=10|Key=V=-50,jump-right|Name=V=-50,jum
+keys n n
+keys r
+shot osinga_fig5a.svg
+msg "Figure 5(c)"
+keys m c
+keys v 2
+ans X-axis=tt|Y-axis=v|Xmin=0|Ymin=-90|Xmax=2|Ymax=50|Xlabel=t/T|Ylabel=V
+set k=2;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+keys g f f
+ans Color=0|Key=Gamma|Name=Gamma
+auto goto UZ 8
+print p
+print w0
+set k=3;total=0.6666667
+keys i g
+keys g f f
+ans Color=3|Key=V=-55|Name=V=-55
+auto goto UZ 13
+print p
+print w0
+set k=3;total=0.6666667
+keys i g
+keys g f f
+ans Color=1|Key=V=-50,jump-left|Name=V=-50,jum
+auto goto UZ 14
+print p
+print w0
+set k=3;total=0.6666667
+keys i g
+keys g f f
+ans Color=10|Key=V=-50,jump-right|Name=V=-50,jum
+keys r
+shot osinga_fig5c.svg
+set meth=rk4;dt=0.0001
+shot osinga_fig5.svg
+pause "Figure 5 done: Enter for the next figure"
+
+# ======================================================================================
+# Figure 6: four orbits at V = -59.2 as the isochron loops round x* (two periods)
+# ======================================================================================
+keys g f r
+try
+  keys m k
+  ans y
+end
+keys g f r
+set lt=1
+keys u c n
+keys esc
+msg "Figure 6: four orbits at V = -59.2 as the isochron loops round x* (two periods)"
+set meth=cvode;dt=0.0001;toler=1e-12;atol=1e-12
+msg "Figure 6(a)"
+keys v 2
+ans X-axis=v|Y-axis=w|Xmin=-90|Ymin=0.3|Xmax=52|Ymax=0.8|Xlabel=V|Ylabel=n
+browser open
+browsekeys l
+ans osinga_iso0.dat
+browsekeys p
+ans v
+ans t
+browser close
+keys g f f
+ans Color=8|Key=isochron|Name=isochron
+set k=1;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+keys g f f
+ans Color=0|Key=Gamma|Name=Gamma
+auto goto UZ 9
+print p
+print w0
+set k=3;total=0.6666667
+keys i g
+keys g f f
+ans Color=3|Key=V=-59.2|Name=V=-59.2
+auto goto UZ 10
+print p
+print w0
+set k=3;total=0.6666667
+keys i g
+keys g f f
+ans Color=7|Key=V=-59.2|Name=V=-59.2
+auto goto UZ 11
+print p
+print w0
+set k=3;total=0.6666667
+keys i g
+keys g f f
+ans Color=1|Key=V=-59.2|Name=V=-59.2
+auto goto UZ 12
+print p
+print w0
+set k=3;total=0.6666667
+keys i g
+keys g f f
+ans Color=10|Key=V=-59.2|Name=V=-59.2
+keys n n
+keys r
+shot osinga_fig6a.svg
+msg "Figure 6(c)"
+keys m c
+keys v 2
+ans X-axis=tt|Y-axis=v|Xmin=0|Ymin=-90|Xmax=2|Ymax=50|Xlabel=t/T|Ylabel=V
+set k=2;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+keys g f f
+ans Color=0|Key=Gamma|Name=Gamma
+auto goto UZ 9
+print p
+print w0
+set k=3;total=0.6666667
+keys i g
+keys g f f
+ans Color=3|Key=V=-59.2|Name=V=-59.2
+auto goto UZ 10
+print p
+print w0
+set k=3;total=0.6666667
+keys i g
+keys g f f
+ans Color=7|Key=V=-59.2|Name=V=-59.2
+auto goto UZ 11
+print p
+print w0
+set k=3;total=0.6666667
+keys i g
+keys g f f
+ans Color=1|Key=V=-59.2|Name=V=-59.2
+auto goto UZ 12
+print p
+print w0
+set k=3;total=0.6666667
+keys i g
+keys g f f
+ans Color=10|Key=V=-59.2|Name=V=-59.2
+keys r
+shot osinga_fig6c.svg
+set meth=rk4;dt=0.0001
+msg "Figure 6: one of the four orbits (purple) spikes late. Its start lies so close to the repelling slow manifold that a change of 1e-9 in n changes its phase: forward integration cannot hold it (the paper's almost phaseless set)"
+shot osinga_fig6.svg
+pause "Figure 6 done: Enter for the next figure"
+
+# ======================================================================================
+# Figure 7: the isochron I(gamma30) of phase 0.3, coloured by arclength
+# ======================================================================================
+keys g f r
+try
+  keys m k
+  ans y
+end
+keys g f r
+set lt=1
+keys u c n
+keys esc
+msg "Figure 7: the isochron I(gamma30) of phase 0.3, coloured by arclength"
+try
+  autokeys f r
+  ans y
+end
+keys v 2
+ans X-axis=v|Y-axis=w|Xmin=-90|Ymin=0.3|Xmax=52|Ymax=0.8|Xlabel=V|Ylabel=n
+set k=3;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+keys g f f
+ans Color=0|Key=Gamma|Name=Gamma
+msg "Figure 7: the outside piece (to the left of gamma30)"
+set k=3;gv0=-72.707435;gw0=0.5478874794;ev=0.9999997181;ew=-0.0007509096079
+set p=-72.707435;total=1;v=-72.707435;w=0.5478874794;dl=0;w0=0.5478874794
+keys i g
+autokeys n
+ans Ntst=600|Nmax=67|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.5|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Figure 7: the inside piece, across Gamma and round x* (a few minutes)"
+set k=3;gv0=-72.707435;gw0=0.5478874794;ev=0.9999997181;ew=-0.0007509096079
+set p=-72.707435;total=1;v=-72.707435;w=0.5478874794;dl=0;w0=0.5478874794
+keys i g
+autokeys n
+ans Ntst=600|Nmax=1046|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.2|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+autokeys f w
+ans osinga_iso30.dat
+browser open
+browsekeys l
+ans osinga_iso30.dat
+browsekeys p
+ans v
+ans t
+browsekeys p
+ans dl
+ans @v
+browsekeys p
+ans w0
+ans @w
+browsekeys p
+ans t
+ans &sqrt(dl^2+w0^2)
+browsekeys p
+ans t
+ans t-55.6
+browsekeys p
+ans dl
+ans 0-t
+browsekeys p
+ans w0
+ans fx(v,w)
+browser close
+msg "Figure 7(a): the isochron in the phase plane, colour = arclength (red near gamma, blue at the end)"
+keys u c a
+ans dl
+ans c
+ans -105
+ans -25
+keys esc
+keys v 2
+ans X-axis=v|Y-axis=w|Xmin=-90|Ymin=0.3|Xmax=52|Ymax=0.8|Xlabel=V|Ylabel=n
+keys r
+keys n n
+shot osinga_fig7a.svg
+msg "Figure 7(b): n against arclength"
+keys m c
+keys u c a
+ans dl
+ans c
+ans -105
+ans -25
+keys esc
+keys v 2
+ans X-axis=t|Y-axis=w|Xmin=-5|Ymin=0.39|Xmax=110|Ymax=0.6|Xlabel=arclength|Ylabel=n
+keys r
+shot osinga_fig7b.svg
+msg "Figure 7(c): the spiral round x*"
+keys m c
+keys u c a
+ans dl
+ans c
+ans -105
+ans -25
+keys esc
+keys v 2
+ans X-axis=v|Y-axis=w|Xmin=-60.75|Ymin=0.398|Xmax=-58.25|Ymax=0.408|Xlabel=V|Ylabel=n
+keys r
+keys n n
+shot osinga_fig7c.svg
+msg "Figure 7(d): dV/dt along the isochron against arclength"
+keys m c
+keys u c a
+ans dl
+ans c
+ans -105
+ans -25
+keys esc
+keys v 2
+ans X-axis=t|Y-axis=w0|Xmin=20|Ymin=-1.6|Xmax=110|Ymax=1|Xlabel=arclength|Ylabel=dV/dt
+keys r
+shot osinga_fig7d.svg
+shot osinga_fig7.svg
+pause "Figure 7 done: Enter for the next figure"
+
+# ======================================================================================
+# Figure 8: I(gamma0) (blue-green), I(gamma30) (blue) and x^r (black) along the repelling slow manifold
+# ======================================================================================
+keys g f r
+try
+  keys m k
+  ans y
+end
+keys g f r
+set lt=1
+keys u c n
+keys esc
+msg "Figure 8: I(gamma0) (blue-green), I(gamma30) (blue) and x^r (black) along the repelling slow manifold"
+keys v 2
+ans X-axis=v|Y-axis=w|Xmin=-90|Ymin=0.3|Xmax=52|Ymax=0.8|Xlabel=V|Ylabel=n
+browser open
+browsekeys l
+ans osinga_iso0.dat
+browsekeys p
+ans v
+ans t
+browser close
+keys g f f
+ans Color=8|Key=I(gamma0)|Name=I(gamma0)
+browser open
+browsekeys l
+ans osinga_iso30.dat
+browsekeys p
+ans v
+ans t
+browser close
+keys g f f
+ans Color=9|Key=I(gamma30)|Name=I(gamma30
+set k=1;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+keys g f f
+ans Color=10|Key=Gamma|Name=Gamma
+set k=-5;total=1;v=-38.0;w=0.65658479;dl=0;w0=0.65658479
+keys i g
+keys g f f
+ans Color=0|Key=x^r|Name=x^r
+keys n n
+keys r
+shot osinga_fig8a.svg
+keys m c
+keys v 2
+ans X-axis=v|Y-axis=w|Xmin=-60.75|Ymin=0.398|Xmax=-58.25|Ymax=0.408|Xlabel=V|Ylabel=n
+browser open
+browsekeys l
+ans osinga_iso0.dat
+browsekeys p
+ans v
+ans t
+browser close
+keys g f f
+ans Color=8|Key=I(gamma0)|Name=I(gamma0)
+browser open
+browsekeys l
+ans osinga_iso30.dat
+browsekeys p
+ans v
+ans t
+browser close
+keys g f f
+ans Color=9|Key=I(gamma30)|Name=I(gamma30
+set k=1;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+keys g f f
+ans Color=10|Key=Gamma|Name=Gamma
+set k=-5;total=1;v=-38.0;w=0.65658479;dl=0;w0=0.65658479
+keys i g
+keys g f f
+ans Color=0|Key=x^r|Name=x^r
+keys n n
+keys r
+shot osinga_fig8b.svg
+shot osinga_fig8.svg
+pause "Figure 8 done: Enter for the next figure"
+
+# ======================================================================================
+# Figure 9: Figure 2's isochrons near x*, with x^r
+# ======================================================================================
+keys g f r
+try
+  keys m k
+  ans y
+end
+keys g f r
+set lt=1
+keys u c n
+keys esc
+msg "Figure 9: Figure 2's isochrons near x*, with x^r"
+set lt=1
+keys v 2
+ans X-axis=v|Y-axis=w|Xmin=-62.3|Ymin=0.388|Xmax=-56.6|Ymax=0.415|Xlabel=V|Ylabel=n
+set k=-5;total=1;v=-38.0;w=0.65658479;dl=0;w0=0.65658479
+keys i g
+keys g f f
+ans Color=0|Key=x^r|Name=x^r
+set k=1;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+keys g f f
+ans Color=10|Key=Gamma|Name=Gamma
+browser open
+browsekeys l
+ans osinga_fig2.dat
+browsekeys p
+ans v
+ans t
+browsekeys p
+ans dl
+ans flr((w0-1)/2)/20
+browser close
+keys u c a
+ans dl
+ans c
+ans 0
+ans 1
+keys esc
+set lt=0
+keys r
+keys n n
+shot osinga_fig9a.svg
+keys m c
+set lt=1
+keys v 2
+ans X-axis=v|Y-axis=w|Xmin=-60.75|Ymin=0.398|Xmax=-58.25|Ymax=0.408|Xlabel=V|Ylabel=n
+set k=-5;total=1;v=-38.0;w=0.65658479;dl=0;w0=0.65658479
+keys i g
+keys g f f
+ans Color=0|Key=x^r|Name=x^r
+set k=1;total=1;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
+keys i g
+keys g f f
+ans Color=10|Key=Gamma|Name=Gamma
+browser open
+browsekeys l
+ans osinga_fig2.dat
+browsekeys p
+ans v
+ans t
+browsekeys p
+ans dl
+ans flr((w0-1)/2)/20
+browser close
+keys u c a
+ans dl
+ans c
+ans 0
+ans 1
+keys esc
+set lt=0
+keys r
+keys n n
+shot osinga_fig9b.svg
+set lt=1
+msg "Done: Figures 1-9 of Osinga & Moehlis (2010) with XPPAUT scripting. What differs from the paper: see the top of Osinga_Moehlis_2010.ode"

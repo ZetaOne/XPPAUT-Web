@@ -1,0 +1,101 @@
+# Osinga_Moehlis_2010.ode -- the figures of Osinga & Moehlis (2010), "Continuation-based computation of
+#   global isochrons", SIAM J. Appl. Dyn. Syst. 9(4) 1201-1228, redone in XPPAUT 8.4 by scripting
+#   alone: run Osinga_Moehlis_2010.xps (File > Do script; XPPAUT 8.4 or XPPAUT-Web).  It walks through
+#   Figures 1 to 9 one after the other and pauses after each (Enter goes on).
+#   Paper: https://sites.me.ucsb.edu/~moehlis/moehlis_papers/isochrons.pdf
+#
+# ======================================================================================
+# WHAT THE SCRIPT DOES, FIGURE BY FIGURE
+# ======================================================================================
+#  Fig. 1  Γ: V against t/T over five periods (window a) and in the phase plane with the
+#          nullclines (main window = b).
+#  Fig. 2  20 isochrons (the paper has 100), phases 0, 0.05, ..., 0.95, coloured by phase.
+#          Each one: a BVP family in AUTO (Run > Bdry Value, both ways from gamma(theta)),
+#          segments of k = 1 period ("stage 1" of the paper), stopped where the end point's
+#          offset |dl| reaches the paper's eta = 1e-4.  All 40 branches are written with AUTO
+#          File > Write pts and coloured in the data browser by branch number = phase.
+#  Fig. 3  The 0-phase isochron I(gamma0) as in M3_HH (k = 3 periods, coarse then fine steps),
+#          coloured by arclength: (a) phase plane, (b) n against arclength, (c) the spiral round
+#          x*, (d) dV/dt along the isochron against arclength.
+#  Fig. 4  Jump-left / jump-right pairs at V = -45 and -40 on I(gamma0): AUTO marks the points
+#  Fig. 5  (Usr period: UZ at p = v(0) = -45, -40, -55, -50, -59.2), each is grabbed and
+#  Fig. 6  integrated for one period (Fig. 4) or two (Figs. 5, 6) and frozen: (a) phase plane
+#          with the isochron and Γ, (c) V against t/T with Γ.  (The paper's enlargements (b):
+#          use Window/zoom in (a).)  Fig. 5: AUTO gives a label (needed to grab a point) to only
+#          one of the three V = -55 points, so it shows the V = -50 pair and one V = -55 orbit.
+#          Fig. 6: one orbit (purple) spikes late: its start is so close to the repelling slow
+#          manifold that a change of 1e-9 in n changes its phase, and no forward integration
+#          (RK4 or CVODE at 1e-12) holds it there -- the paper's "almost phaseless set".
+#  Fig. 7  The isochron I(gamma30) of phase 0.3, panels (a)-(d) as in Fig. 3.
+#  Fig. 8  I(gamma0), I(gamma30) and x^r, the orbit segment along the repelling slow manifold
+#          (here: 5 periods BACKWARD from (-38, 0.6566) on the middle branch of the V-nullcline,
+#          which attracts in backward time; it ends at x*).  (a) phase plane, (b) near x*.
+#  Fig. 9  Figure 2's isochrons near x*, two enlargements, with x^r.
+#
+#  What differs from the paper, and why
+#   - Fig. 2 / 9: 20 isochrons, stage 1 (k = 1) only: the paper's 100 isochrons with several
+#     stages each would take hours.  Each isochron stops where it leaves the thin layer along
+#     the V-nullcline; the paper continues them round x* and out again.
+#   - Line width: XPP draws 1-pixel lines on screen and has no option to change it (the
+#     paper's thick curves cannot be had); "shot ... linewidth=" thickens only the frame in
+#     SVG files and very little in PostScript.
+#   - Colours: XPP's colour maps and its 11 curve colours (Γ is black, not gray; the nullclines
+#     have XPP's colours; Fig. 2 uses XPP's rainbow map, the paper cyan to magenta).
+#   - XPP keeps at most 26 frozen curves and does not free those of closed windows, so the
+#     script clears each window's curves before it closes it.
+#   - Figs. 3, 7: the isochron stops where |dl| reaches eta = 1e-4 (arclength 183 and 96; the
+#     paper goes to about 190 and 105).
+#   - Time is rescaled: t runs from 0 to 1 over the k periods of a segment; the plotted
+#     time tt = k t is t/T, as in the paper.
+#
+# ======================================================================================
+# THE METHOD (M3; see M3_HH.ode for the step-by-step version)
+# ======================================================================================
+#  Orbit segments u' = kT F(u), 0 <= s <= 1, that end on the straight piece of the isochron
+#  at gamma: u(1) = gamma + dl e.  Then u(0) is on the isochron of gamma.  XPP's AUTO wants one
+#  boundary condition per equation, so dl and w0 (= w(0)) are constant variables and
+#  p = v(0) is the continuation parameter: AUTO's diagram, w0 against p, is the isochron.
+#  gamma, e for each phase come from Osinga_Moehlis_2010.xps (set gv0, gw0, ev, ew).
+# ======================================================================================
+
+# --- the continuation parameter p = v(0) (first, so that it is AUTO's Par1)
+par p=44.706379
+
+# --- the model: the reduced Hodgkin-Huxley neuron of Osinga & Moehlis (2010), eq. (4.1):
+#     m = minf(v) (fast), h = 0.8 - n;  I = 10.  Here w is n.
+am(x)=0.1*(x+40)/(1-exp(-(x+40)/10))
+bm(x)=4*exp(-(x+65)/18)
+an(x)=0.01*(x+55)/(1-exp(-(x+55)/10))
+bn(x)=0.125*exp(-(x+65)/80)
+minf(x)=am(x)/(am(x)+bm(x))
+fx(x,y)=iapp-gna*minf(x)^3*(0.8-y)*(x-ena)-gk*y^4*(x-ek)-gl*(x-el)
+fy(x,y)=an(x)*(1-y)-bn(x)*y
+par iapp=10,gna=120,gk=36,gl=0.3,ena=50,ek=-77,el=-54.4
+
+# --- the ingredients: the period, gamma and the isochron direction e there (set by the script)
+par per=11.84628522, k=1
+par gv0=44.706379, gw0=0.45973791, ev=0.9999999906, ew=-0.0001371081336
+
+# --- the segment in rescaled time (k < 0 integrates backward: x^r)
+v'=k*per*fx(v,w)
+w'=k*per*fy(v,w)
+dl'=0
+w0'=0
+init v=44.706379,w=0.45973791,dl=0,w0=0.45973791
+# --- time in periods of Γ (t/T), for the time series
+aux tt=t*k
+
+# --- the boundary conditions (v' here means v at s = 1, v means v at s = 0)
+bndry v'-gv0-dl'*ev
+bndry w'-gw0-dl'*ew
+bndry v-p
+bndry w0-w
+
+@ meth=rk4, dt=0.0001, total=1, maxstor=400000, bound=1e6
+@ xp=v, yp=w, xlo=-90, xhi=52, ylo=0.3, yhi=0.8
+@ ntst=100, ncol=4, nmax=400, npr=100000, ds=0.01, dsmin=1e-8, dsmax=0.5, parmin=-100, parmax=55
+@ normmax=1e6, epsl=1e-8, epsu=1e-8, epss=1e-6
+# nullcline colours as in the paper: V-nullcline green (7), n-nullcline red (1)
+@ xnc=7, ync=1
+@ autovar=w0, autoxmin=-100, autoxmax=55, autoymin=0.3, autoymax=0.8
+done
