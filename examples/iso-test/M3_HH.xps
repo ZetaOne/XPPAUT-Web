@@ -1,21 +1,86 @@
-# M3_HH.xps -- method M3 (boundary value continuation) for M3_HH.ode,
-# in XPP's own AUTO.  File > Do script in XPPAUT 8.4 (or XPPAUT-Web).  Each step is explained in the .ode.
+# M3_HH.xps -- method M3 (boundary value continuation) for M3_HH.ode, in XPP's own AUTO, and
+# the result drawn like Osinga & Moehlis (2010), Figure 3.  File > Do script in XPPAUT 8.4 (or
+# XPPAUT-Web).  Each step is explained at the top of M3_HH.ode.
 speed 0.1
-msg "Step 1: the starting solution, Γ from gamma0 for k = 2 periods (time rescaled to 0..1)"
+msg "Step 1: the starting solution, Gamma from gamma0 for k = 3 periods (time rescaled to 0..1)"
 keys i g
+msg "Step 2: freeze Gamma, so that it stays drawn"
+keys g f f
+ok
 keys f a
-msg "Step 3: AUTO numerics (Ntst 200, Ds -0.01, p = v(0) from -100 to 55)"
+msg "Step 3: AUTO, Run > Bdry Value -- the isochron to the right of gamma0"
 autokeys n
-ans Ntst=200|Nmax=470|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.5|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=8
-msg "Step 4: Run > Bdry Value -- the isochron to the left of gamma0"
+ans Ntst=600|Nmax=60|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.5|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
 autokeys r b
-msg "Step 5: back to the start, the other way -- the isochron to the right"
+msg "Step 4: a fresh start, to the left of gamma0 -- across Gamma and the first excursion (about a minute)"
 set p=44.706379;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
 keys i g
 autokeys n
-ans Nmax=60|Ds=0.01
+ans Nmax=412|Ds=-0.01|Dsmax=0.5
 autokeys r b
-msg "Step 6: one point's orbit segment, in the main window"
-auto goto LP 2
-keys i g
-msg "Done. The AUTO window is the isochron of phase 0, w(0) against v(0). M3 works where M2 cannot: no backward integration. Its limitation (the end point must stay on the straight piece of the isochron): M3_limitation_linear_HH.ode"
+msg "Step 5: on from the last point with smaller steps -- the other excursions and the spiral round x* (a few minutes)"
+auto goto last
+autokeys n
+ans Nmax=892|Ds=-0.01|Dsmax=0.1
+autokeys r
+msg "Step 6: AUTO File > Write pts -- the isochron's points to a file"
+autokeys f w
+ans M3_HH_isochron.dat
+msg "Step 7: load them in the data browser and compute the arclength (Replace with @ and &)"
+browser open
+browsekeys l
+ans M3_HH_isochron.dat
+browsekeys p
+ans v
+ans t
+browsekeys p
+ans dl
+ans @v
+browsekeys p
+ans w0
+ans @w
+browsekeys p
+ans t
+ans &sqrt(dl^2+w0^2)
+browsekeys p
+ans t
+ans t-21.4
+browsekeys p
+ans dl
+ans 0-t
+browser close
+msg "Step 8: window (a) -- the isochron in the phase plane, coloured by arclength (red at gamma0, blue at the end)"
+keys u c a
+ans dl
+ans c
+ans -190
+ans -85
+keys esc
+keys v 2
+ans X-axis=v|Y-axis=w|Xmin=-90|Ymin=0.3|Xmax=52|Ymax=0.8|Xlabel=V|Ylabel=n
+keys r
+keys n n
+msg "Step 9: window (b) -- n against arclength"
+keys m c
+keys u c a
+ans dl
+ans c
+ans -190
+ans -85
+keys esc
+keys v 2
+ans X-axis=t|Y-axis=w|Xmin=-10|Ymin=0.39|Xmax=200|Ymax=0.7|Xlabel=arclength|Ylabel=n
+keys r
+msg "Step 9: window (c) -- the spiral round x*"
+keys m c
+keys u c a
+ans dl
+ans c
+ans -190
+ans -85
+keys esc
+keys v 2
+ans X-axis=v|Y-axis=w|Xmin=-60.75|Ymin=0.398|Xmax=-58.25|Ymax=0.408|Xlabel=V|Ylabel=n
+keys r
+keys n n
+msg "Done. Windows (a), (b), (c) are Figure 3 (a), (b), (c) of Osinga & Moehlis (2010), computed in XPP's own AUTO: the isochron of phase 0 through the slow-manifold layer, where M1 and M2 fail. Limitation (the end point must stay on the straight piece): M3_limitation_linear_HH.ode"

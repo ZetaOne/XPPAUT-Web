@@ -4,7 +4,7 @@
 # ======================================================================================
 # WHAT TO DO IN THE XPPAUT WINDOW   (or run M3_limitation_linear_HH.xps: File > Do script)
 # ======================================================================================
-#   The same steps as M3_HH.ode, with k = 1 (segments one period long) instead of 2:
+#   The same steps as M3_HH.ode, with k = 1 (segments one period long) instead of 3:
 #   1. Initialconds > Go (keys i g): Γ from gamma0, one period.   2. File > Auto (keys f a).
 #   3. AUTO Numerics: Ntst 100  Nmax 900  Ds -0.01  Dsmin 1e-8  Dsmax 0.5  Par Min -100
 #      Par Max 55  Norm Max 1e6  ITNW 8  (Ds -0.01: to the left first).
@@ -25,7 +25,7 @@
 #  Checked (pyauto-xpp): the points with |dl| < 0.001 lie on the paper's isochron;
 #  the run-off branch (|dl| about 110) has phase about 0.42.
 #  The cure (Osinga & Moehlis): longer segments, k = 2, 3, ... periods: the end point then
-#  needs only a tiny dl.  That is M3_HH.ode (k = 2).
+#  needs only a tiny dl.  That is M3_HH.ode (k = 3).
 # ======================================================================================
 
 # --- the continuation parameter p = v(0) (first, so that it is AUTO's Par1)

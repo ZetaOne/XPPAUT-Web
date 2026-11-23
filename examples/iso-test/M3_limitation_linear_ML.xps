@@ -1,7 +1,7 @@
 # M3_limitation_linear_ML.xps -- method M3 (boundary value continuation) with k = 1 for M3_limitation_linear_ML.ode,
 # in XPP's own AUTO.  File > Do script in XPPAUT 8.4 (or XPPAUT-Web).  Each step is explained in the .ode.
 speed 0.1
-msg "Step 1: the starting solution, Γ from gamma0 for k = 1 period (time rescaled to 0..1)"
+msg "Step 1: the starting solution, Gamma from gamma0 for k = 1 period (time rescaled to 0..1)"
 keys i g
 keys f a
 msg "Step 3: AUTO numerics (Ntst 100, Ds -0.01, p = v(0) from -80 to 60)"

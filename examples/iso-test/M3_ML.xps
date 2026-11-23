@@ -1,7 +1,7 @@
 # M3_ML.xps -- method M3 (boundary value continuation) for M3_ML.ode,
 # in XPP's own AUTO.  File > Do script in XPPAUT 8.4 (or XPPAUT-Web).  Each step is explained in the .ode.
 speed 0.1
-msg "Step 1: the starting solution, Γ from gamma0 for k = 3 periods (time rescaled to 0..1)"
+msg "Step 1: the starting solution, Gamma from gamma0 for k = 3 periods (time rescaled to 0..1)"
 keys i g
 keys f a
 msg "Step 3: AUTO numerics (Ntst 300, Ds -0.01, p = v(0) from -80 to 60)"

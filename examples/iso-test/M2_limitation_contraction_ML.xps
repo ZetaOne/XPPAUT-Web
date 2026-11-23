@@ -27,4 +27,4 @@ keys v 2
 ans X-axis=ve|Y-axis=we|Xmin=-70|Ymin=0.0|Xmax=50|Ymax=0.65|Xlabel=v|Ylabel=w
 keys r
 keys n n
-msg "Done. M2's limitation: after 3 periods backward, the dots in colours other than red are not on their isochron, and many ran off. Backward integration magnifies errors by the contraction of Γ."
+msg "Done. M2's limitation: after 3 periods backward, the dots in colours other than red are not on their isochron, and many ran off. Backward integration magnifies errors by the contraction of Gamma."

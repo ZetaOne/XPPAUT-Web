@@ -5,26 +5,48 @@
 # WHAT TO DO IN THE XPPAUT WINDOW   (or run M3_HH.xps: File > Do script, which does
 #                                    all of it; XPPAUT 8.4 or XPPAUT-Web)
 # ======================================================================================
-#   1. Initialconds > Go (keys i g): the starting solution.  From gamma0, k = 2 periods
-#      of Γ in rescaled time 0..1 (it ends at gamma0 again).  The main window shows Γ.
-#   2. File > Auto (keys f a) opens the AUTO window.  Its axes are already set
-#      (Hi-lo, Y-axis w0, Main Parm p): the diagram IS the isochron, w(0) against v(0).
-#   3. AUTO Numerics (n):  Ntst 200  Nmax 470  Ds -0.01  Dsmin 1e-8  Dsmax 0.5
-#        Par Min -100  Par Max 55  Norm Max 1e6  ITNW 8                         (OK)
-#   4. Run > Bdry Value (r b): the isochron from gamma0 to the LEFT, through Γ's inside,
-#      up to n = 0.68 (the top of the first excursion), back down almost on top of
-#      itself, and into x* = (-59.60, 0.4026).
-#      LP = fold of the curve in v (it turns back in v; the continuation goes on round it).
-#      Nmax 470 stops where the curve gets too tight to see; further in, the end point
-#      drifts off the straight piece (column dl in the AUTO output grows).
-#   5. The other way, as a new branch from the start: in the main window set p = 44.706379
-#      (Parameters) and v = 44.706379, w = 0.45973791, dl = 0, w0 = 0.45973791 (ICs), Initialconds > Go;
-#      in AUTO: Numerics Ds 0.01 Nmax 60, Run > Bdry Value: the isochron from gamma0 to the
-#      RIGHT (outside Γ).  (Left first, and a fresh start rather than grabbing point 1: the
-#      other ways make XPP's AUTO very slow or fail on the second run.)
-#   6. Grab a point of the diagram (the script takes the top fold, LP 2), then in the main window
-#      Initialconds > Go: that point's orbit segment (from the isochron point, 2 periods,
-#      onto gamma0).
+#   1. Initialconds > Go (keys i g): the starting solution.  From gamma0, k = 3 periods
+#      of Γ in rescaled time 0..1 (it ends at gamma0 again).
+#   2. Graphic stuff > Freeze > Freeze (keys g f f), OK: Γ stays drawn under the isochron.
+#   3. File > Auto (keys f a).  Its axes are already set (Hi-lo, Y-axis w0, Main Parm p):
+#      the AUTO diagram IS the isochron, w(0) against v(0).
+#      AUTO Numerics (n): Ntst 600  Nmax 60  Ds 0.01  Dsmin 1e-8  Dsmax 0.5  Par Min -100
+#      Par Max 55  Norm Max 1e6  ITNW 20.  Run > Bdry Value (r b): the short piece of the
+#      isochron to the RIGHT of gamma0 (outside Γ).
+#   4. The LEFT side, as a new branch from the start: in the main window set p = 44.706379
+#      (Parameters) and v = 44.706379, w = 0.45973791, dl = 0, w0 = 0.45973791 (ICs),
+#      Initialconds > Go.  AUTO Numerics: Nmax 412  Ds -0.01  Dsmax 0.5.  Run > Bdry Value:
+#      from gamma0 to the left, across Γ's inside, up to the first excursion (n = 0.68)
+#      and back down.  (A fresh start, not a grab of point 1: grabbing makes XPP's AUTO
+#      very slow on the second run.)
+#   5. Grab the last point (Grab, End, Enter).  AUTO Numerics: Nmax 892  Ds -0.01
+#      Dsmax 0.1, Run: the second and third excursions and the spiral round x*, with
+#      smaller steps so that the spiral is drawn smoothly.  Nmax 892 stops where the end
+#      point's offset |dl| reaches 1e-4 (the paper's eta) at arclength 183.
+#   --- colour by arclength, as in the paper's Figure 3 ---
+#   6. AUTO File > Write pts: M3_HH_isochron.dat (columns: v(0), w(0), w(0), type, branch).
+#   7. Main window: Data (the data browser) > Load: M3_HH_isochron.dat.  Its columns now sit
+#      in the browser as t, v, w, dl, w0.  Replace (p) column by formula, in this order:
+#        v  := t                      V = v(0)                        (w already holds n = w(0))
+#        dl := @v                     differences of V (@ = derivative column)
+#        w0 := @w                     differences of n
+#        t  := &sqrt(dl^2+w0^2)       running sum (&): the ARCLENGTH along the isochron
+#        t  := t-21.4                 so that gamma0 is at 0 (the right-hand piece comes first)
+#        dl := 0-t                    minus arclength, for the colour (XPP's scale runs
+#                                     blue -> red, the paper's red -> blue)
+#      Close the browser.
+#   8. Window (a), the phase plane: nUmerics > Color code > Another quantity: dl, Min -190,
+#      Max -85 (keys u c a), Esc; Viewaxes 2D: v, w, -90..52, 0.3..0.8 (keys v 2); Restore
+#      (keys r); Nullcline > New (keys n n).
+#   9. Window (b), n against arclength: Makewindow > Create (keys m c); Color code again
+#      (a new window does not keep the quantity); Viewaxes 2D: t, w, -10..200, 0.39..0.7;
+#      Restore.   Window (c), the spiral round x*: Makewindow > Create; Color code again;
+#      Viewaxes 2D: v, w, -60.75..-58.25, 0.398..0.408; Restore; Nullcline > New.
+#   Compare with Osinga & Moehlis (2010), Figure 3 (a), (b), (c): the same curve, the same
+#   colours (red at gamma0, blue at the end), the same three peaks of n (0.68, 0.55, 0.43
+#   at arclength 105, 147, 175).
+#   XPPAUT-Web: the default mode shows windows (a), (b), (c) as panels (drag them apart).
+#   With "separate windows" on, a window enlarged after a newer one was made can stay blank.
 #
 # ======================================================================================
 # THE METHOD (M3, Osinga & Moehlis 2010, section 3)
@@ -61,7 +83,7 @@
 #  M2_limitation_contraction_HH.ode).  M1 (a grid of forward runs) cannot resolve the
 #  slow-manifold layer (M1_limitation_slowmanifold_HH.ode).  M3 never integrates backward and
 #  never needs a grid: it follows the isochron through the layer.
-#  Why k = 2: the end point must stay where the isochron is straight (|dl| small).  With
+#  Why k = 3: the end point must stay where the isochron is straight (|dl| small).  With
 #  k = 1 that fails: see M3_limitation_linear_HH.ode.
 # ======================================================================================
 
@@ -80,7 +102,7 @@ fy(x,y)=an(x)*(1-y)-bn(x)*y
 par iapp=10,gna=120,gk=36,gl=0.3,ena=50,ek=-77,el=-54.4
 
 # --- the ingredients
-par per=11.84628522, k=2
+par per=11.84628522, k=3
 par gv0=44.706379, gw0=0.45973791, ev=0.9999999906, ew=-0.0001371078909
 
 # --- step 1: the segment in rescaled time, u' = kT F(u)
@@ -98,8 +120,8 @@ bndry v-p
 bndry w0-w
 
 @ meth=rk4, dt=0.0001, total=1, maxstor=200000, bound=1e6
-@ xp=v, yp=w, xlo=-100, xhi=55, ylo=0.3, yhi=0.8
-@ ntst=200, ncol=4, nmax=470, npr=100000, ds=-0.01, dsmin=1e-8, dsmax=0.5, parmin=-100, parmax=55
+@ xp=v, yp=w, xlo=-90, xhi=52, ylo=0.3, yhi=0.8
+@ ntst=600, ncol=4, nmax=412, npr=100000, ds=-0.01, dsmin=1e-8, dsmax=0.5, parmin=-100, parmax=55
 @ normmax=1e6, epsl=1e-8, epsu=1e-8, epss=1e-6
 @ autovar=w0, autoxmin=-100, autoxmax=55, autoymin=0.3, autoymax=0.8
 done
