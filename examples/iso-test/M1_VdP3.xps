@@ -1,0 +1,39 @@
+# M1_VdP3.xps -- runs M1_VdP3.ode in one go (the steps at the top of the .ode).
+#   XPPAUT 8.4:  File > Do script > M1_VdP3.xps    (or: xppaut M1_VdP3.ode -script M1_VdP3.xps)
+#   XPPAUT-Web:  pick it under Scripts (group iso-test), or open the link with ?script=
+speed 0.3
+msg "M1, brute force: integrate every starting point of a grid and read its phase from its spikes"
+
+# A. window 1: the phase map, each starting point coloured by its phase theta (periodic colours)
+keys v 2
+ans X-axis=vs|Y-axis=ws|Xmin=-3.5|Ymin=-7|Xmax=3.5|Ymax=7|Xlabel=v|Ylabel=w
+keys u c a
+ans theta
+ans c
+ans 0
+ans 1
+keys esc
+msg "2par range over the starting point: 70 x 70 = 4900 runs, one dot each (a few minutes)"
+keys i 2
+ans Vary1=vs|Start1=-3.5|End1=3.5|Vary2=ws|Start2=-7|End2=7|Steps=70|Steps2=70|Reset storage (Y/N)=N|Use old ic's (Y/N)=Y|Cycle color (Y/N)=N|Movie(Y/N)=N|Crv(1) Array(2)=2
+keys n n
+msg "Window 1: the phase map; points of one colour have the same phase, so the colour bands are the isochrons. Nullclines on top."
+wait 4
+
+# B. window 2: the same runs, only the starting points whose phase is near 0, 0.1, ..., 0.9
+#    (a new window copies the colour settings but not the quantity: set it, then switch
+#    colour off for this window)
+keys m c
+keys u c a
+ans theta
+ans c
+ans 0
+ans 1
+keys esc
+keys u c n
+keys esc
+keys v 2
+ans X-axis=vb|Y-axis=wb|Xmin=-3.5|Ymin=-7|Xmax=3.5|Ymax=7|Xlabel=v|Ylabel=w
+keys r
+keys n n
+msg "Done. Window 2: ten isochrons (phase 0, 0.1, ..., 0.9) by brute force. M1's limitation: near the repelling slow manifold the isochrons crowd together beyond any grid; see M1_limitation_slowmanifold_HH."

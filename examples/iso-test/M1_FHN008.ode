@@ -1,0 +1,111 @@
+# M1_FHN008.ode -- isochrons by BRUTE FORCE (method M1), FitzHugh-Nagumo oscillator, ep = 0.08 (strongly slow-fast, like reduced Hodgkin-Huxley)
+#
+# ======================================================================================
+# WHAT TO DO IN THE XPPAUT WINDOW   (or run M1_FHN008.xps: File > Do script, which does
+#                                    all of it; XPPAUT 8.4 or XPPAUT-Web)
+# ======================================================================================
+#  A. The phase map, coloured (every dot = one starting point, colour = its phase)
+#   1. Viewaxes > 2D: X-axis vs, Y-axis ws, Xlabel v, Ylabel w           (keys v 2)
+#   2. nUmerics > Color code > Another quantity:  theta,  Choose,  Min 0,  Max 1
+#      (keys u c a), then Esc back to the main menu
+#   3. Initialconds > 2par range                                              (keys i 2)
+#        Vary1 vs    Start1 -2.5   End1 2.5
+#        Vary2 ws    Start2 -1.0   End2 2.0
+#        Steps 70    Steps2 70    Crv(1) Array(2): 2
+#        Reset storage: N   (keep every run: one dot each)
+#        Use old ic's: Y    (every run starts from its own point; with N each run
+#                            would go on from where the last one ended)
+#        Cycle color: N   Movie: N
+#      Ok.  4900 runs; each leaves one dot at its starting point, coloured by its
+#      phase.  The picture is the PHASE MAP: the colour bands are the isochrons.
+#   4. Nullcline > New (keys n n): the nullclines on top; they cross at the equilibrium
+#      x* inside the cycle, where all the colours meet.
+#
+#  B. Isochrons as dots, in a second window (the same runs, nothing to compute again)
+#   5. Makewindow > Create (keys m c): a new window, which is now the active one.
+#      First repeat step 2 in it (a new window copies the colour settings but not the
+#      quantity; without this, XPP also redraws window 1 with the wrong colours)
+#   6. nUmerics > Color code > No color (keys u c n), Esc
+#   7. Viewaxes > 2D: X-axis vb, Y-axis wb, Xlabel v, Ylabel w
+#      (and the same window), then Restore (keys r): only the starting points whose
+#      phase is within dth of 0, 1/niso, 2/niso, ... are left: niso isochrons.
+#   8. Nullcline > New (keys n n) in this window too.
+#      (niso, dth: Param window, then run 3 again.)
+#
+#  C. One point:  ICs vs=0.0, ws=0.4;  Viewaxes > 2D: t, theta;  Initialconds
+#      > Go: theta jumps to its final value after the first spike (here 0.964).
+#
+# ======================================================================================
+# THE METHOD (M1, brute force)
+# ======================================================================================
+#  Ingredients (computed once, numbers below):  the limit cycle Γ, its period T, a phase
+#  zero gamma0 on Γ (the point of Γ with the largest v), and a spike threshold thr.
+#
+#  For every starting point x0 on a grid:
+#   step 1  integrate x0 for a time trans, long enough to settle onto Γ
+#           (Γ attracts by about 10^16.6 per period)
+#   step 2  record s = the time of an upward crossing of v = thr after settling
+#   step 3  the same crossing for the cycle itself: starting at gamma0, Γ first crosses
+#           thr upward at t = tc0.  x0 is then late by (s - tc0) compared with gamma0,
+#           so its ASYMPTOTIC PHASE (clock reading) is
+#                theta(x0) = (tc0 - s)/T   mod 1
+#   step 4  the isochron of phase th = the set of grid points with theta = th:
+#           the colour bands (window 1), or the points within dth of th (window 2)
+#
+#  Why it works: x0 and the point of Γ with phase theta(x0) approach each other, so they
+#  cross thr at the same times once x0 has settled.  Only forward integration is needed.
+#  What it costs: one full integration per grid point; the grid sets the resolution.
+#  Its limitation: see M1_limitation_slowmanifold_HH.ode (this model behaves like the reduced Hodgkin-Huxley model).  Osinga & Moehlis (2010)
+#  show that all isochrons come exponentially close to the repelling slow manifold (an
+#  "almost phaseless set") and arbitrarily close to the equilibrium x* = (-0.804848, -0.13106)
+#  (the phaseless set); across such thin layers a grid cannot resolve the phase.
+#
+#  How this file is laid out (XPP draws nullclines only when the plot axes are variables):
+#   (vs, ws)  the starting point, as variables that barely move (their equations are
+#              eps times the model's, eps = 1e-9): 2par range varies their initial values,
+#              window 1 plots them, and their nullclines are the model's nullclines
+#   (vb, wb)  the same again, for window 2; a point whose phase is not near k/niso is
+#              moved down off the picture at its first spike after settling
+#   (V, W)    the trajectory itself, started from (vs, ws) at t = 1e-6
+# ======================================================================================
+
+# --- the model: FitzHugh-Nagumo, I = 0.5, a = 0.7, b = 0.8, time-scale ratio ep = 0.08
+#     (FHN's usual "eps" is called ep here: eps is the marker parameter below)
+fx(x,y)=x-x^3/3-y+i
+fy(x,y)=ep*(x+a-b*y)
+par i=0.5,a=0.7,b=0.8,ep=0.08
+
+# --- the ingredients: Γ has period per; it crosses v = thr upward for the first time
+#     tc0 after gamma0 = (1.8521175, 0.23432046), the point of Γ with the largest v
+par per=39.47441498, thr=-0.05914464, tc0=36.75438962
+
+# --- step 1: the starting point x0 = (vs, ws) (and its copy (vb, wb) for window 2)
+par eps=1e-9
+vs'=eps*fx(vs,ws)
+ws'=eps*fy(vs,ws)
+vb'=eps*fx(vb,wb)
+wb'=eps*fy(vb,wb)
+init vs=0,ws=0.4,vb=0,wb=0.4
+#     the trajectory from x0: it starts at x0 at t = 1e-6
+V'=fx(V,W)
+W'=fy(V,W)
+init V=0,W=0.4
+global 1 t-1e-6 {V=vs;W=ws;vb=vs;wb=ws}
+
+# --- step 2 and step 3: at every upward crossing of v = thr (time t = s), the asymptotic
+#     phase theta = (tc0 - s)/T mod 1 (theta stays -1 until the first spike, e.g. for a
+#     start at the equilibrium).  Window 2: at a crossing after settling (t > tset), a
+#     point whose phase is farther than dth from every multiple of 1/niso is moved down
+#     off the picture.
+par niso=10, dth=0.012, tset=71.0539
+theta'=0
+init theta=-1
+global 1 V-thr {theta=mod((tc0-t)/per,1);wb=if((t>tset)*(abs(mod(mod((tc0-t)/per,1)*niso+0.5,1)-0.5)>(dth*niso)))then(wb-10)else(wb)}
+
+# --- numerics: settle for 3 periods, then store the last 1.3 periods (every 257th step)
+@ meth=rk4, dt=0.01, trans=118.423, total=169.74, nout=257, bound=1e6, maxstor=1000000
+#     every run of a range starts again from its own point ("Use old ic's" = Y, XPP's
+#     default; with N each run would go on from where the last one ended)
+@ rangereset=no, rangeoldic=yes
+@ xp=vs, yp=ws, xlo=-2.5, xhi=2.5, ylo=-1.0, yhi=2.0, lt=-3, colormap=1, nmesh=200
+done
