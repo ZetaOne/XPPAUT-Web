@@ -1,0 +1,88 @@
+# M2_HH.ode -- isochrons by BACKWARD INTEGRATION (method M2),
+#                reduced Hodgkin-Huxley neuron (Osinga & Moehlis 2010, eq. 4.1)
+#
+# ======================================================================================
+# WHAT TO DO IN THE XPPAUT WINDOW   (or run M2_HH.xps: File > Do script, which does
+#                                    all of it; XPPAUT 8.4 or XPPAUT-Web)
+# ======================================================================================
+#   1. Viewaxes > 2D: X-axis ve, Y-axis we, Xlabel v, Ylabel n (window as below)   (keys v 2)
+#   2. nUmerics > Color code > Another quantity: thc (= th), Choose, Min 0, Max 1 (keys u c a), Esc
+#   3. Initialconds > 2par range                                               (keys i 2)
+#        Vary1 u   Start1 -1  End1 1      Vary2 th  Start2 0  End2 0.9
+#        Steps 80  Steps2 9  Reset storage N  Use old ic's Y  Crv(1) Array(2) 2
+#      810 runs.  Each leaves one dot: a point of the isochron of phase th (colour = th):
+#      ten isochrons, th = 0, 0.1, ..., 0.9.   Then Nullcline > New (keys n n).
+#   4. Makewindow > Create (keys m c); in the new window: Color code > Another quantity:
+#      err, Choose, Min 0, Max 1 (a new window copies the colour settings but not the
+#      quantity); Viewaxes as in 1; Restore (keys r); Nullcline > New.
+#      Window 2 colours the same dots by the CHECK err = (phase of the dot, measured
+#      forward the M1 way) - th, shown as |err| from 0 to 0.5: red = correct, any other
+#      colour = the dot is not on its isochron.  Dots that never spiked are not drawn.
+#
+# ======================================================================================
+# THE METHOD (M2, backward integration)
+# ======================================================================================
+#  Ingredients (computed once):  Γ, its period T, gamma0 = (44.706379, 0.45973791) (largest v
+#  on Γ, phase 0), and the direction e = (0.9999999906, -0.0001371078909) of the isochron of phase 0 at gamma0:
+#  near Γ that isochron is a short straight line, perpendicular to the adjoint Z(gamma0).
+#   step 1  starting points on that line: gamma0 + s e, s = sign(u) smax 10^(-dec (1-|u|)),
+#           u from -1 to 1 (both sides of Γ, distances spread over dec = 16 decades)
+#   step 2  integrate each one BACKWARD in time for tau = (k - th) T
+#   step 3  the flow carries isochron a in time t onto isochron a + t/T; backward by
+#           (k - th) T it carries isochron 0 onto isochron th (mod 1): the end point lies on
+#           the isochron of phase th.  Backward, points near Γ spread out from it, so the
+#           tiny straight piece grows into a long piece of the isochron.
+#   step 4  the check: integrate the end point forward and read its phase from its spikes
+#           (M1's way); err = phase - th should be 0.
+#  Here k = 1.  Its limitation: see M2_limitation_contraction_HH.ode.
+# ======================================================================================
+
+# --- the model: the reduced Hodgkin-Huxley neuron of Osinga & Moehlis (2010), eq. (4.1):
+#     m = minf(v) (fast), h = 0.8 - n;  I = 10 (repetitive firing)
+am(x)=0.1*(x+40)/(1-exp(-(x+40)/10))
+bm(x)=4*exp(-(x+65)/18)
+an(x)=0.01*(x+55)/(1-exp(-(x+55)/10))
+bn(x)=0.125*exp(-(x+65)/80)
+minf(x)=am(x)/(am(x)+bm(x))
+fx(x,y)=iapp-gna*minf(x)^3*(0.8-y)*(x-ena)-gk*y^4*(x-ek)-gl*(x-el)
+fy(x,y)=an(x)*(1-y)-bn(x)*y
+par iapp=10,gna=120,gk=36,gl=0.3,ena=50,ek=-77,el=-54.4
+
+# --- the ingredients
+par per=11.84628522, thr=-20, tc0=11.74002818
+par gv0=44.706379, gw0=0.45973791, ev=0.9999999906, ew=-0.0001371078909
+
+# --- step 1: the starting point gamma0 + s(u) e;  steps 2-3: backward until tau = (k - th) T
+#     (written out, not as derived ! parameters, so that 2par range updates them)
+par th=0.3, k=1, u=0.5, smax=0.0001, dec=16
+sv(q)=sign(q)*smax*10^(-dec*(1-abs(q)))
+#     direction of time: -1 (backward) before tau, +1 (forward, the check) after it;
+#     a point that leaves the box |v| < 200, |n| < 2 stops (backward, points outside Γ run off)
+dirn(x,y)=if(t<((k-th)*per))then(-1)else(1)
+box(x,y)=heav(200-abs(x))*heav(2-abs(y))
+vb'=dirn(vb,wb)*fx(vb,wb)*box(vb,wb)
+wb'=dirn(vb,wb)*fy(vb,wb)*box(vb,wb)
+init vb=44.706379,wb=0.45973791
+global 1 t-1e-6 {vb=gv0+sv(u)*ev;wb=gw0+sv(u)*ew}
+
+# --- the end point (ve, we), copied at t = tau.  ve, we obey eps*F (they stay put, and their
+#     nullclines are the model's, so XPP can draw nullclines on this picture)
+par eps=1e-9
+ve'=eps*fx(ve,we)
+we'=eps*fy(ve,we)
+init ve=44.706379,we=0.45973791
+global 1 t-(k-th)*per {ve=vb;we=wb}
+
+# --- step 4, the check: the latest upward spike after tau gives the dot's phase;
+#     err = |phase - th| (0 to 0.5), -1 if it never spiked
+tl'=0
+init tl=-1
+global 1 vb-thr {tl=if(t>((k-th)*per))then(t)else(tl)}
+#     the target phase as a column (Color code takes variables and aux quantities, not parameters)
+aux thc=th
+aux err=if(tl>0)then(abs(mod(mod((tc0-(tl-(k-th)*per))/per,1)-th+0.5,1)-0.5))else(-1)
+
+@ meth=rk4, dt=0.01, trans=64.9699, total=72.0777, nout=500, bound=1e9, maxstor=1000000
+@ rangereset=no, rangeoldic=yes
+@ xp=ve, yp=we, xlo=-90, xhi=52, ylo=0.3, yhi=0.8, lt=-3, colormap=1, nmesh=200
+done

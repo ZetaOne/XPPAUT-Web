@@ -1,0 +1,19 @@
+# M2_limitation_contraction_HH.xps -- runs M2_limitation_contraction_HH.ode in one go (the steps at the top of the .ode).
+#   XPPAUT 8.4:  File > Do script > M2_limitation_contraction_HH.xps    (or: xppaut M2_limitation_contraction_HH.ode -script M2_limitation_contraction_HH.xps)
+#   XPPAUT-Web:  pick it under Scripts (group iso-test), or open the link with ?script=
+speed 0.3
+msg "M2, backward integration with k = 2 periods: start on the straight isochron at gamma0, integrate back by (k - th) T"
+keys v 2
+ans X-axis=ve|Y-axis=we|Xmin=-210|Ymin=0.3|Xmax=52|Ymax=0.8|Xlabel=v|Ylabel=n
+keys u c a
+ans thc
+ans c
+ans 0
+ans 1
+keys esc
+keys i 2
+ans Vary1=u|Start1=-1|End1=1|Vary2=th|Start2=0|End2=0.9|Steps=80|Steps2=9|Reset storage (Y/N)=N|Use old ic's (Y/N)=Y|Cycle color (Y/N)=N|Movie(Y/N)=N|Crv(1) Array(2)=2
+keys n n
+msg "Window 1: each dot is the end of one backward run, coloured by its target phase th = 0, 0.1, ..., 0.9"
+wait 4
+msg "Done. M2's limitation: all 810 runs, started up to 16 decades apart, end at one spot (v = -201): after 2 periods backward the start is lost, no dot is near an isochron."
