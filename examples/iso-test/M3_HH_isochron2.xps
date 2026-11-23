@@ -1,0 +1,33 @@
+# M3_HH_isochron2.xps -- method M3 for the isochron of phase 0.5 of the reduced HH neuron, in XPP's own
+# AUTO.  File > Do script in XPPAUT 8.4 (or XPPAUT-Web).  Explained at the top of M3_HH_isochron2.ode.
+#
+# ######################################################################################
+# ##  FOR ANOTHER ISOCHRON CHANGE ONLY THIS BLOCK (same gv0, gw0 as the .ode's block)
+# ##  (each "for" with one value just names a number: $gv0 below is replaced by it)
+# ######################################################################################
+for gv0 in -68.15888208
+for gw0 in 0.4429858968
+for nright in 357
+for nleft in 77
+# ######################################################################################
+speed 0.1
+msg "Step 1: Gamma from gamma(theta) = ($gv0, $gw0), k = 3 periods; freeze it"
+keys i g
+keys g f f
+ok
+keys f a
+msg "Step 2: AUTO, Run > Bdry Value -- the isochron with V increasing, into x* (a few minutes)"
+autokeys n
+ans Ntst=600|Nmax=$nright|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.5|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+autokeys r b
+msg "Step 3: a fresh start, V decreasing, outside Gamma"
+set p=$gv0;v=$gv0;w=$gw0;dl=0;w0=$gw0
+keys i g
+autokeys n
+ans Nmax=$nleft|Ds=-0.01
+autokeys r b
+msg "Done. The AUTO window is the isochron of phase 0.5: n(0) against V(0). Phase 0 is M3_HH.ode"
+end
+end
+end
+end

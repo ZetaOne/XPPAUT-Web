@@ -1,0 +1,68 @@
+# M3_HH_isochron2.ode -- the isochron of PHASE 0.5 of the reduced Hodgkin-Huxley neuron (Osinga &
+#              Moehlis 2010) by boundary value continuation (method M3), all inside XPP's AUTO.
+#              M3_HH.ode does phase 0; M3_HH_isochron1/2/3 do phases 0.25, 0.5, 0.75.
+#
+# ######################################################################################
+# ##  FOR ANOTHER ISOCHRON CHANGE ONLY THIS BLOCK (and the block at the top of the .xps)
+# ##
+# ##  gv0, gw0 = gamma(theta): the point of Γ a time theta*T after gamma0 = (44.706379,
+# ##             0.45973791), T = 11.84628522 (integrate from gamma0 for theta*T)
+# ##  ev, ew   = the direction of the isochron there: the stable Floquet direction,
+# ##             orthogonal to the adjoint Z(theta): e = (-Z_n, Z_V)/|Z| (either sign)
+# ##  p and the init line repeat gv0, gw0 (XPP cannot take a parameter there)
+# ##  This file: theta = 0.5
+# ######################################################################################
+par p=-68.15888208
+par gv0=-68.15888208, gw0=0.4429858968, ev=0.9999962926, ew=-0.00272300962
+init v=-68.15888208, w=0.4429858968, dl=0, w0=0.4429858968
+# ######################################################################################
+#
+# ======================================================================================
+# WHAT TO DO IN THE XPPAUT WINDOW   (or run M3_HH_isochron2.xps: File > Do script)
+# ======================================================================================
+#   1. Initialconds > Go (keys i g): k = 3 periods of Γ starting at gamma(theta) (time
+#      rescaled to 0..1).  Graphic stuff > Freeze > Freeze: keep Γ drawn.
+#   2. File > Auto.  Numerics: Ntst 600  Nmax 357  Ds 0.01  Dsmin 1e-8  Dsmax 0.5  Par Min -100
+#      Par Max 55  Norm Max 1e6  ITNW 20.  Run > Bdry Value: the isochron from gamma(theta) with V
+#      increasing: across Γ's inside, round the spiral into x*, ending at (-59.123, 0.4037).
+#   3. The other side from a fresh start: in the main window set p = v = gv0, w = w0 = gw0,
+#      dl = 0, Initialconds > Go; AUTO Numerics Nmax 77  Ds -0.01; Run > Bdry Value:
+#      V decreasing, outside Γ, ending at
+#      (-100.105, 0.49131) (Par Min -100).
+#   The AUTO window (Hi-lo of w0 against p) IS the isochron, n(0) against V(0).
+#   Both runs stop by themselves (at x* / at Par Min) with the end point's offset |dl| below
+#   1e-4 (the paper's eta) all the way; for another phase watch the column dl and lower Nmax
+#   if |dl| grows past that.
+#   The method itself is explained in M3_HH.ode.
+# ======================================================================================
+
+# --- the model: the reduced Hodgkin-Huxley neuron of Osinga & Moehlis (2010), eq. (4.1):
+#     m = minf(v) (fast), h = 0.8 - n;  I = 10 (repetitive firing).  Here w is n.
+am(x)=0.1*(x+40)/(1-exp(-(x+40)/10))
+bm(x)=4*exp(-(x+65)/18)
+an(x)=0.01*(x+55)/(1-exp(-(x+55)/10))
+bn(x)=0.125*exp(-(x+65)/80)
+minf(x)=am(x)/(am(x)+bm(x))
+fx(x,y)=iapp-gna*minf(x)^3*(0.8-y)*(x-ena)-gk*y^4*(x-ek)-gl*(x-el)
+fy(x,y)=an(x)*(1-y)-bn(x)*y
+par iapp=10,gna=120,gk=36,gl=0.3,ena=50,ek=-77,el=-54.4
+
+par per=11.84628522, k=3
+
+v'=k*per*fx(v,w)
+w'=k*per*fy(v,w)
+dl'=0
+w0'=0
+
+bndry v'-gv0-dl'*ev
+bndry w'-gw0-dl'*ew
+bndry v-p
+bndry w0-w
+
+@ meth=rk4, dt=0.0001, total=1, maxstor=200000, bound=1e6
+@ xp=v, yp=w, xlo=-90, xhi=52, ylo=0.3, yhi=0.8
+@ ntst=600, ncol=4, nmax=357, npr=100000, ds=0.01, dsmin=1e-8, dsmax=0.5, parmin=-100, parmax=55
+@ normmax=1e6, epsl=1e-8, epsu=1e-8, epss=1e-6
+@ xnc=7, ync=1
+@ autovar=w0, autoxmin=-100, autoxmax=55, autoymin=0.3, autoymax=0.8
+done
