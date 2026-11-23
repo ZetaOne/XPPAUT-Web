@@ -6,7 +6,7 @@ keys i g
 keys f a
 msg "Step 3: AUTO numerics (Ntst 300, Ds -0.01, p = v(0) from -80 to 60)"
 autokeys n
-ans Ntst=300|Nmax=185|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.5|Par Min=-80|Par Max=60|Norm Max=1e6|ITNW=8
+ans Ntst=300|Nmax=185|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.5|Par Min=-80|Par Max=60|Norm Max=1e6|ITNW=8|SuppBP=1
 msg "Step 4: Run > Bdry Value -- the isochron to the left of gamma0"
 autokeys r b
 msg "Step 5: back to the start, the other way -- the isochron to the right"

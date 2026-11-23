@@ -26,7 +26,7 @@
 #      (time rescaled to 0..1).  File > Auto (keys f a): the AUTO diagram, v0 = v(0) against
 #      p = u(0), IS the isochron.
 #   2. AUTO Numerics: Ntst 100  Nmax 92  Ds -0.01  Dsmin 1e-8  Dsmax 0.05  Par Min -2.5
-#      Par Max 2.5  Norm Max 3.5  ITNW 8.  Run > Bdry Value (r b): the isochron of phase 0
+#      Par Max 2.5  Norm Max 3.5  ITNW 8  SuppBP 1.  Run > Bdry Value (r b): the isochron of phase 0
 #      from gamma0 = (1, 0) INTO the origin; the LPs are its folds in u (each half turn).
 #   3. The other way, as a new branch from a fresh start: set p = 1 (Parameters) and
 #      u = 1, v = 0, dl = 0, v0 = 0 (ICs), Initialconds > Go; AUTO Numerics Nmax 300

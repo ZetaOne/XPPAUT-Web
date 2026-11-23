@@ -12,7 +12,7 @@ msg "Step 2: the isochron of phase 0, from gamma0 = (1, 0): inward to the origin
 set th0=0.0;p=1;u=1;v=0;dl=0;v0=0
 keys i g
 autokeys n
-ans Ntst=100|Nmax=92|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.05|Par Min=-2.5|Par Max=2.5|Norm Max=3.5|ITNW=8
+ans Ntst=100|Nmax=92|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.05|Par Min=-2.5|Par Max=2.5|Norm Max=3.5|ITNW=8|SuppBP=1
 autokeys r b
 set th0=0.0;p=1;u=1;v=0;dl=0;v0=0
 keys i g
@@ -23,7 +23,7 @@ msg "Step 3: the isochron of phase pi/2, from gamma0 = (0, 1): inward to the ori
 set th0=1.5707963267948966;p=0;u=0;v=1;dl=0;v0=1
 keys i g
 autokeys n
-ans Ntst=100|Nmax=92|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.05|Par Min=-2.5|Par Max=2.5|Norm Max=3.5|ITNW=8
+ans Ntst=100|Nmax=92|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.05|Par Min=-2.5|Par Max=2.5|Norm Max=3.5|ITNW=8|SuppBP=1
 autokeys r b
 set th0=1.5707963267948966;p=0;u=0;v=1;dl=0;v0=1
 keys i g
@@ -34,7 +34,7 @@ msg "Step 4: the isochron of phase pi, from gamma0 = (-1, 0): inward to the orig
 set th0=3.141592653589793;p=-1;u=-1;v=0;dl=0;v0=0
 keys i g
 autokeys n
-ans Ntst=100|Nmax=92|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.05|Par Min=-2.5|Par Max=2.5|Norm Max=3.5|ITNW=8
+ans Ntst=100|Nmax=92|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.05|Par Min=-2.5|Par Max=2.5|Norm Max=3.5|ITNW=8|SuppBP=1
 autokeys r b
 set th0=3.141592653589793;p=-1;u=-1;v=0;dl=0;v0=0
 keys i g
@@ -45,7 +45,7 @@ msg "Step 5: the isochron of phase 3pi/2, from gamma0 = (0, -1): inward to the o
 set th0=4.71238898038469;p=0;u=0;v=-1;dl=0;v0=-1
 keys i g
 autokeys n
-ans Ntst=100|Nmax=92|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.05|Par Min=-2.5|Par Max=2.5|Norm Max=3.5|ITNW=8
+ans Ntst=100|Nmax=92|NPr=100000|Ds=-0.01|Dsmin=1e-08|Dsmax=0.05|Par Min=-2.5|Par Max=2.5|Norm Max=3.5|ITNW=8|SuppBP=1
 autokeys r b
 set th0=4.71238898038469;p=0;u=0;v=-1;dl=0;v0=-1
 keys i g

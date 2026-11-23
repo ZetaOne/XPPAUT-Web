@@ -22,8 +22,8 @@ init v=-62.14960325, w=0.3919806361, dl=0, w0=0.3919806361
 # ======================================================================================
 #   1. Initialconds > Go (keys i g): k = 3 periods of Γ starting at gamma(theta) (time
 #      rescaled to 0..1).  Graphic stuff > Freeze > Freeze: keep Γ drawn.
-#   2. File > Auto.  Numerics: Ntst 600  Nmax 336  Ds 0.01  Dsmin 1e-8  Dsmax 0.5  Par Min -100
-#      Par Max 55  Norm Max 1e6  ITNW 20.  Run > Bdry Value: the isochron from gamma(theta) with V
+#   2. File > Auto.  Numerics: Ntst 600  Nmax 321  Ds 0.01  Dsmin 1e-8  Dsmax 0.5  Par Min -100
+#      Par Max 55  Norm Max 1e6  ITNW 20  SuppBP 1.  Run > Bdry Value: the isochron from gamma(theta) with V
 #      increasing: across Γ's inside, round the spiral into x*, ending at (-59.522, 0.40125).
 #   3. The other side from a fresh start: in the main window set p = v = gv0, w = w0 = gw0,
 #      dl = 0, Initialconds > Go; AUTO Numerics Nmax 102  Ds -0.01; Run > Bdry Value:
@@ -61,7 +61,7 @@ bndry w0-w
 
 @ meth=rk4, dt=0.0001, total=1, maxstor=200000, bound=1e6
 @ xp=v, yp=w, xlo=-90, xhi=52, ylo=0.3, yhi=0.8
-@ ntst=600, ncol=4, nmax=336, npr=100000, ds=0.01, dsmin=1e-8, dsmax=0.5, parmin=-100, parmax=55
+@ ntst=600, ncol=4, nmax=321, npr=100000, ds=0.01, dsmin=1e-8, dsmax=0.5, parmin=-100, parmax=55
 @ normmax=1e6, epsl=1e-8, epsu=1e-8, epss=1e-6
 @ xnc=7, ync=1
 @ autovar=w0, autoxmin=-100, autoxmax=55, autoymin=0.3, autoymax=0.8

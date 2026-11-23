@@ -7,7 +7,7 @@
 #   The same steps as M3_HH.ode, with k = 1 (segments one period long) instead of 3:
 #   1. Initialconds > Go (keys i g): Γ from gamma0, one period.   2. File > Auto (keys f a).
 #   3. AUTO Numerics: Ntst 100  Nmax 900  Ds -0.01  Dsmin 1e-8  Dsmax 0.5  Par Min -100
-#      Par Max 55  Norm Max 1e6  ITNW 8  (Ds -0.01: to the left first).
+#      Par Max 55  Norm Max 1e6  ITNW 8  SuppBP 1  (Ds -0.01: to the left first).
 #   4. Run > Bdry Value (r b): to the left.   5. As step 5 of M3_HH.ode: back to the
 #      start values, Go, Numerics Ds 0.01 Nmax 60, Run > Bdry Value: to the right.
 #

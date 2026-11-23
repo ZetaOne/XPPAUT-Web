@@ -10,18 +10,18 @@ ok
 keys f a
 msg "Step 3: AUTO, Run > Bdry Value -- the isochron to the right of gamma0"
 autokeys n
-ans Ntst=600|Nmax=60|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.5|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+ans Ntst=600|Nmax=60|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.5|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20|SuppBP=1
 autokeys r b
 msg "Step 4: a fresh start, to the left of gamma0 -- across Gamma and the first excursion (about a minute)"
 set p=44.706379;v=44.706379;w=0.45973791;dl=0;w0=0.45973791
 keys i g
 autokeys n
-ans Nmax=412|Ds=-0.01|Dsmax=0.5
+ans Nmax=405|Ds=-0.01|Dsmax=0.5
 autokeys r b
 msg "Step 5: on from the last point with smaller steps -- the other excursions and the spiral round x* (a few minutes)"
 auto goto last
 autokeys n
-ans Nmax=892|Ds=-0.01|Dsmax=0.1
+ans Nmax=757|Ds=-0.01|Dsmax=0.1
 autokeys r
 msg "Step 6: AUTO File > Write pts -- the isochron's points to a file"
 autokeys f w

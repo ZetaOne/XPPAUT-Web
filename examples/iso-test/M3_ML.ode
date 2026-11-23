@@ -10,7 +10,7 @@
 #   2. File > Auto (keys f a) opens the AUTO window.  Its axes are already set
 #      (Hi-lo, Y-axis w0, Main Parm p): the diagram IS the isochron, w(0) against v(0).
 #   3. AUTO Numerics (n):  Ntst 300  Nmax 185  Ds -0.01  Dsmin 1e-8  Dsmax 0.5
-#        Par Min -80  Par Max 60  Norm Max 1e6  ITNW 8                         (OK)
+#        Par Min -80  Par Max 60  Norm Max 1e6  ITNW 8  SuppBP 1              (OK)
 #   4. Run > Bdry Value (r b): the isochron from gamma0 to the LEFT, through Γ's inside,
 #      round the equilibrium x* = (-23.09, 0.158) in a tightening spiral.
 #      LP = fold of the curve in v (it turns back in v; the continuation goes on round it).

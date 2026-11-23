@@ -7,7 +7,7 @@
 # ######################################################################################
 for gv0 in -62.14960325
 for gw0 in 0.3919806361
-for nright in 336
+for nright in 321
 for nleft in 102
 # ######################################################################################
 speed 0.1
@@ -18,7 +18,7 @@ ok
 keys f a
 msg "Step 2: AUTO, Run > Bdry Value -- the isochron with V increasing, into x* (a few minutes)"
 autokeys n
-ans Ntst=600|Nmax=$nright|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.5|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20
+ans Ntst=600|Nmax=$nright|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.5|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20|SuppBP=1
 autokeys r b
 msg "Step 3: a fresh start, V decreasing, outside Gamma"
 set p=$gv0;v=$gv0;w=$gw0;dl=0;w0=$gw0
