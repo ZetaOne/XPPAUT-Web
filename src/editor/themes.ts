@@ -66,6 +66,6 @@ export function applyUiColours(p: Palette) {
   r.setProperty('--ed-sel', p.sel)
   r.setProperty('--ed-error', p.error)
   r.setProperty('--ed-warning', p.warning)
-  r.setProperty('--ed-muted', p.comment)
+  r.setProperty('--ed-muted', `color-mix(in srgb, ${p.fg} 62%, ${p.bg})`)
   document.documentElement.style.colorScheme = p.dark ? 'dark' : 'light'
 }

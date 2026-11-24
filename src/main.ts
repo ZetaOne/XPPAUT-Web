@@ -385,6 +385,7 @@ async function launch(name: string, text: string, extras: Array<{ name: string; 
     onOutput: (line) => {
       terminal.write(line)
       watchEigen(line)
+      outBuffer.push(line)
     },
     onNotice: notice,
     onFileWritten: exported,
@@ -950,8 +951,49 @@ const seenNow = (name: string) => {
   const f = session?.listFiles().find((x) => x.name === name)
   if (f) wsSeen.set(name, f.size + ':' + f.mtime)
 }
+// XPP's output and the running script line, to the editor windows
+const outBuffer: string[] = []
+let lastScript = ''
+setInterval(() => {
+  if (outBuffer.length) ws.post({ t: 'out', lines: outBuffer.splice(0, outBuffer.length) })
+  if (!session) return
+  const sl = session.scriptLine()
+  const key = sl.line ? sl.name + ':' + sl.line : ''
+  if (key !== lastScript) {
+    ws.post({ t: 'script-line', name: sl.name || lastScript.split(':')[0], line: sl.line })
+    lastScript = key
+  }
+}, 150)
+// the editor's sliders: one move at a time, when XPP is free
+const sliderPending = new Map<number, number>()
+setInterval(() => {
+  if (!session || session.busy) return
+  for (const [k, v] of sliderPending) {
+    sliderPending.delete(k)
+    session.moveSlider(k, v)
+    return
+  }
+}, 120)
+const paramsReply = () =>
+  session && ws.post({ t: 'params', list: session.params(), sliders: [0, 1, 2].map((k) => session!.sliderInfo(k)) })
 ws.onMessage(async (m) => {
   if (m.t === 'hello') return ws.post({ t: 'xpp-here', ode: odeName })
+  if (session && m.t === 'cmd') {
+    if (m.to === 'auto') {
+      const w = session.windows().find((x) => x.title.startsWith("It's AUTO"))
+      if (!w) return notice('The AUTO window is not open')
+      session.activate(w.id)
+    } else session.activate(session.mainWindow)
+    for (const k of m.keys) session.pressKey(k)
+    return
+  }
+  if (session && m.t === 'params-req') return void paramsReply()
+  if (session && m.t === 'slider-setup') {
+    const ok = await session.setupSlider(m.k, m.name, m.lo, m.hi, m.value)
+    ws.post({ t: 'slider-ok', k: m.k, ok })
+    return
+  }
+  if (session && m.t === 'slider-move') return void sliderPending.set(m.k, m.value)
   if (!session) {
     // no XPP running here: the editor asks to run a model -> start it
     if (m.t === 'run-ode') location.href = location.pathname + '?ws=' + encodeURIComponent(m.name)

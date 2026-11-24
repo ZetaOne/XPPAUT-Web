@@ -472,6 +472,17 @@ input[type='number'] {
   grid-template-rows: 4px var(--panel-h);
 }
 
+.ed-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ed-panel > .pbody {
+  flex: 1;
+  overflow: auto;
+}
+
 .ed-panel-wrap.closed {
   grid-template-rows: 0 0;
 }
@@ -480,6 +491,114 @@ input[type='number'] {
   overflow: auto;
   border-top: 1px solid var(--ed-line);
   background: var(--ed-bg);
+}
+
+.ptabs {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px;
+  background: var(--ed-bg);
+  border-bottom: 1px solid var(--ed-line);
+}
+
+.ptabs [data-p] {
+  border-radius: 0;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ed-muted);
+}
+
+.ptabs [data-p].on {
+  color: var(--ed-fg);
+  box-shadow: inset 0 -1px 0 var(--ed-accent);
+}
+
+.ptabs .grow {
+  flex: 1;
+}
+
+.ptools[hidden] {
+  display: none;
+}
+
+/* XPP's command bar: always at the top of the panel */
+.cmdbar {
+  display: flex;
+  gap: 4px;
+  padding: 4px 8px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--ed-line);
+  scrollbar-width: thin;
+}
+
+.cmdbar button {
+  flex: none;
+  border: 1px solid var(--ed-line);
+  background: var(--ed-side);
+}
+
+.cmdbar.off button:not(.cmdedit) {
+  opacity: 0.45;
+}
+
+.pbody[hidden] {
+  display: none;
+}
+
+.term {
+  margin: 0;
+  padding: 6px 10px;
+  font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.sliders {
+  padding: 6px 10px;
+}
+
+.sliders .hint {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--ed-muted);
+}
+
+.srow {
+  display: grid;
+  grid-template-columns: minmax(90px, 140px) 70px 1fr 70px 70px;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.srow output {
+  font: 12px ui-monospace, Menlo, Consolas, monospace;
+}
+
+.cmd-dialog textarea {
+  grid-column: 1 / -1;
+  width: 100%;
+  font: 12px ui-monospace, Menlo, Consolas, monospace;
+  background: var(--ed-bg);
+  color: var(--ed-fg);
+  border: 1px solid var(--ed-line);
+  border-radius: 4px;
+}
+
+/* the running script line (Monaco's margin; CodeMirror draws its own) */
+.xpp-runarrow::before {
+  content: '➜';
+  display: block;
+  color: #ff7a00;
+  font-weight: bold;
+  text-align: center;
 }
 
 .ed-panel h3 {
@@ -656,5 +775,33 @@ input[type='number'] {
   .tab .x {
     width: 28px;
     opacity: 1;
+  }
+
+  :root {
+    --panel-h: 42vh;
+  }
+
+  .ptabs {
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+  }
+
+  .ptabs button {
+    flex: none;
+    padding: 5px 6px;
+  }
+
+  .srow {
+    grid-template-columns: 1fr 64px 64px;
+  }
+
+  .srow input[type='range'] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .srow output {
+    grid-column: 1 / -1;
   }
 }

@@ -532,6 +532,15 @@ export class XppSession {
     this.mod.FS.writeFile('/work/' + name.replace(/[/\\]/g, '_'), data);
   }
 
+  /** the script line now running (0: none) and the script's file name */
+  scriptLine(): { line: number; name: string } {
+    const m = this.mod;
+    if (!m || !m._xw_script_line) return { line: 0, name: '' };
+    const line = m._xw_script_line();
+    const full = line ? m.UTF8ToString(m._xw_script_name()) : '';
+    return { line, name: full.slice(full.lastIndexOf('/') + 1) };
+  }
+
   /** delete a file from XPP's working folder (the editor deleted it) */
   removeFile(name: string): void {
     try {

@@ -1503,6 +1503,15 @@ static void do_shot(SCMD *c)
      1  a command ran; look again immediately,
      2  timed wait; *ms is the timeout in milliseconds,
      3  *ev holds a synthetic key press; hand it to the caller.           */
+#ifdef __EMSCRIPTEN__
+/* XPPAUT-Web: the page shows which line of the script is running (the
+   editor's arrow): the line of the command last started, 0 when no script runs */
+#include <emscripten.h>
+static int xppweb_cur_line=0;
+EMSCRIPTEN_KEEPALIVE int xw_script_line(void){return active?xppweb_cur_line:0;}
+EMSCRIPTEN_KEEPALIVE const char *xw_script_name(void){return script_name;}
+#endif
+
 int script_poll(int *ms,XEvent *ev)
 {
   SCMD *c;
@@ -1573,6 +1582,9 @@ int script_poll(int *ms,XEvent *ev)
   }
   c=&cmds[pc];
   run_ctx=c->ctx;
+#ifdef __EMSCRIPTEN__
+  xppweb_cur_line=c->line;   /* XPPAUT-Web: the line now running (xw_script_line) */
+#endif
   switch(c->type){
   case C_SET:
   case C_PRINT:

@@ -85,7 +85,9 @@ export function engine(): Engine {
         scrollBeyondLastLine: false,
         renderWhitespace: 'selection',
         tabSize: 2,
+        glyphMargin: true,
       })
+      let run: string[] = []
       editors.add(e)
       e.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => opts.onSave())
       return {
@@ -109,6 +111,10 @@ export function engine(): Engine {
               severity: m.severity === 'error' ? monaco.MarkerSeverity.Error : monaco.MarkerSeverity.Warning,
             })),
           )
+        },
+        setRunLine(line) {
+          run = e.deltaDecorations(run, line === null ? [] : [{ range: new monaco.Range(line + 1, 1, line + 1, 1), options: { isWholeLine: false, glyphMarginClassName: 'xpp-runarrow', glyphMarginHoverMessage: { value: 'running now' } } }])
+          if (line !== null) e.revealLineInCenterIfOutsideViewport(line + 1)
         },
         focus: () => e.focus(),
         reveal: (line) => {

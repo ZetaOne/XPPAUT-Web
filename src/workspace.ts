@@ -21,6 +21,18 @@ export type WsMessage =
   | { t: 'run-script'; name: string; from: string }
   | { t: 'hello'; from: string }
   | { t: 'xpp-here'; ode: string; from: string }
+  /** XPP's output, a few lines at a time (the editor's terminal) */
+  | { t: 'out'; lines: string[]; from: string }
+  /** the script line now running (line 0: no script runs) */
+  | { t: 'script-line'; name: string; line: number; from: string }
+  /** the editor's command bar: keys for XPP's main window or AUTO's */
+  | { t: 'cmd'; keys: string[]; to?: 'auto'; from: string }
+  /** the editor's sliders (XPP's own Par/Var sliders k = 0..2) */
+  | { t: 'params-req'; from: string }
+  | { t: 'params'; list: Array<{ name: string; value: number; ic: boolean }>; sliders: Array<{ name: string; value: number; lo: number; hi: number } | null>; from: string }
+  | { t: 'slider-setup'; k: number; name: string; lo: number; hi: number; value: number; from: string }
+  | { t: 'slider-ok'; k: number; ok: boolean; from: string }
+  | { t: 'slider-move'; k: number; value: number; from: string }
 
 const DB = 'xpp-workspace'
 const STORE = 'files'

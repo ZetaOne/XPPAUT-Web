@@ -13,6 +13,8 @@ export interface EditorView {
   setValue(text: string): void
   onChange(f: () => void): void
   setMarks(marks: Mark[]): void
+  /** the arrow on the script line now running (0-based; null: none) */
+  setRunLine(line: number | null): void
   focus(): void
   /** go to a line (0-based) */
   reveal(line: number): void
@@ -26,6 +28,9 @@ export interface Engine {
   setTheme(p: Palette): void
   setOptions(o: Partial<EngineOpts>): void
 }
+
+/** the running-line arrow's colour: one that reads on every theme */
+export const RUN_ARROW = '#ff7a00'
 
 export interface EngineOpts {
   fontSize: number

@@ -1,12 +1,12 @@
 // CodeMirror for phones and tablets (touch, phone keyboards).
-import { EditorState, Compartment } from '@codemirror/state'
-import { EditorView as CMView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection } from '@codemirror/view'
+import { EditorState, Compartment, StateField, StateEffect, RangeSet } from '@codemirror/state'
+import { EditorView as CMView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, gutter, GutterMarker } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { StreamLanguage, HighlightStyle, syntaxHighlighting, bracketMatching, foldGutter } from '@codemirror/language'
 import { search, searchKeymap, highlightSelectionMatches } from '@codemirror/search'
 import { setDiagnostics, lintGutter } from '@codemirror/lint'
 import { tags as t } from '@lezer/highlight'
-import type { EditorView, Engine, EngineOpts, Mark } from './engine'
+import { RUN_ARROW, type EditorView, type Engine, type EngineOpts, type Mark } from './engine'
 import { startState, tokenOde, tokenXps, type Tok } from './lang'
 import type { Palette } from './themes'
 
@@ -28,6 +28,35 @@ const lang = (tok: typeof tokenOde) =>
 
 const ODE = lang(tokenOde)
 const XPS = lang(tokenXps)
+
+// the arrow on the script line now running
+class Arrow extends GutterMarker {
+  toDOM() {
+    const s = document.createElement('span')
+    s.textContent = '➜'
+    s.style.color = RUN_ARROW
+    s.style.fontWeight = 'bold'
+    return s
+  }
+}
+const arrow = new Arrow()
+const setRun = StateEffect.define<number | null>()
+const runField = StateField.define<number | null>({
+  create: () => null,
+  update: (v, tr) => {
+    for (const e of tr.effects) if (e.is(setRun)) return e.value
+    return v
+  },
+})
+const runGutter = gutter({
+  class: 'cm-run-gutter',
+  markers: (v) => {
+    const l = v.state.field(runField)
+    if (l === null || l >= v.state.doc.lines) return RangeSet.empty
+    return RangeSet.of([arrow.range(v.state.doc.line(l + 1).from)])
+  },
+  initialSpacer: () => arrow,
+})
 
 function themeExt(p: Palette) {
   const hl = HighlightStyle.define([
@@ -86,6 +115,8 @@ export function engine(): Engine {
         state: EditorState.create({
           doc: text,
           extensions: [
+            runField,
+            runGutter,
             lineNumbers(),
             foldGutter(),
             highlightActiveLine(),
@@ -125,6 +156,10 @@ export function engine(): Engine {
               }),
             ),
           )
+        },
+        setRunLine(line) {
+          view.dispatch({ effects: setRun.of(line) })
+          if (line !== null && line < view.state.doc.lines) view.dispatch({ effects: CMView.scrollIntoView(view.state.doc.line(line + 1).from, { y: 'nearest' }) })
         },
         focus: () => view.focus(),
         reveal: (line) => {

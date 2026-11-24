@@ -44,6 +44,7 @@ Changes to upstream files are marked with `XPPAUT-Web:` comments.
 | `pop_list.c` | WebAssembly build only: in `xpp_next_event()`, a script's timed wait calls `xppweb_script_wait(ms)` (web/xlib/platform_web.c) instead of `select()` on the X connection | There is no X connection in the browser; the page must get a turn (to draw, and to deliver the key that ends a `pause`) while a script waits |
 | `xpp_script.c` | WebAssembly build only: `script_run_from_menu()` runs the script named in `xppweb_script_pick` (set by the page's Scripts menu through `xw_pick_script`) instead of opening the file selector | XPP's file selector is small on phones; the page lists the scripts and starts the chosen one through XPP's own File -> Do script |
 | `xpp_script.c` | WebAssembly build only: `shot name.png` (and `shot auto name.png`) saves the graph or AUTO diagram as on screen, as PNG at twice the size (`xppweb_shot_png`, web/xlib/xpp_hooks.c) | A picture that phones show directly; .ps/.svg need another app |
+| `xpp_script.c` | WebAssembly build only: `xw_script_line()` / `xw_script_name()` report the line of the command now running | The editor marks the running line of a script with an arrow |
 
 ### Fixes from Bard Ermentrout (2025)
 

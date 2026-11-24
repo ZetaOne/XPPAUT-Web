@@ -10,6 +10,7 @@ import { loadEngine, type Engine, type EditorView, type EngineOpts, type Mark } 
 import { THEMES, followSite, applyUiColours, type Palette } from './themes'
 import { kindOf, imagePreview, pdfPreview, psPreview, dataPreview, type Kind, type Preview } from './preview'
 import { languageOf } from './lang'
+import { parseKeys } from '../commands'
 
 // ---- settings ------------------------------------------------------------------
 type Style = 'auto' | 'monaco' | 'codemirror'
@@ -75,11 +76,25 @@ root.innerHTML = `
   </main>
   <div class="ed-panel-wrap closed" id="panelwrap">
     <div class="split h" id="panelsplit"></div>
-    <section class="ed-panel"><h3><span>Problems</span><button type="button" id="panelclose">×</button></h3><ul class="problems" id="problems"></ul></section>
+    <section class="ed-panel">
+      <div class="ptabs">
+        <button type="button" data-p="terminal" class="on">Terminal</button>
+        <button type="button" data-p="problems" id="ptab-problems">Problems</button>
+        <button type="button" data-p="sliders">Sliders</button>
+        <span class="grow"></span>
+        <span class="ptools" data-for="terminal"><button type="button" id="termclear" title="Clear">Clear</button><button type="button" id="termcopy" title="Copy all">Copy</button><button type="button" id="termsave" title="Save as a file in the workspace">Save</button></span>
+        <button type="button" id="panelclose" title="Close the panel">×</button>
+      </div>
+      <div class="cmdbar" id="cmdbar" title="XPP's commands (in XPP's tab)"></div>
+      <div class="pbody" data-p="terminal"><pre class="term" id="term"></pre></div>
+      <div class="pbody" data-p="problems" hidden><ul class="problems" id="problems"></ul></div>
+      <div class="pbody" data-p="sliders" hidden><div class="sliders" id="sliders"></div></div>
+    </section>
   </div>
   <footer class="ed-status">
     <span id="st-file"></span><span id="st-lang"></span>
     <button type="button" id="st-problems" title="Problems">⨂ 0 ⚠ 0</button>
+    <button type="button" id="st-terminal" title="Terminal, XPP's commands and sliders">▤ Terminal</button>
     <span class="grow"></span>
     <span id="st-xpp" title="XPP's tab"></span><span id="st-engine"></span>
   </footer>`
@@ -267,6 +282,7 @@ async function fillTab(t: Tab, data: Uint8Array) {
       if (settings.autosave) scheduleSave(t)
     })
     scheduleCheck(t)
+    applyRunLine(t)
   } else if (t.kind === 'image') t.preview = imagePreview(t.title, data)
   else if (t.kind === 'pdf') t.preview = pdfPreview(t.title, data)
   else if (t.kind === 'ps') t.preview = psPreview(t.title, data)
@@ -446,8 +462,19 @@ function scheduleCheck(t: Tab) {
 let xppHere: { ode: string; at: number } | null = null
 ws.onMessage((m) => {
   if (m.t === 'xpp-here') {
+    const changed = xppHere?.ode !== m.ode
     xppHere = { ode: m.ode, at: Date.now() }
     updateXpp()
+    if (changed) ws.post({ t: 'params-req' })
+  } else if (m.t === 'out') termWrite(m.lines)
+  else if (m.t === 'script-line') {
+    runLine = { name: m.name, line: m.line }
+    for (const g of groups) for (const t of g.tabs) applyRunLine(t)
+  } else if (m.t === 'params') fillSliders(m.list, m.sliders)
+  else if (m.t === 'slider-ok') {
+    const r = sliderRows[m.k]
+    if (r) r.ready = m.ok
+    if (!m.ok) toast('XPP could not put that on a slider')
   } else if (m.t === 'changed') {
     void refreshTree()
     for (const g of groups) for (const t of g.tabs) if (t.src.kind === 'ws' && t.src.name === m.name) void reloadTab(t)
@@ -459,12 +486,14 @@ ping()
 const xppAlive = () => !!xppHere && Date.now() - xppHere.at < 12000
 function updateXpp() {
   $('st-xpp').textContent = xppAlive() ? `XPP: ${xppHere!.ode || 'running'}` : 'XPP: not open'
+  $('cmdbar').classList.toggle('off', !xppAlive())
 }
 setInterval(updateXpp, 3000)
 
 async function run() {
   const t = activeTab()
   if (!t) return
+  showPanel('terminal')
   if (t.dirty) await saveTab(t)
   let name = t.src.kind === 'ws' ? t.src.name : t.title
   if (t.src.kind === 'folder') {
@@ -862,6 +891,197 @@ function dragSplit(el: HTMLElement, axis: 'x' | 'y', move: (d: number, start: nu
 dragSplit($('sidesplit'), 'x', (d, s) => document.documentElement.style.setProperty('--side-w', Math.max(140, Math.min(560, s + d)) + 'px'), () => $('side').clientWidth)
 dragSplit($('panelsplit'), 'y', (d, s) => document.documentElement.style.setProperty('--panel-h', Math.max(60, Math.min(innerHeight - 200, s - d)) + 'px'), () => $('panelwrap').querySelector<HTMLElement>('.ed-panel')!.clientHeight)
 
+// ---- the bottom panel: terminal, problems, sliders; XPP's command bar ------
+function showPanel(which: 'terminal' | 'problems' | 'sliders') {
+  $('panelwrap').classList.remove('closed')
+  for (const b of document.querySelectorAll<HTMLElement>('.ptabs [data-p]')) b.classList.toggle('on', b.dataset.p === which)
+  for (const b of document.querySelectorAll<HTMLElement>('.pbody')) b.hidden = b.dataset.p !== which
+  for (const b of document.querySelectorAll<HTMLElement>('.ptools')) b.hidden = b.dataset.for !== which
+  if (which === 'sliders') ws.post({ t: 'params-req' })
+  if (which === 'terminal') scrollTerm()
+  for (const g of groups) for (const t of g.tabs) t.view?.layout()
+}
+for (const b of document.querySelectorAll<HTMLElement>('.ptabs [data-p]')) b.addEventListener('click', () => showPanel(b.dataset.p as 'terminal'))
+
+// the terminal: XPP's output, sent by XPP's tab
+const MAXLINES = 5000
+const termLines: string[] = []
+const scrollTerm = () => {
+  const pre = $('term')
+  pre.parentElement!.scrollTop = pre.parentElement!.scrollHeight
+}
+function termWrite(lines: string[]) {
+  const pre = $('term')
+  const body = pre.parentElement!
+  const atEnd = body.scrollTop + body.clientHeight >= body.scrollHeight - 30
+  termLines.push(...lines)
+  if (termLines.length > MAXLINES) termLines.splice(0, termLines.length - MAXLINES)
+  pre.textContent = termLines.join('\n')
+  if (atEnd) scrollTerm()
+}
+$('termclear').addEventListener('click', () => {
+  termLines.length = 0
+  $('term').textContent = ''
+})
+$('termcopy').addEventListener('click', () => void navigator.clipboard?.writeText(termLines.join('\n')).then(() => toast('Copied')))
+$('termsave').addEventListener('click', async () => {
+  const name = 'xpp-output-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.txt'
+  await ws.write(name, ws.bytesOf(termLines.join('\n') + '\n'))
+  await refreshTree()
+  toast('Saved ' + name)
+})
+
+// XPP's command bar: "Label = keys" lines (as the phone's Cmd panel), kept per browser
+const CMD_KEY = 'xpp-editor-cmds'
+const CMD_DEFAULT = [
+  'Integrate = i g', 'Last = i l', 'Continue = c', 'Nullclines = n n', 'Dir. field = d d', 'Erase = e',
+  'Fit = w f', 'Restore = r', 'Sing pts = s g', 'AUTO = f a', 'Do script = f d', 'Esc = Esc', 'Enter = Enter',
+].join('\n')
+const CMD_HELP = `# XPP's command bar, one button per line:   Label = keys
+# keys are XPP's menu letters:  Fit = w f   (Window/zoom, then Fit)
+# for AUTO's window, start the keys with "auto:"   Steady state = auto: r s
+# named keys: Esc Enter Tab Left Right Up Down`
+const cmdText = () => {
+  try {
+    return localStorage.getItem(CMD_KEY) ?? CMD_DEFAULT
+  } catch {
+    return CMD_DEFAULT
+  }
+}
+function parseCmds(text: string) {
+  const out: Array<{ label: string; keys: string[]; to?: 'auto' }> = []
+  for (const line of text.split('\n')) {
+    const l = line.trim()
+    if (!l || l.startsWith('#')) continue
+    const i = l.indexOf('=')
+    if (i < 1) continue
+    let rest = l.slice(i + 1).trim()
+    const auto = /^auto:/i.test(rest)
+    if (auto) rest = rest.slice(5).trim()
+    const keys = parseKeys(rest)
+    if (keys.length) out.push({ label: l.slice(0, i).trim(), keys, to: auto ? 'auto' : undefined })
+  }
+  return out
+}
+function renderCmdBar() {
+  const bar = $('cmdbar')
+  bar.replaceChildren()
+  for (const c of parseCmds(cmdText())) {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.textContent = c.label
+    b.title = (c.to === 'auto' ? 'AUTO: ' : '') + c.keys.join(' ')
+    b.addEventListener('click', () => {
+      if (!xppAlive()) return toast('Open XPP first (the XPP button), then use its commands here')
+      ws.post({ t: 'cmd', keys: c.keys, to: c.to })
+    })
+    bar.append(b)
+  }
+  const edit = document.createElement('button')
+  edit.type = 'button'
+  edit.className = 'cmdedit'
+  edit.textContent = '✎'
+  edit.title = 'Edit these buttons'
+  edit.addEventListener('click', editCmds)
+  bar.append(edit)
+}
+function editCmds() {
+  document.querySelector('.cmd-dialog')?.remove()
+  const d = document.createElement('div')
+  d.className = 'settings-pop cmd-dialog'
+  d.innerHTML = `<h3>XPP's command bar</h3><textarea rows="14" spellcheck="false"></textarea>
+    <p>Kept in this browser. Changes show as soon as you save.</p>
+    <button type="button" data-a="reset">Default</button><span></span><button type="button" data-a="cancel">Cancel</button><button type="button" data-a="save" class="run">Save</button>`
+  const ta = d.querySelector('textarea')!
+  ta.value = CMD_HELP + '\n' + cmdText()
+  d.addEventListener('click', (e) => {
+    const a = (e.target as HTMLElement).dataset.a
+    if (a === 'reset') ta.value = CMD_HELP + '\n' + CMD_DEFAULT
+    if (a === 'cancel') d.remove()
+    if (a === 'save') {
+      const body = ta.value.split('\n').filter((l) => !l.trim().startsWith('#')).join('\n').trim()
+      if (!parseCmds(body).length) return toast('No commands: write lines like  Integrate = i g')
+      try {
+        localStorage.setItem(CMD_KEY, body)
+      } catch {
+        /* private mode */
+      }
+      renderCmdBar()
+      d.remove()
+    }
+  })
+  document.body.append(d)
+  ta.focus()
+}
+
+// the sliders: XPP's own three Par/Var sliders (XPP re-runs as one moves)
+let params: Array<{ name: string; value: number; ic: boolean }> = []
+const sliderRows: Array<{ sel: HTMLSelectElement; lo: HTMLInputElement; hi: HTMLInputElement; range: HTMLInputElement; out: HTMLOutputElement; ready: boolean }> = []
+function buildSliders() {
+  const box = $('sliders')
+  box.innerHTML = '<p class="hint">Pick a parameter or initial value: XPP runs the model again as you drag (XPP’s three Par/Var sliders).</p>'
+  for (let k = 0; k < 3; k++) {
+    const row = document.createElement('div')
+    row.className = 'srow'
+    row.innerHTML = `<select aria-label="Parameter"></select><input type="number" class="lo" step="any" aria-label="Low"><input type="range" min="0" max="1000" step="1" aria-label="Value"><input type="number" class="hi" step="any" aria-label="High"><output></output>`
+    const r = { sel: row.querySelector('select')!, lo: row.querySelector<HTMLInputElement>('.lo')!, hi: row.querySelector<HTMLInputElement>('.hi')!, range: row.querySelector<HTMLInputElement>('input[type=range]')!, out: row.querySelector('output')!, ready: false }
+    const setup = (v: number) => {
+      if (!r.sel.value) return
+      r.ready = false
+      ws.post({ t: 'slider-setup', k, name: r.sel.value, lo: +r.lo.value, hi: +r.hi.value, value: v })
+    }
+    r.sel.addEventListener('change', () => {
+      const p = params.find((q) => q.name === r.sel.value)
+      if (!p) return
+      const span = p.value === 0 ? 1 : Math.abs(p.value)
+      r.lo.value = String(+(p.value - span).toPrecision(6))
+      r.hi.value = String(+(p.value + span).toPrecision(6))
+      r.range.value = '500'
+      r.out.textContent = String(+p.value.toPrecision(6))
+      setup(p.value)
+    })
+    const val = () => +r.lo.value + ((+r.hi.value - +r.lo.value) * +r.range.value) / 1000
+    for (const inp of [r.lo, r.hi]) inp.addEventListener('change', () => setup(Math.min(+r.hi.value, Math.max(+r.lo.value, Number(r.out.textContent) || +r.lo.value))))
+    r.range.addEventListener('input', () => {
+      const v = val()
+      r.out.textContent = String(+v.toPrecision(6))
+      if (r.ready) ws.post({ t: 'slider-move', k, value: v })
+    })
+    sliderRows.push(r)
+    box.append(row)
+  }
+}
+function fillSliders(list: typeof params, sliders: Array<{ name: string; value: number; lo: number; hi: number } | null>) {
+  params = list
+  sliderRows.forEach((r, k) => {
+    const keep = sliders[k]?.name ?? r.sel.value
+    r.sel.innerHTML = '<option value="">(choose)</option>'
+    for (const [label, ic] of [['Parameters', false], ['Initial values', true]] as const) {
+      const og = document.createElement('optgroup')
+      og.label = label
+      for (const p of list.filter((q) => q.ic === ic)) og.append(new Option(p.name, p.name))
+      r.sel.append(og)
+    }
+    r.sel.value = keep
+    const s = sliders[k]
+    if (s) {
+      r.lo.value = String(s.lo)
+      r.hi.value = String(s.hi)
+      r.range.value = String(Math.round(((s.value - s.lo) / (s.hi - s.lo || 1)) * 1000))
+      r.out.textContent = String(+s.value.toPrecision(6))
+      r.ready = true
+    }
+  })
+}
+
+// the running script line: an arrow in the editor
+let runLine: { name: string; line: number } = { name: '', line: 0 }
+function applyRunLine(t: Tab) {
+  if (!t.view) return
+  const mine = t.src.kind === 'ws' ? t.src.name : t.title
+  t.view.setRunLine(runLine.line && mine === runLine.name ? runLine.line - 1 : null)
+}
+
 /** another editor window: they all share the workspace (and update each other) */
 function newWindow(name?: string) {
   const w = window.open('editor.html' + (name ? '#' + encodeURIComponent(name) : ''), '_blank', touchy() ? '' : 'popup,width=1100,height=750')
@@ -921,7 +1141,8 @@ $('wsmenu').addEventListener('click', (e) =>
     }],
   ]),
 )
-$('st-problems').addEventListener('click', () => $('panelwrap').classList.toggle('closed'))
+$('st-problems').addEventListener('click', () => showPanel('problems'))
+$('st-terminal').addEventListener('click', () => ($('panelwrap').classList.contains('closed') ? showPanel('terminal') : $('panelwrap').classList.add('closed')))
 $('panelclose').addEventListener('click', () => $('panelwrap').classList.add('closed'))
 document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
@@ -937,6 +1158,8 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => se
 
 // ---- start -----------------------------------------------------------------------
 applyTheme()
+renderCmdBar()
+buildSliders()
 groups.push(makeGroup())
 layoutGroups()
 welcome(groups[0])
