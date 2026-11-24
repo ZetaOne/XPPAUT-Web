@@ -201,6 +201,75 @@ input[type='number'] {
   font-weight: 600;
 }
 
+.sideview {
+  display: flex;
+  gap: 2px;
+  margin: 6px 8px 2px;
+  padding: 2px;
+  border: 1px solid var(--ed-line);
+  border-radius: 6px;
+}
+
+.sideview button {
+  flex: 1;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ed-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.sideview button.on {
+  background: color-mix(in srgb, var(--ed-accent) 30%, transparent);
+  color: var(--ed-fg);
+  font-weight: 600;
+}
+
+.tree li.sub {
+  padding-left: 26px;
+}
+
+.tree li .when {
+  color: var(--ed-muted);
+  font-size: 11px;
+}
+
+.tree li.drop {
+  outline: 1px dashed var(--ed-accent);
+  outline-offset: -1px;
+}
+
+.tree li.choose {
+  display: block;
+  padding: 8px 12px;
+  white-space: normal;
+  cursor: default;
+}
+
+.tree li.choose:hover {
+  background: none;
+}
+
+.tree li.choose p {
+  margin: 0 0 8px;
+  color: var(--ed-muted);
+  line-height: 1.4;
+}
+
+.tree li.choose .big {
+  display: block;
+  width: 100%;
+  margin: 0 0 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--ed-accent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--ed-accent) 20%, transparent);
+  color: var(--ed-fg);
+  cursor: pointer;
+}
+
 .tree .empty {
   padding: 4px 12px;
   color: var(--ed-muted);
@@ -766,6 +835,15 @@ input[type='number'] {
 
   .tree li {
     padding: 7px 10px;
+  }
+
+  .tree li.sub {
+    padding-left: 28px;
+  }
+
+  .sideview button {
+    padding: 7px 6px;
+    font-size: 13px;
   }
 
   .tab {

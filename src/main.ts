@@ -351,14 +351,20 @@ function notice(msg: string) {
 }
 
 // ---- starting XPP -----------------------------------------------------------
-async function launch(name: string, text: string, extras: Array<{ name: string; data: Uint8Array }> = [], id = name) {
-  // the workspace (files kept in the browser, shared with the editor): its
-  // files go into XPP's folder too; a file edited there wins over an
-  // example's own copy (not the model itself)
+/** the workspace folder of the model XPP runs ("lecar"; see src/workspace.ts) */
+let wsDir = ''
+async function launch(name: string, text: string, extras: Array<{ name: string; data: Uint8Array }> = [], id = name, dir = ws.folderFor(name)) {
+  // the workspace (files kept in the browser, shared with the editor): the
+  // model's own folder there goes into XPP's folder too; a file edited there
+  // wins over an example's own copy (not the model itself)
+  wsDir = dir
   for (const f of await ws.readAll()) {
-    if (f.name === name || f.data.length > 20_000_000 || /^fort\.\d+$/.test(f.name)) continue
-    extras = [...extras.filter((e) => e.name !== f.name), { name: f.name, data: f.data }]
+    if (ws.dirOf(f.name) !== dir) continue
+    const base = ws.baseOf(f.name)
+    if (base === name || f.data.length > 20_000_000 || /^fort\.\d+$/.test(base)) continue
+    extras = [...extras.filter((e) => e.name !== base), { name: base, data: f.data }]
   }
+  void ws.touch(dir)
   // your own model (examples bring their files): ask for table files it names
   if (!id.includes('/')) {
     const ok = await neededFiles(name, text, extras)
@@ -550,8 +556,9 @@ fetch('odes/index.json')
     const edited = restoreEdited(want)
     if (fromWs) {
       // the editor's "Run in XPP": a model from the workspace
+      const base = ws.baseOf(fromWs)
       void ws.read(fromWs).then((d) => {
-        if (d) launch(fromWs, ws.textOf(d), [], fromWs)
+        if (d) launch(base, ws.textOf(d), [], base, ws.dirOf(fromWs) || ws.folderFor(base))
         else notice(`${fromWs} is not in the workspace`)
       })
     } else if (edited) launch(edited.name, edited.text, edited.extras, edited.id)
@@ -933,15 +940,16 @@ const wsSeen = new Map<string, string>()
 let wsBusy = false
 /** XPP's folder -> the workspace: new and changed files */
 async function syncToWorkspace() {
-  if (!session || wsBusy) return
+  if (!session || wsBusy || !wsDir) return
   wsBusy = true
   try {
     for (const f of session.listFiles()) {
       const key = f.size + ':' + f.mtime
-      if (wsSeen.get(f.name) === key) continue
+      const path = ws.join(wsDir, f.name)
+      if (wsSeen.get(path) === key) continue
       if (/^fort\.\d+$/.test(f.name) || f.size > 20_000_000) continue
-      wsSeen.set(f.name, key)
-      await ws.write(f.name, session.readFile(f.name))
+      wsSeen.set(path, key)
+      await ws.write(path, session.readFile(f.name))
     }
   } finally {
     wsBusy = false
@@ -949,7 +957,7 @@ async function syncToWorkspace() {
 }
 const seenNow = (name: string) => {
   const f = session?.listFiles().find((x) => x.name === name)
-  if (f) wsSeen.set(name, f.size + ':' + f.mtime)
+  if (f) wsSeen.set(ws.join(wsDir, name), f.size + ':' + f.mtime)
 }
 // XPP's output and the running script line, to the editor windows
 const outBuffer: string[] = []
@@ -958,9 +966,9 @@ setInterval(() => {
   if (outBuffer.length) ws.post({ t: 'out', lines: outBuffer.splice(0, outBuffer.length) })
   if (!session) return
   const sl = session.scriptLine()
-  const key = sl.line ? sl.name + ':' + sl.line : ''
+  const key = sl.line ? ws.join(wsDir, sl.name) + ':' + sl.line : ''
   if (key !== lastScript) {
-    ws.post({ t: 'script-line', name: sl.name || lastScript.split(':')[0], line: sl.line })
+    ws.post({ t: 'script-line', name: sl.line ? ws.join(wsDir, sl.name) : lastScript.replace(/:\d+$/, ''), line: sl.line })
     lastScript = key
   }
 }, 150)
@@ -977,7 +985,7 @@ setInterval(() => {
 const paramsReply = () =>
   session && ws.post({ t: 'params', list: session.params(), sliders: [0, 1, 2].map((k) => session!.sliderInfo(k)) })
 ws.onMessage(async (m) => {
-  if (m.t === 'hello') return ws.post({ t: 'xpp-here', ode: odeName })
+  if (m.t === 'hello') return ws.post({ t: 'xpp-here', ode: odeName, dir: wsDir })
   if (session && m.t === 'cmd') {
     if (m.to === 'auto') {
       const w = session.windows().find((x) => x.title.startsWith("It's AUTO"))
@@ -996,37 +1004,47 @@ ws.onMessage(async (m) => {
   if (session && m.t === 'slider-move') return void sliderPending.set(m.k, m.value)
   if (!session) {
     // no XPP running here: the editor asks to run a model -> start it
-    if (m.t === 'run-ode') location.href = location.pathname + '?ws=' + encodeURIComponent(m.name)
+    if (m.t === 'run-ode') location.href = wsUrl(m.name, m.script)
     return
   }
+  // only files in the folder of the model XPP runs belong in XPP's folder
+  const mine = 'name' in m && ws.dirOf(m.name) === wsDir
+  const base = 'name' in m ? ws.baseOf(m.name) : ''
   if (m.t === 'changed') {
+    if (!mine || !base) return
     const d = await ws.read(m.name)
     if (d) {
-      session.writeFile(m.name, d)
-      seenNow(m.name)
+      session.writeFile(base, d)
+      seenNow(base)
       renderFiles()
       updateFileCount()
       updateScriptCount()
     }
   } else if (m.t === 'deleted') {
-    session.removeFile(m.name)
+    if (!mine) return
+    session.removeFile(base)
     wsSeen.delete(m.name)
     updateFileCount()
     updateScriptCount()
   } else if (m.t === 'run-script') {
     const d = await ws.read(m.name)
-    if (d) session.writeFile(m.name, d)
-    session.runScript(m.name)
-    notice('Running ' + m.name)
+    if (d) session.writeFile(base, d)
+    seenNow(base) // (a script from another folder stays out of this one)
+    session.runScript(base)
+    notice('Running ' + base)
   } else if (m.t === 'run-ode') {
     // the edited model, with the workspace's files: a fresh start
-    leaveThen(() => (location.href = location.pathname + '?ws=' + encodeURIComponent(m.name)))
+    leaveThen(() => (location.href = wsUrl(m.name, m.script)))
   }
 })
+/** XPP's page started on a model of the workspace ("folder/x.ode"), and a script */
+function wsUrl(path: string, script?: string) {
+  return location.pathname + '?ws=' + encodeURIComponent(path) + (script ? '&script=' + encodeURIComponent(script) : '')
+}
 /** open the editor in its own tab (on `name`, if given) */
 function openEditor(name?: string) {
   void syncToWorkspace().then(() => {
-    const w = window.open('editor.html' + (name ? '#' + encodeURIComponent(name) : ''), 'xpp-editor')
+    const w = window.open('editor.html' + (name && wsDir ? '#' + encodeURIComponent(ws.join(wsDir, name)) : ''), 'xpp-editor')
     if (!w) notice('Allow pop-ups for this site to open the editor in a new tab')
   })
 }

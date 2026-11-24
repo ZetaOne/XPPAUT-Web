@@ -295,14 +295,22 @@ The phone layout is chosen automatically (switch it under **Settings → View**)
 **Editor** (at the top of the page) opens a code editor in a new browser tab,
 working on XPP's files:
 
-- **Files kept in the browser** (the workspace): what XPP saves, your models
-  and scripts stay between visits and are shared by XPP's tab and the
-  editor (and any number of editor windows: **New window**). ⋯ next to
-  Workspace: **Download all (.zip)**, **Restore from .zip**. Clearing the
-  site's data deletes them, so download a copy of anything you want to keep.
-- **Your own folder** (Chrome and Edge on computers): **Open folder** edits
-  the files of a folder on your computer in place. The editor reopens it
-  every time (the browser may ask once per visit).
+- **Web files** and **Local files**: a switch at the top of the file list.
+- **Web files** are kept in the browser, **one folder per model**: what XPP
+  saves while it runs a model goes into that model's folder, and XPP sees
+  only that folder's files. The model opened most recently is at the top.
+  Files stay between visits and are shared by XPP's tab and the editor (and
+  any number of editor windows: **New window**). Drag a file onto a folder
+  to move it. ⋯ next to a folder: Run, New file, Add files, Rename,
+  Download (.zip), Delete. ⋯ at the top: New model, Add files, **Download
+  all (.zip)**, **Restore from .zip**. Clearing the site's data deletes
+  them, so download a copy of anything you want to keep.
+- **Local files** is empty until you **Choose a folder** on your device;
+  the folder is then remembered. Chrome and Edge on computers edit its
+  files in place (the browser may ask once per visit). Other browsers
+  (Firefox, Safari, phones) read a copy of it, and Save downloads the file.
+  ▶ Run on a local model copies it and the files beside it into its
+  folder in Web files first.
 - **Two editors in one**: VS Code's editor (Monaco) on computers, a
   touch-friendly one (CodeMirror) on phones and tablets; switch in ⚙.
   Highlighting for `.ode` models and `.xps` scripts, and **live checking of

@@ -61,13 +61,20 @@ root.innerHTML = `
     <button type="button" id="setbtn" title="Theme, editor style, font size…" aria-label="Settings">⚙</button>
     <input type="file" id="upinput" multiple hidden>
     <input type="file" id="zipinput" accept=".zip" hidden>
+    <input type="file" id="dirinput" webkitdirectory multiple hidden>
   </header>
   <main class="ed-main" id="main">
     <aside class="ed-side" id="side">
-      <h2><span>Workspace</span><button type="button" id="wsmenu" title="More: download all, restore, empty">⋯</button></h2>
-      <ul class="tree" id="wstree"></ul>
-      <div id="folderpart" hidden>
-        <h2><span id="foldername">Folder</span><button type="button" id="folderclose" title="Close the folder">×</button></h2>
+      <div class="sideview" role="tablist">
+        <button type="button" role="tab" data-v="web" title="Files kept in this browser, one folder per model (shared with XPP's tab)">Web files</button>
+        <button type="button" role="tab" data-v="local" title="A folder on this device">Local files</button>
+      </div>
+      <div id="webpart">
+        <h2><span>Models in this browser</span><button type="button" id="wsmenu" title="More: new model, add files, download all, restore, empty">⋯</button></h2>
+        <ul class="tree" id="wstree"></ul>
+      </div>
+      <div id="localpart" hidden>
+        <h2><span id="foldername">No folder</span><button type="button" id="localmenu" title="More: choose another folder, read it again, forget it">⋯</button></h2>
         <ul class="tree" id="foldertree"></ul>
       </div>
     </aside>
@@ -129,7 +136,13 @@ function applyTheme() {
 }
 
 // ---- tabs and groups --------------------------------------------------------------
-type Source = { kind: 'ws'; name: string } | { kind: 'folder'; path: string; handle: FileSystemFileHandle }
+type Source =
+  /** the workspace (this browser): "folder/name" */
+  | { kind: 'ws'; name: string }
+  /** a folder on the computer, edited in place (Chrome, Edge) */
+  | { kind: 'folder'; path: string; handle: FileSystemFileHandle }
+  /** other browsers: a copy read from a folder; saving downloads the file */
+  | { kind: 'copy'; path: string }
 interface Tab {
   id: string
   src: Source
@@ -152,7 +165,8 @@ interface Group {
 }
 const groups: Group[] = []
 let focused = 0
-const srcKey = (s: Source) => (s.kind === 'ws' ? 'ws:' + s.name : 'fs:' + s.path)
+const srcKey = (s: Source) => (s.kind === 'ws' ? 'ws:' + s.name : s.kind === 'folder' ? 'fs:' + s.path : 'cp:' + s.path)
+const srcLabel = (s: Source) => (s.kind === 'ws' ? s.name : s.path)
 const activeTab = (): Tab | null => groups[focused]?.active ?? null
 
 function makeGroup(): Group {
@@ -225,10 +239,10 @@ async function openFile(src: Source, gi = focused, asText = false): Promise<Tab 
   }
   const data = await readSource(src)
   if (!data) {
-    toast('Cannot read ' + (src.kind === 'ws' ? src.name : src.path))
+    toast('Cannot read ' + srcLabel(src))
     return null
   }
-  const title = src.kind === 'ws' ? src.name : src.path.split('/').pop()!
+  const title = src.kind === 'ws' ? ws.baseOf(src.name) : src.path.split('/').pop()!
   const g = groups[gi] ?? groups[0]
   if (!g.tabs.length) g.body.replaceChildren()
   const pane = document.createElement('div')
@@ -240,7 +254,7 @@ async function openFile(src: Source, gi = focused, asText = false): Promise<Tab 
   const t: Tab = { id: Math.random().toString(36).slice(2), src, title, kind: kindOf(title, data), asText, pane, view: null, preview: null, dirty: false, marks: [], tabEl }
   tabEl.innerHTML = `<span class="tt"></span><button type="button" class="x" aria-label="Close"></button>`
   tabEl.querySelector('.tt')!.textContent = title + (asText ? ' (text)' : '')
-  tabEl.title = src.kind === 'ws' ? 'Workspace: ' + src.name : 'Folder: ' + src.path
+  tabEl.title = (src.kind === 'ws' ? 'In this browser: ' : src.kind === 'folder' ? 'Local folder: ' : 'Local copy: ') + srcLabel(src)
   tabEl.addEventListener('click', (e) => {
     if ((e.target as HTMLElement).classList.contains('x')) return void closeTab(t)
     showTab(groups.findIndex((x) => x.tabs.includes(t)), t)
@@ -279,7 +293,7 @@ async function fillTab(t: Tab, data: Uint8Array) {
     t.view.onChange(() => {
       setDirty(t, true)
       scheduleCheck(t)
-      if (settings.autosave) scheduleSave(t)
+      if (settings.autosave && t.src.kind !== 'copy') scheduleSave(t) // a copy saves by downloading: only on Save
     })
     scheduleCheck(t)
     applyRunLine(t)
@@ -396,6 +410,7 @@ function split() {
 // ---- reading and saving --------------------------------------------------------
 async function readSource(s: Source): Promise<Uint8Array | null> {
   if (s.kind === 'ws') return ws.read(s.name)
+  if (s.kind === 'copy') return localCopy?.files.get(s.path) ?? null
   try {
     return new Uint8Array(await (await s.handle.getFile()).arrayBuffer())
   } catch {
@@ -414,7 +429,13 @@ async function saveTab(t: Tab | null) {
   const text = t.view.getValue()
   try {
     if (t.src.kind === 'ws') await ws.write(t.src.name, ws.bytesOf(text))
-    else {
+    else if (t.src.kind === 'copy') {
+      // this browser cannot write into the folder: keep the copy, download the file
+      localCopy?.files.set(t.src.path, ws.bytesOf(text))
+      if (localCopy) void keepCopy(localCopy)
+      download(t.title, ws.bytesOf(text))
+      toast(`${t.title} saved to your downloads (this browser cannot write into the folder)`, 4000)
+    } else {
       const w = await t.src.handle.createWritable()
       await w.write(text)
       await w.close()
@@ -459,11 +480,11 @@ function scheduleCheck(t: Tab) {
 }
 
 // ---- running in XPP --------------------------------------------------------------
-let xppHere: { ode: string; at: number } | null = null
+let xppHere: { ode: string; dir: string; at: number } | null = null
 ws.onMessage((m) => {
   if (m.t === 'xpp-here') {
     const changed = xppHere?.ode !== m.ode
-    xppHere = { ode: m.ode, at: Date.now() }
+    xppHere = { ode: m.ode, dir: m.dir ?? '', at: Date.now() }
     updateXpp()
     if (changed) ws.post({ t: 'params-req' })
   } else if (m.t === 'out') termWrite(m.lines)
@@ -495,33 +516,44 @@ async function run() {
   if (!t) return
   showPanel('terminal')
   if (t.dirty) await saveTab(t)
-  let name = t.src.kind === 'ws' ? t.src.name : t.title
-  if (t.src.kind === 'folder') {
-    // a folder's model: it and the files beside it go into the workspace first
-    await copyFolderToWs(t.src.path)
-    name = t.title
-  }
+  // a local file: it and the files beside it go into the model's folder here first
+  const name = t.src.kind === 'ws' ? t.src.name : await localToWs(t.src)
+  if (!name) return
   const lang = languageOf(name)
+  const dir = ws.dirOf(name)
+  const base = ws.baseOf(name)
   if (lang === 'ode') {
     if (xppAlive()) {
       ws.post({ t: 'run-ode', name })
-      toast(`Running ${name} in XPP's tab`)
+      toast(`Running ${base} in XPP's tab`)
     } else window.open('index.html?ws=' + encodeURIComponent(name), 'xpp-main')
   } else if (lang === 'xps') {
-    if (xppAlive()) {
+    if (xppAlive() && xppHere!.dir === dir) {
       ws.post({ t: 'run-script', name })
-      toast(`Running ${name} in XPP's tab`)
-    } else {
-      // XPP is not open: start it with a model of the same name, then the script
-      const files = await ws.list()
-      const model = files.find((f) => f.name.endsWith('.ode') && name.startsWith(f.name.replace(/\.ode$/, '')))
-      if (model) window.open(`index.html?ws=${encodeURIComponent(model.name)}&script=${encodeURIComponent(name)}`, 'xpp-main')
-      else toast('Open XPP with a model first (XPP button), then Run the script')
+      toast(`Running ${base} in XPP's tab`)
+      return
     }
+    // XPP runs another model (or none): start this folder's model, then the script
+    const model = await modelIn(dir)
+    if (model) {
+      if (xppAlive()) {
+        ws.post({ t: 'run-ode', name: model, script: base })
+        toast(`Starting ${ws.baseOf(model)} in XPP's tab, then ${base}`)
+      } else window.open(`index.html?ws=${encodeURIComponent(model)}&script=${encodeURIComponent(base)}`, 'xpp-main')
+    } else if (xppAlive()) {
+      ws.post({ t: 'run-script', name })
+      toast(`No model in ${dir}: running ${base} with the model XPP has open`)
+    } else toast(`No model (.ode) in ${dir}: add one, or open XPP with a model first`)
   }
 }
 
-// ---- the explorer ----------------------------------------------------------------
+/** the model of a folder: the .ode named like the folder, or its first .ode */
+async function modelIn(dir: string): Promise<string | null> {
+  const odes = (await ws.list()).map((f) => f.name).filter((n) => ws.dirOf(n) === dir && /\.ode$/i.test(n))
+  return odes.find((n) => ws.folderFor(ws.baseOf(n)) === dir) ?? odes[0] ?? null
+}
+
+// ---- the explorer: Web files (this browser, a folder per model) | Local files ----
 const icon = (name: string) => {
   const k = kindOf(name)
   if (/\.ode$/i.test(name)) return '∂'
@@ -529,35 +561,157 @@ const icon = (name: string) => {
   return k === 'image' ? '🖼' : k === 'ps' || k === 'pdf' ? '📄' : k === 'data' ? '📈' : '·'
 }
 
+const store = {
+  get(k: string): string | null {
+    try {
+      return localStorage.getItem(k)
+    } catch {
+      return null
+    }
+  },
+  set(k: string, v: string) {
+    try {
+      localStorage.setItem(k, v)
+    } catch {
+      /* private mode */
+    }
+  },
+}
+
+/** which list the explorer shows (remembered) */
+function setView(v: 'web' | 'local') {
+  store.set('xpp-editor-view', v)
+  for (const b of document.querySelectorAll<HTMLButtonElement>('.sideview button')) {
+    b.classList.toggle('on', b.dataset.v === v)
+    b.setAttribute('aria-selected', String(b.dataset.v === v))
+  }
+  $('webpart').hidden = v !== 'web'
+  $('localpart').hidden = v !== 'local'
+  if (v === 'local') renderLocal()
+}
+
+/** folders opened or closed by hand (the others: only the most recent is open) */
+const folderOpen: Record<string, boolean> = (() => {
+  try {
+    return JSON.parse(store.get('xpp-editor-folders') ?? '{}')
+  } catch {
+    return {}
+  }
+})()
+const keepFolderOpen = () => store.set('xpp-editor-folders', JSON.stringify(folderOpen))
+
+function ago(t: number) {
+  const s = (Date.now() - t) / 1000
+  if (s < 60) return 'just now'
+  if (s < 3600) return Math.floor(s / 60) + ' min ago'
+  if (s < 86400) return Math.floor(s / 3600) + ' h ago'
+  if (s < 2 * 86400) return 'yesterday'
+  return new Date(t).toLocaleDateString()
+}
+
+/** the folder new files go into: the open file's, else the most recent */
+async function currentDir(): Promise<string> {
+  const t = activeTab()
+  if (t?.src.kind === 'ws') return ws.dirOf(t.src.name)
+  return (await ws.folders())[0]?.dir ?? ws.UNSORTED
+}
+
+let treeBusy = false
+let treeAgain = false
 async function refreshTree() {
-  const list = await ws.list()
+  // the list is read again on every change from another tab: one at a time
+  if (treeBusy) return void (treeAgain = true)
+  treeBusy = true
+  try {
+    await drawTree()
+  } finally {
+    treeBusy = false
+    if (treeAgain) {
+      treeAgain = false
+      void refreshTree()
+    }
+  }
+}
+
+async function drawTree() {
+  const all = await ws.folders()
   const ul = $('wstree')
   ul.replaceChildren()
-  if (!list.length) {
-    ul.innerHTML = '<li class="empty">Empty. XPP\'s files appear here when XPP runs, or use New / Add files.</li>'
+  if (!all.length) {
+    ul.innerHTML = '<li class="empty">Empty. A folder appears here for each model XPP runs, or use ⋯ → New model / Add files.</li>'
     return
   }
   const cur = activeTab()
-  for (const f of list) {
-    if (/^fort\.\d+$/.test(f.name)) continue
+  const curDir = cur?.src.kind === 'ws' ? ws.dirOf(cur.src.name) : ''
+  all.forEach((g, i) => {
+    const open = folderOpen[g.dir] ?? (i === 0 || g.dir === curDir)
     const li = document.createElement('li')
-    li.draggable = true
-    li.innerHTML = `<span class="ic"></span><span class="nm"></span><button type="button" class="more" aria-label="More">⋯</button>`
-    li.querySelector('.ic')!.textContent = icon(f.name)
-    li.querySelector('.nm')!.textContent = f.name
-    li.title = `${f.name} · ${(f.size / 1024).toFixed(1)} kB · ${new Date(f.mtime).toLocaleString()}`
-    if (cur?.src.kind === 'ws' && cur.src.name === f.name) li.classList.add('active')
+    li.className = 'dir'
+    li.dataset.dir = g.dir
+    li.innerHTML = `<span class="ic"></span><span class="nm"></span><span class="when"></span><button type="button" class="more" aria-label="More">⋯</button>`
+    li.querySelector('.ic')!.textContent = open ? '▾' : '▸'
+    li.querySelector('.nm')!.textContent = g.dir
+    li.querySelector('.when')!.textContent = ago(g.opened)
+    li.title = `${g.dir}: ${g.files.length} file${g.files.length === 1 ? '' : 's'}, opened ${new Date(g.opened).toLocaleString()}`
+    li.setAttribute('aria-expanded', String(open))
     li.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).classList.contains('more')) return fileMenu(e as MouseEvent, f.name)
-      void openFile({ kind: 'ws', name: f.name })
+      if ((e.target as HTMLElement).classList.contains('more')) return folderMenu(e as MouseEvent, g.dir, g.files.map((f) => f.name))
+      folderOpen[g.dir] = !open
+      keepFolderOpen()
+      void refreshTree()
     })
     li.addEventListener('contextmenu', (e) => {
       e.preventDefault()
-      fileMenu(e, f.name)
+      folderMenu(e, g.dir, g.files.map((f) => f.name))
     })
-    li.addEventListener('dragstart', (e) => e.dataTransfer?.setData('text/x-xpp', 'ws|' + f.name))
+    // a file dropped on a folder moves there
+    li.addEventListener('dragover', (e) => {
+      if (!e.dataTransfer?.types.includes('text/x-xpp')) return
+      e.preventDefault()
+      li.classList.add('drop')
+    })
+    li.addEventListener('dragleave', () => li.classList.remove('drop'))
+    li.addEventListener('drop', (e) => {
+      e.preventDefault()
+      li.classList.remove('drop')
+      const d = e.dataTransfer?.getData('text/x-xpp') ?? ''
+      if (d.startsWith('ws|')) void moveFile(d.slice(3), g.dir)
+    })
     ul.append(li)
-  }
+    if (!open) return
+    // the model first, then the rest by name
+    const files = g.files.filter((f) => !/^fort\.\d+$/.test(ws.baseOf(f.name)))
+    files.sort((a, b) => Number(/\.ode$/i.test(b.name)) - Number(/\.ode$/i.test(a.name)) || a.name.localeCompare(b.name))
+    if (!files.length) {
+      const e = document.createElement('li')
+      e.className = 'empty sub'
+      e.textContent = 'No files yet'
+      ul.append(e)
+    }
+    for (const f of files) {
+      const base = ws.baseOf(f.name)
+      const fi = document.createElement('li')
+      fi.className = 'sub'
+      fi.draggable = true
+      fi.dataset.key = 'ws:' + f.name
+      fi.innerHTML = `<span class="ic"></span><span class="nm"></span><button type="button" class="more" aria-label="More">⋯</button>`
+      fi.querySelector('.ic')!.textContent = icon(base)
+      fi.querySelector('.nm')!.textContent = base
+      fi.title = `${f.name} · ${(f.size / 1024).toFixed(1)} kB · ${new Date(f.mtime).toLocaleString()}`
+      if (cur && srcKey(cur.src) === fi.dataset.key) fi.classList.add('active')
+      fi.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).classList.contains('more')) return fileMenu(e as MouseEvent, f.name)
+        void openFile({ kind: 'ws', name: f.name })
+        if (touchy()) closeSide()
+      })
+      fi.addEventListener('contextmenu', (e) => {
+        e.preventDefault()
+        fileMenu(e, f.name)
+      })
+      fi.addEventListener('dragstart', (e) => e.dataTransfer?.setData('text/x-xpp', 'ws|' + f.name))
+      ul.append(fi)
+    }
+  })
 }
 
 function menu(e: MouseEvent, items: Array<[string, () => void] | null>) {
@@ -594,9 +748,10 @@ function fileMenu(e: MouseEvent, name: string) {
     null,
     ['Rename…', () => void renameFile(name)],
     ['Duplicate', () => void duplicateFile(name)],
+    ['Move to folder…', () => void moveFilePrompt(name)],
     ['Download', async () => {
       const d = await ws.read(name)
-      if (d) download(name, d)
+      if (d) download(ws.baseOf(name), d)
     }],
     null,
     ['Delete', () => void deleteFile(name)],
@@ -604,48 +759,117 @@ function fileMenu(e: MouseEvent, name: string) {
   menu(e, items)
 }
 
-const validName = (n: string) => n.trim().replace(/[\\/]/g, '_')
+function folderMenu(e: MouseEvent, dir: string, files: string[]) {
+  const model = files.find((n) => ws.folderFor(ws.baseOf(n)) === dir) ?? files.find((n) => /\.ode$/i.test(n))
+  menu(e, [
+    ...(model ? [[`Run ${ws.baseOf(model)} in XPP`, () => void openFile({ kind: 'ws', name: model }).then(() => run())] as [string, () => void], null] : []),
+    ['New file here…', () => void newFile(dir)],
+    ['Add files here…', () => {
+      addTarget = dir
+      $('upinput').click()
+    }],
+    null,
+    ['Rename folder…', () => void renameDir(dir)],
+    ['Download folder (.zip)', () => void downloadDir(dir)],
+    null,
+    ['Delete folder…', () => void deleteDir(dir)],
+  ])
+}
 
-async function newFile() {
-  const n = prompt('New file name (for example model.ode or run.xps):', 'untitled.ode')
+const validName = (n: string) => n.trim().replace(/[\\/]/g, '_')
+/** the folder for files added by Add files (null: decided by the files) */
+let addTarget: string | null = null
+
+async function exists(path: string) {
+  return (await ws.list()).some((f) => f.name === path)
+}
+
+async function newFile(dir?: string) {
+  const n = prompt(dir ? `New file in ${dir} (for example run.xps):` : 'New model or file (a new model.ode gets its own folder):', dir ? 'run.xps' : 'model.ode')
   if (!n) return
   const name = validName(n)
-  if ((await ws.list()).some((f) => f.name === name)) return toast(name + ' already exists')
+  const where = dir ?? (/\.ode$/i.test(name) ? ws.folderFor(name) : await currentDir())
+  const path = ws.join(where, name)
+  if (await exists(path)) return toast(`${name} already exists in ${where}`)
   const starter = name.endsWith('.ode')
     ? '# a new model\npar a=1\nx\'=-a*x\ninit x=1\n@ total=20\ndone\n'
     : name.endsWith('.xps')
       ? '# a script: one command per line (File -> Do script in XPP)\nkeys i g\n'
       : ''
-  await ws.write(name, ws.bytesOf(starter))
+  await ws.write(path, ws.bytesOf(starter))
+  await ws.touch(where)
+  folderOpen[where] = true
+  keepFolderOpen()
   await refreshTree()
-  void openFile({ kind: 'ws', name })
+  void openFile({ kind: 'ws', name: path })
+}
+
+/** files the user added (or a restored .zip without folders): a model takes the others into its folder */
+async function addFiles(files: Array<{ name: string; data: Uint8Array }>, target: string | null) {
+  const ode = files.find((f) => /\.ode$/i.test(f.name))
+  const dir = target ?? (ode ? ws.folderFor(ode.name) : await currentDir())
+  for (const f of files) await ws.write(ws.join(dir, validName(f.name)), f.data)
+  await ws.touch(dir)
+  folderOpen[dir] = true
+  keepFolderOpen()
+  await refreshTree()
+  toast(`${files.length} file${files.length === 1 ? '' : 's'} added to ${dir}`)
 }
 
 async function renameFile(name: string) {
-  const n = prompt('Rename to:', name)
-  if (!n || n === name) return
-  const to = validName(n)
+  const dir = ws.dirOf(name)
+  const n = prompt('Rename to:', ws.baseOf(name))
+  if (!n || n === ws.baseOf(name)) return
+  const to = ws.join(dir, validName(n))
+  if (await exists(to)) return toast(`${validName(n)} already exists in ${dir}`)
+  await relocate(name, to)
+}
+
+/** a file moves (rename, other folder): open tabs follow it */
+async function relocate(name: string, to: string) {
   const d = await ws.read(name)
   if (!d) return
   await ws.write(to, d)
   await ws.remove(name)
-  for (const g of groups) for (const t of g.tabs) if (t.src.kind === 'ws' && t.src.name === name) await closeTab(t)
+  let reopen = false
+  for (const g of groups) for (const t of [...g.tabs]) if (t.src.kind === 'ws' && t.src.name === name) {
+    if (t.dirty) await saveTab(t)
+    await closeTab(t)
+    reopen = true
+  }
   await refreshTree()
-  void openFile({ kind: 'ws', name: to })
+  if (reopen) void openFile({ kind: 'ws', name: to })
+}
+
+async function moveFile(name: string, dir: string) {
+  if (ws.dirOf(name) === dir) return
+  const to = ws.join(dir, ws.baseOf(name))
+  if (await exists(to)) return toast(`${ws.baseOf(name)} already exists in ${dir}`)
+  await relocate(name, to)
+  toast(`${ws.baseOf(name)} moved to ${dir}`)
+}
+
+async function moveFilePrompt(name: string) {
+  const dirs = (await ws.folders()).map((g) => g.dir).filter((d) => d !== ws.dirOf(name))
+  const n = prompt(`Move ${ws.baseOf(name)} to which folder? (a new name makes a new folder)\n${dirs.join(', ')}`, dirs[0] ?? '')
+  if (n) await moveFile(name, validName(n))
 }
 
 async function duplicateFile(name: string) {
   const d = await ws.read(name)
   if (!d) return
-  const dot = name.lastIndexOf('.')
-  let to = dot > 0 ? name.slice(0, dot) + '-copy' + name.slice(dot) : name + '-copy'
-  for (let k = 2; (await ws.list()).some((f) => f.name === to); k++) to = dot > 0 ? `${name.slice(0, dot)}-copy${k}${name.slice(dot)}` : `${name}-copy${k}`
+  const dir = ws.dirOf(name)
+  const base = ws.baseOf(name)
+  const dot = base.lastIndexOf('.')
+  const make = (k: string) => ws.join(dir, dot > 0 ? `${base.slice(0, dot)}-copy${k}${base.slice(dot)}` : `${base}-copy${k}`)
+  let to = make('')
+  for (let k = 2; await exists(to); k++) to = make(String(k))
   await ws.write(to, d)
   await refreshTree()
 }
 
 async function deleteFile(name: string) {
-  if (!confirm(`Delete ${name} from the workspace (and XPP's folder)?`)) return
+  if (!confirm(`Delete ${ws.baseOf(name)} from ${ws.dirOf(name)} (in this browser, and XPP's folder)?`)) return
   for (const g of groups) for (const t of [...g.tabs]) if (t.src.kind === 'ws' && t.src.name === name) {
     t.dirty = false
     await closeTab(t)
@@ -654,43 +878,107 @@ async function deleteFile(name: string) {
   await refreshTree()
 }
 
+async function renameDir(dir: string) {
+  const n = prompt('Rename the folder to:', dir)
+  if (!n || validName(n) === dir) return
+  const to = validName(n)
+  if ((await ws.folders()).some((g) => g.dir === to)) return toast(`There is already a folder ${to}`)
+  const open = groups.flatMap((g) => g.tabs).filter((t) => t.src.kind === 'ws' && ws.dirOf(t.src.name) === dir)
+  for (const t of open) if (t.dirty) await saveTab(t)
+  await ws.renameFolder(dir, to)
+  for (const t of open) {
+    const name = (t.src as { name: string }).name
+    await closeTab(t)
+    void openFile({ kind: 'ws', name: ws.join(to, ws.baseOf(name)) })
+  }
+  folderOpen[to] = folderOpen[dir] ?? true
+  delete folderOpen[dir]
+  keepFolderOpen()
+  await refreshTree()
+}
+
+async function deleteDir(dir: string) {
+  if (!confirm(`Delete the folder ${dir} and every file in it (in this browser)? Download folder first to keep a copy.`)) return
+  for (const g of groups) for (const t of [...g.tabs]) if (t.src.kind === 'ws' && ws.dirOf(t.src.name) === dir) {
+    t.dirty = false
+    await closeTab(t)
+  }
+  await ws.removeFolder(dir)
+  delete folderOpen[dir]
+  keepFolderOpen()
+  await refreshTree()
+}
+
+async function downloadDir(dir: string) {
+  const files = (await ws.readAll()).filter((f) => ws.dirOf(f.name) === dir && !/^fort\.\d+$/.test(ws.baseOf(f.name))).map((f) => ({ name: ws.baseOf(f.name), data: f.data }))
+  if (!files.length) return toast(`${dir} is empty`)
+  download(dir + '.zip', makeZip(files))
+}
+
 async function downloadAll() {
-  const files = (await ws.readAll()).filter((f) => !/^fort\.\d+$/.test(f.name)).map((f) => ({ name: f.name, data: f.data }))
-  if (!files.length) return toast('The workspace is empty')
+  // one folder per model, as here
+  const files = (await ws.readAll()).filter((f) => !/^fort\.\d+$/.test(ws.baseOf(f.name))).map((f) => ({ name: f.name, data: f.data }))
+  if (!files.length) return toast('Nothing is kept in this browser yet')
   download('xpp-workspace.zip', makeZip(files))
 }
 
 async function restoreZip(file: File) {
   try {
     const files = await unzip(new Uint8Array(await file.arrayBuffer()))
-    for (const f of files) await ws.write(validName(f.name.split('/').pop()!), f.data)
+    const loose: Array<{ name: string; data: Uint8Array }> = []
+    let n = 0
+    for (const f of files) {
+      const parts = f.name.split('/').filter(Boolean)
+      if (!parts.length) continue
+      // "folder/name" (Download all): back into its folder; loose files: by their model
+      if (parts.length >= 2) {
+        await ws.write(ws.join(validName(parts[0]), validName(parts[parts.length - 1])), f.data)
+        n++
+      } else loose.push({ name: parts[0], data: f.data })
+    }
+    if (loose.length) {
+      const dirs = [...new Set([...(await ws.folders()).map((g) => g.dir), ...loose.filter((f) => /\.ode$/i.test(f.name)).map((f) => ws.folderFor(f.name))])]
+      for (const f of loose) await ws.write(ws.join(ws.guessDir(f.name, dirs), validName(f.name)), f.data)
+    }
     await refreshTree()
-    toast(`Restored ${files.length} files`)
+    toast(`Restored ${n + loose.length} files`)
   } catch (e) {
     toast('Could not read the .zip: ' + (e as Error).message, 5000)
   }
 }
 
-// ---- a folder on the computer (Chrome, Edge) --------------------------------------
+// ---- Local files: a folder on this device ----------------------------------------
+// Chrome and Edge open the folder itself (edits are saved in place, the folder
+// is remembered). Other browsers can only read a copy of it: the copy is kept
+// here, and Save downloads the file.
 type DirHandle = FileSystemDirectoryHandle & { entries(): AsyncIterable<[string, FileSystemHandle]>; requestPermission?(o: object): Promise<string>; queryPermission?(o: object): Promise<string> }
 let folder: DirHandle | null = null
+/** the remembered folder, when the browser wants a click before opening it again */
+let pendingHandle: DirHandle | null = null
 const canFolder = 'showDirectoryPicker' in window
+let localCopy: { name: string; when: number; files: Map<string, Uint8Array> } | null = null
 
-async function openFolder(h?: DirHandle) {
+function chooseLocal() {
+  setView('local')
+  if (canFolder) void openFolder()
+  else $('dirinput').click()
+}
+
+async function openFolder(h?: DirHandle, show = true) {
   try {
     const dir = h ?? ((await (window as unknown as { showDirectoryPicker(o: object): Promise<DirHandle> }).showDirectoryPicker({ mode: 'readwrite' })) as DirHandle)
     if (h && h.requestPermission && (await h.requestPermission({ mode: 'readwrite' })) !== 'granted') return
     folder = dir
+    pendingHandle = null
     keepHandle(dir)
-    $('foldername').textContent = dir.name
-    $('folderpart').hidden = false
-    await refreshFolder()
+    if (show) setView('local')
+    else void renderLocal()
   } catch (e) {
     if ((e as Error).name !== 'AbortError') toast('Could not open the folder: ' + (e as Error).message, 5000)
   }
 }
 
-async function listDir(dir: DirHandle, path: string, depth: number, out: Array<{ path: string; handle: FileSystemHandle; depth: number }>) {
+async function listDir(dir: DirHandle, path: string, depth: number, out: Array<{ path: string; handle: FileSystemHandle | null; depth: number }>) {
   const items: Array<[string, FileSystemHandle]> = []
   for await (const e of dir.entries()) items.push(e)
   items.sort((a, b) => (a[1].kind === b[1].kind ? a[0].localeCompare(b[0]) : a[1].kind === 'directory' ? -1 : 1))
@@ -701,32 +989,86 @@ async function listDir(dir: DirHandle, path: string, depth: number, out: Array<{
   }
 }
 
-async function refreshFolder() {
-  if (!folder) return
+/** the copy's files as a tree (folders first) */
+function copyItems(): Array<{ path: string; handle: null; depth: number; dir: boolean }> {
+  if (!localCopy) return []
+  const dirs = new Set<string>()
+  for (const p of localCopy.files.keys()) {
+    const parts = p.split('/')
+    for (let i = 1; i < parts.length; i++) dirs.add(parts.slice(0, i).join('/'))
+  }
+  const all = [...[...dirs].map((p) => ({ p, dir: true })), ...[...localCopy.files.keys()].map((p) => ({ p, dir: false }))]
+  // sort as a tree: by path, a folder before what is inside it, folders before files at each level
+  const key = (x: { p: string; dir: boolean }) => x.p.split('/').map((s, i, a) => (i < a.length - 1 || x.dir ? '0' : '1') + s).join('/')
+  all.sort((a, b) => key(a).localeCompare(key(b)))
+  return all.map((x) => ({ path: x.p, handle: null, depth: x.p.split('/').length - 1, dir: x.dir }))
+}
+
+async function renderLocal() {
   const ul = $('foldertree')
   ul.replaceChildren()
-  const items: Array<{ path: string; handle: FileSystemHandle; depth: number }> = []
-  await listDir(folder, '', 0, items)
+  const name = folder?.name ?? localCopy?.name
+  $('foldername').textContent = name ? (localCopy && !folder ? `${name} (a copy)` : name) : 'No folder'
+  if (!folder && !localCopy) {
+    // empty: choose one (the system's folder picker)
+    const li = document.createElement('li')
+    li.className = 'choose'
+    li.innerHTML = `<p>No folder yet. Choose a folder on this device: its files appear here${canFolder ? ', and Save writes into it' : ' (this browser reads a copy; Save downloads the file)'}. The folder is remembered.</p>`
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.className = 'big'
+    b.textContent = 'Choose a folder…'
+    b.addEventListener('click', chooseLocal)
+    li.append(b)
+    if (pendingHandle) {
+      const r = document.createElement('button')
+      r.type = 'button'
+      r.className = 'big'
+      r.textContent = 'Reopen ' + pendingHandle.name
+      r.title = 'Open the folder you used last time (the browser asks for permission)'
+      r.addEventListener('click', () => void openFolder(pendingHandle!))
+      li.prepend(r)
+    }
+    ul.append(li)
+    return
+  }
+  const items: Array<{ path: string; handle: FileSystemHandle | null; depth: number; dir?: boolean }> = []
+  if (folder) {
+    try {
+      await listDir(folder, '', 0, items)
+    } catch (e) {
+      ul.innerHTML = '<li class="empty"></li>'
+      ul.querySelector('li')!.textContent = 'Cannot read the folder: ' + (e as Error).message
+      return
+    }
+  } else items.push(...copyItems())
+  if (!items.length) ul.innerHTML = '<li class="empty">The folder is empty</li>'
   for (const it of items) {
     const li = document.createElement('li')
     li.style.paddingLeft = 8 + it.depth * 14 + 'px'
     const name = it.path.split('/').pop()!
     li.innerHTML = `<span class="ic"></span><span class="nm"></span>`
     li.querySelector('.nm')!.textContent = name
-    if (it.handle.kind === 'directory') {
+    const isDir = it.handle ? it.handle.kind === 'directory' : !!it.dir
+    if (isDir) {
       li.classList.add('dir')
       li.querySelector('.ic')!.textContent = '▾'
     } else {
+      const src: Source = it.handle ? { kind: 'folder', path: it.path, handle: it.handle as FileSystemFileHandle } : { kind: 'copy', path: it.path }
+      li.dataset.key = srcKey(src)
+      if (activeTab() && srcKey(activeTab()!.src) === li.dataset.key) li.classList.add('active')
       li.querySelector('.ic')!.textContent = icon(name)
-      li.addEventListener('click', () => void openFile({ kind: 'folder', path: it.path, handle: it.handle as FileSystemFileHandle }))
+      li.addEventListener('click', () => {
+        void openFile(src)
+        if (touchy()) closeSide()
+      })
       li.addEventListener('contextmenu', (e) => {
         e.preventDefault()
         menu(e, [
-          ['Open', () => void openFile({ kind: 'folder', path: it.path, handle: it.handle as FileSystemFileHandle })],
-          ['Copy to the workspace', async () => {
-            const f = await (it.handle as FileSystemFileHandle).getFile()
-            await ws.write(name, new Uint8Array(await f.arrayBuffer()))
-            await refreshTree()
+          ['Open', () => void openFile(src)],
+          ['Copy to Web files', async () => {
+            const path = await localToWs(src, false)
+            if (path) toast(`${name} copied to ${ws.dirOf(path)}`)
           }],
         ])
       })
@@ -735,50 +1077,113 @@ async function refreshFolder() {
   }
 }
 
-/** a folder model and the files beside it, into the workspace (for Run) */
-async function copyFolderToWs(path: string) {
-  if (!folder) return
-  const parts = path.split('/')
-  let dir: DirHandle = folder
-  for (const p of parts.slice(0, -1)) dir = (await dir.getDirectoryHandle(p)) as DirHandle
-  for await (const [name, h] of dir.entries()) {
-    if (h.kind !== 'file' || name.startsWith('.')) continue
-    const f = await (h as FileSystemFileHandle).getFile()
-    if (f.size > 5_000_000) continue
-    await ws.write(name, new Uint8Array(await f.arrayBuffer()), true)
+/** the files beside a local file (same folder) */
+async function localSiblings(src: Source): Promise<Array<{ name: string; data: Uint8Array }>> {
+  const out: Array<{ name: string; data: Uint8Array }> = []
+  if (src.kind === 'copy' && localCopy) {
+    const parent = src.path.includes('/') ? src.path.slice(0, src.path.lastIndexOf('/') + 1) : ''
+    for (const [p, d] of localCopy.files) if (p.startsWith(parent) && !p.slice(parent.length).includes('/') && d.length <= 5_000_000) out.push({ name: p.slice(parent.length), data: d })
+  } else if (src.kind === 'folder' && folder) {
+    let dir: DirHandle = folder
+    for (const p of src.path.split('/').slice(0, -1)) dir = (await dir.getDirectoryHandle(p)) as DirHandle
+    for await (const [name, h] of dir.entries()) {
+      if (h.kind !== 'file' || name.startsWith('.')) continue
+      const f = await (h as FileSystemFileHandle).getFile()
+      if (f.size > 5_000_000) continue
+      out.push({ name, data: new Uint8Array(await f.arrayBuffer()) })
+    }
   }
-  ws.post({ t: 'changed', name: parts[parts.length - 1] })
-  await refreshTree()
+  return out
 }
 
-// the folder is remembered (the browser asks again for permission)
-function keepHandle(h: DirHandle) {
-  const r = indexedDB.open('xpp-editor', 1)
-  r.onupgradeneeded = () => r.result.createObjectStore('kv')
-  r.onsuccess = () => r.result.transaction('kv', 'readwrite').objectStore('kv').put(h, 'folder')
+/** a local file into Web files (for Run): with `all`, the files beside it come too,
+ *  into the folder of their model; returns its path here */
+async function localToWs(src: Source, all = true): Promise<string | null> {
+  if (src.kind === 'ws') return src.name
+  const name = src.path.split('/').pop()!
+  try {
+    const sib = await localSiblings(src)
+    const parentName = src.path.includes('/') ? src.path.split('/').slice(-2, -1)[0] : (folder?.name ?? localCopy?.name ?? 'local')
+    const ode = /\.ode$/i.test(name) ? name : sib.find((f) => /\.ode$/i.test(f.name))?.name
+    const dir = ode ? ws.folderFor(ode) : validName(parentName)
+    const files = all ? sib : sib.filter((f) => f.name === name)
+    if (!files.some((f) => f.name === name)) {
+      const d = await readSource(src)
+      if (d) files.push({ name, data: d })
+    }
+    for (const f of files) await ws.write(ws.join(dir, f.name), f.data, true)
+    ws.post({ t: 'changed', name: ws.join(dir, name) })
+    await ws.touch(dir)
+    await refreshTree()
+    return ws.join(dir, name)
+  } catch (e) {
+    toast('Could not copy from the folder: ' + (e as Error).message, 5000)
+    return null
+  }
 }
-function forgetHandle() {
-  const r = indexedDB.open('xpp-editor', 1)
-  r.onupgradeneeded = () => r.result.createObjectStore('kv')
-  r.onsuccess = () => r.result.transaction('kv', 'readwrite').objectStore('kv').delete('folder')
+
+// other browsers: the folder chosen with the file picker, read into a copy
+async function readCopy(list: File[]) {
+  const files = new Map<string, Uint8Array>()
+  let total = 0
+  let top = ''
+  for (const f of list) {
+    const rel = (f as File & { webkitRelativePath?: string }).webkitRelativePath || f.name
+    const parts = rel.split('/')
+    if (parts.length > 1) top ||= parts[0]
+    const path = parts.length > 1 ? parts.slice(1).join('/') : rel
+    if (path.split('/').some((p) => p.startsWith('.')) || f.size > 20_000_000 || total + f.size > 100_000_000) continue
+    total += f.size
+    files.set(path, new Uint8Array(await f.arrayBuffer()))
+  }
+  localCopy = { name: top || 'Chosen files', when: Date.now(), files }
+  void keepCopy(localCopy)
+  setView('local')
+  toast(`Read ${files.size} files from ${localCopy.name}`)
 }
-function lastHandle(): Promise<DirHandle | null> {
+
+// remembered: the folder (Chrome, Edge: the browser asks again for permission)
+// or the copy (other browsers)
+function kv<T>(mode: IDBTransactionMode, f: (s: IDBObjectStore) => IDBRequest<T> | void): Promise<T | null> {
   return new Promise((ok) => {
     const r = indexedDB.open('xpp-editor', 1)
     r.onupgradeneeded = () => r.result.createObjectStore('kv')
     r.onsuccess = () => {
-      const g = r.result.transaction('kv').objectStore('kv').get('folder')
-      g.onsuccess = () => ok((g.result as DirHandle) ?? null)
-      g.onerror = () => ok(null)
+      try {
+        const q = f(r.result.transaction('kv', mode).objectStore('kv'))
+        if (!q) return ok(null)
+        q.onsuccess = () => ok((q.result as T) ?? null)
+        q.onerror = () => ok(null)
+      } catch {
+        ok(null)
+      }
     }
     r.onerror = () => ok(null)
   })
 }
+function keepHandle(h: DirHandle) {
+  void kv('readwrite', (s) => void s.put(h, 'folder'))
+}
+function keepCopy(c: { name: string; when: number; files: Map<string, Uint8Array> }) {
+  return kv('readwrite', (s) => void s.put({ name: c.name, when: c.when, files: [...c.files] }, 'copy'))
+}
+function forgetLocal() {
+  void kv('readwrite', (s) => {
+    s.delete('folder')
+    s.delete('copy')
+  })
+  folder = null
+  pendingHandle = null
+  localCopy = null
+  void renderLocal()
+}
+const lastHandle = () => kv<DirHandle>('readonly', (s) => s.get('folder') as IDBRequest<DirHandle>)
+const lastCopy = () => kv<{ name: string; when: number; files: Array<[string, Uint8Array]> }>('readonly', (s) => s.get('copy') as IDBRequest<{ name: string; when: number; files: Array<[string, Uint8Array]> }>)
 
 // ---- problems panel, status, title buttons ---------------------------------------
 function updateChrome() {
   const t = activeTab()
-  $('st-file').textContent = t ? (t.src.kind === 'ws' ? t.src.name : 'folder: ' + t.src.path) + (t.dirty ? ' ●' : '') : ''
+  $('st-file').textContent = t ? (t.src.kind === 'ws' ? t.src.name : (t.src.kind === 'folder' ? 'local: ' : 'local copy: ') + t.src.path) + (t.dirty ? ' ●' : '') : ''
   $('st-lang').textContent = t ? ({ ode: 'XPP model', xps: 'XPP script', plain: t.kind === 'text' || t.asText ? 'Text' : t.kind.toUpperCase() } as const)[languageOf(t.title)] : ''
   const lang = t ? languageOf(t.title) : 'plain'
   $<HTMLButtonElement>('runbtn').disabled = !(lang === 'ode' || lang === 'xps')
@@ -800,7 +1205,8 @@ function updateChrome() {
     ul.append(li)
   }
   if (!marks.length) ul.innerHTML = '<li class="where">No problems in this file.</li>'
-  for (const li of $('wstree').querySelectorAll('li')) li.classList.toggle('active', t?.src.kind === 'ws' && li.querySelector('.nm')?.textContent === t.src.name)
+  const key = t ? srcKey(t.src) : ''
+  for (const li of document.querySelectorAll<HTMLElement>('#wstree li[data-key], #foldertree li[data-key]')) li.classList.toggle('active', li.dataset.key === key)
 }
 
 function settingsPop() {
@@ -815,8 +1221,9 @@ function settingsPop() {
     <label for="s-wrap">Wrap long lines</label><input type="checkbox" id="s-wrap">
     <label for="s-mini">Minimap</label><input type="checkbox" id="s-mini">
     <label for="s-auto">Save automatically</label><input type="checkbox" id="s-auto">
-    ${canFolder ? '<label for="s-reopen">Open my folder every time</label><input type="checkbox" id="s-reopen"><span></span><button type="button" id="s-forget">Forget my folder</button>' : ''}
-    <p>Files are kept in this browser (the workspace) and shared with XPP's tab. Clearing the site's data deletes them: Download all (⋯ next to Workspace) keeps a copy.</p>`
+    ${canFolder ? '<label for="s-reopen">Open my folder every time</label><input type="checkbox" id="s-reopen">' : ''}
+    <span></span><button type="button" id="s-forget">Forget my local folder</button>
+    <p>Web files are kept in this browser, one folder per model, and shared with XPP's tab. Clearing the site's data deletes them: Download all (⋯ in Web files) keeps a copy.</p>`
   document.body.append(p)
   const sel = (id: string) => p.querySelector<HTMLInputElement & HTMLSelectElement>('#' + id)!
   sel('s-theme').value = settings.theme
@@ -825,16 +1232,11 @@ function settingsPop() {
   sel('s-wrap').checked = settings.wrap
   sel('s-mini').checked = settings.minimap
   sel('s-auto').checked = settings.autosave
-  if (canFolder) {
-    sel('s-reopen').checked = settings.reopenFolder
-    p.querySelector('#s-forget')!.addEventListener('click', () => {
-      forgetHandle()
-      folder = null
-      $('folderpart').hidden = true
-      document.getElementById('reopenbtn')?.remove()
-      toast('The folder is forgotten')
-    })
-  }
+  if (canFolder) sel('s-reopen').checked = settings.reopenFolder
+  p.querySelector('#s-forget')!.addEventListener('click', () => {
+    forgetLocal()
+    toast('The local folder is forgotten')
+  })
   p.addEventListener('change', async () => {
     const styleBefore = engineKind()
     settings.theme = sel('s-theme').value
@@ -1078,8 +1480,9 @@ function fillSliders(list: typeof params, sliders: Array<{ name: string; value: 
 let runLine: { name: string; line: number } = { name: '', line: 0 }
 function applyRunLine(t: Tab) {
   if (!t.view) return
-  const mine = t.src.kind === 'ws' ? t.src.name : t.title
-  t.view.setRunLine(runLine.line && mine === runLine.name ? runLine.line - 1 : null)
+  // XPP names the script "folder/x.xps"; a local file is matched by its name
+  const mine = t.src.kind === 'ws' ? t.src.name === runLine.name : t.title === ws.baseOf(runLine.name)
+  t.view.setRunLine(runLine.line && mine ? runLine.line - 1 : null)
 }
 
 /** another editor window: they all share the workspace (and update each other) */
@@ -1098,21 +1501,32 @@ $('newbtn').addEventListener('click', () => void newFile())
 $('upbtn').addEventListener('click', () => $('upinput').click())
 $<HTMLInputElement>('upinput').addEventListener('change', async (e) => {
   const inp = e.target as HTMLInputElement
-  for (const f of inp.files ?? []) await ws.write(validName(f.name), new Uint8Array(await f.arrayBuffer()))
+  const files = await Promise.all([...(inp.files ?? [])].map(async (f) => ({ name: f.name, data: new Uint8Array(await f.arrayBuffer()) })))
   inp.value = ''
-  await refreshTree()
+  const target = addTarget
+  addTarget = null
+  if (files.length) await addFiles(files, target)
 })
+$<HTMLInputElement>('dirinput').addEventListener('change', (e) => {
+  const inp = e.target as HTMLInputElement
+  if (inp.files?.length) void readCopy([...inp.files]) // (the list empties when the input is reset)
+  inp.value = ''
+})
+for (const b of document.querySelectorAll<HTMLButtonElement>('.sideview button')) b.addEventListener('click', () => setView(b.dataset.v as 'web' | 'local'))
+$('localmenu').addEventListener('click', (e) =>
+  menu(e, [
+    ['Choose another folder…', chooseLocal],
+    ...(folder || localCopy ? [['Read it again', () => (folder ? void renderLocal() : $('dirinput').click())] as [string, () => void]] : []),
+    null,
+    ['Forget this folder', forgetLocal],
+  ]),
+)
 $<HTMLInputElement>('zipinput').addEventListener('change', (e) => {
   const f = (e.target as HTMLInputElement).files?.[0]
   if (f) void restoreZip(f)
   ;(e.target as HTMLInputElement).value = ''
 })
-$('folderbtn').hidden = !canFolder
-$('folderbtn').addEventListener('click', () => void openFolder())
-$('folderclose').addEventListener('click', () => {
-  folder = null
-  $('folderpart').hidden = true
-})
+$('folderbtn').addEventListener('click', chooseLocal)
 $('savebtn').addEventListener('click', () => void saveTab(activeTab()))
 $('runbtn').addEventListener('click', () => void run())
 $('splitbtn').addEventListener('click', split)
@@ -1124,14 +1538,14 @@ $('xppbtn').addEventListener('click', () => {
 $('setbtn').addEventListener('click', settingsPop)
 $('wsmenu').addEventListener('click', (e) =>
   menu(e, [
-    ['New file…', () => void newFile()],
+    ['New model…', () => void newFile()],
     ['Add files…', () => $('upinput').click()],
     null,
     ['Download all (.zip)', () => void downloadAll()],
     ['Restore from .zip…', () => $('zipinput').click()],
     null,
-    ['Empty the workspace…', async () => {
-      if (!confirm('Delete every file in the workspace? (Download all first to keep a copy.)')) return
+    ['Delete everything…', async () => {
+      if (!confirm('Delete every folder and file kept in this browser? (Download all first to keep a copy.)')) return
       for (const g of groups) for (const t of [...g.tabs]) if (t.src.kind === 'ws') {
         t.dirty = false
         await closeTab(t)
@@ -1151,7 +1565,7 @@ document.addEventListener('keydown', (e) => {
   }
 })
 window.addEventListener('beforeunload', (e) => {
-  if (groups.some((g) => g.tabs.some((t) => t.dirty && t.src.kind === 'folder'))) e.preventDefault()
+  if (groups.some((g) => g.tabs.some((t) => t.dirty && t.src.kind !== 'ws'))) e.preventDefault()
 })
 addEventListener('storage', (e) => e.key === 'xpp-theme' && settings.theme === 'site' && applyTheme())
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => settings.theme === 'site' && applyTheme())
@@ -1173,21 +1587,19 @@ addEventListener('hashchange', () => {
   const want = decodeURIComponent(location.hash.slice(1))
   if (want) void openFile({ kind: 'ws', name: want })
 })
-if (canFolder)
-  void lastHandle().then(async (h) => {
+setView(store.get('xpp-editor-view') === 'local' ? 'local' : 'web')
+// the local folder chosen before
+void (async () => {
+  if (canFolder) {
+    const h = await lastHandle()
     if (!h) return
     // the browser kept the permission ("Allow on every visit"): open it now
-    if (settings.reopenFolder && h.queryPermission && (await h.queryPermission({ mode: 'readwrite' })) === 'granted') return void openFolder(h)
-    const b = document.createElement('button')
-    b.id = 'reopenbtn'
-    b.type = 'button'
-    b.className = 'wide'
-    b.textContent = 'Reopen ' + h.name
-    b.title = 'Open the folder you used last time (the browser asks for permission)'
-    b.addEventListener('click', () => {
-      b.remove()
-      void openFolder(h)
-    })
-    $('folderbtn').after(b)
-  })
+    if (settings.reopenFolder && h.queryPermission && (await h.queryPermission({ mode: 'readwrite' })) === 'granted') return void openFolder(h, false)
+    pendingHandle = h // Local files offers "Reopen …"
+  } else {
+    const c = await lastCopy()
+    if (c) localCopy = { name: c.name, when: c.when, files: new Map(c.files) }
+  }
+  void renderLocal()
+})()
 updateChrome()
