@@ -270,6 +270,68 @@ input[type='number'] {
   cursor: pointer;
 }
 
+.storage {
+  position: sticky; /* stays in view under a long list */
+  bottom: 6px;
+  background: var(--ed-side);
+  margin: 4px 8px 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--ed-line);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--ed-muted);
+}
+
+.smeter {
+  height: 6px;
+  margin-bottom: 4px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--ed-fg) 12%, transparent);
+  overflow: hidden;
+}
+
+.smeter span {
+  display: block;
+  height: 100%;
+  background: var(--ed-accent);
+}
+
+.storage.warn .smeter span {
+  background: #e8a317;
+}
+
+.snote {
+  margin-top: 5px;
+  line-height: 1.35;
+}
+
+.snote.strong {
+  padding: 4px 6px;
+  border-left: 3px solid #e8a317;
+  background: color-mix(in srgb, #e8a317 14%, transparent);
+  color: var(--ed-fg);
+}
+
+.storage.full {
+  border-color: #e5383b;
+  color: var(--ed-fg);
+}
+
+.storage.full .smeter span {
+  background: #e5383b;
+}
+
+.ed-status #st-store.warn {
+  background: #e8a317;
+  color: #000;
+}
+
+.ed-status #st-store.full {
+  background: #e5383b;
+  color: #fff;
+  font-weight: 700;
+}
+
 .tree .empty {
   padding: 4px 12px;
   color: var(--ed-muted);

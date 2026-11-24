@@ -77,6 +77,11 @@ root.innerHTML = `
         <h2><span id="foldername">No folder</span><button type="button" id="localmenu" title="More: choose another folder, read it again, forget it">⋯</button></h2>
         <ul class="tree" id="foldertree"></ul>
       </div>
+      <div class="storage" id="storage" hidden>
+        <div class="smeter"><span id="sbar"></span></div>
+        <div class="stext" id="stext"></div>
+        <div class="snote" id="snote" hidden></div>
+      </div>
     </aside>
     <div class="split v" id="sidesplit"></div>
     <div class="groups" id="groups"></div>
@@ -103,6 +108,7 @@ root.innerHTML = `
     <button type="button" id="st-problems" title="Problems">⨂ 0 ⚠ 0</button>
     <button type="button" id="st-terminal" title="Terminal, XPP's commands and sliders">▤ Terminal</button>
     <span class="grow"></span>
+    <button type="button" id="st-store" title="Storage used in this browser"></button>
     <span id="st-xpp" title="XPP's tab"></span><span id="st-engine"></span>
   </footer>`
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T
@@ -600,6 +606,90 @@ const folderOpen: Record<string, boolean> = (() => {
 })()
 const keepFolderOpen = () => store.set('xpp-editor-folders', JSON.stringify(folderOpen))
 
+function sizeText(n: number) {
+  if (n < 1024) return n + ' B'
+  if (n < 1024 * 1024) return (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' kB'
+  if (n < 1024 ** 3) return (n / 1024 / 1024).toFixed(n < 10 * 1024 * 1024 ? 1 : 0) + ' MB'
+  return (n / 1024 ** 3).toFixed(1) + ' GB'
+}
+
+// ---- storage: how much the files take, and how close the browser's limit is ----
+// The browser gives the site a quota (shared with XPP's own cached program).
+// Amber from 70 % of it, red from 90 % or when less than 50 MB is left: then
+// the browser may refuse new files or, if it runs short of disk, delete the
+// site's data.
+let storageLevel: 'ok' | 'warn' | 'full' = 'ok'
+async function updateStorage(all?: Awaited<ReturnType<typeof ws.folders>>) {
+  const folders = all ?? (await ws.folders())
+  const files = folders.reduce((n, g) => n + g.files.reduce((m, f) => m + f.size, 0), 0)
+  let usage = 0
+  let quota = 0
+  let persisted = false
+  try {
+    const e = await navigator.storage.estimate()
+    usage = e.usage ?? 0
+    quota = e.quota ?? 0
+    persisted = (await navigator.storage.persisted?.()) ?? false
+  } catch {
+    /* not available (old browser, private window) */
+  }
+  const frac = quota ? usage / quota : 0
+  const left = quota - usage
+  const level = !quota ? 'ok' : frac >= 0.9 || left < 50 * 1024 * 1024 ? 'full' : frac >= 0.7 ? 'warn' : 'ok'
+  const bar = $('sbar')
+  bar.style.width = Math.min(100, Math.max(1, frac * 100)).toFixed(1) + '%'
+  $('storage').hidden = false
+  $('storage').className = 'storage ' + level
+  $('stext').textContent = quota
+    ? `Your files: ${sizeText(files)} · site total ${sizeText(usage)} of ${sizeText(quota)} (${(frac * 100).toFixed(frac < 0.1 ? 1 : 0)} %)`
+    : `Your files: ${sizeText(files)}`
+  $('storage').title =
+    (level === 'full'
+      ? 'Almost full: the browser may refuse new files. Download what you want to keep (⋯ → Download all) and delete folders you no longer need.'
+      : level === 'warn'
+        ? 'Getting full: download a copy of your files (⋯ → Download all) and delete folders you no longer need.'
+        : 'Storage this site uses in the browser (your files, XPP\'s cached program and examples).') +
+    (persisted ? '' : ' The browser may clear it when the disk runs low; ⋯ → Keep my files asks it not to.')
+  // what this browser may do to the files
+  const risk = browserRisk(persisted)
+  const note = $('snote')
+  note.hidden = !risk || !files
+  note.textContent = risk?.text ?? ''
+  note.classList.toggle('strong', !!risk?.nag)
+  // Safari's 7 days: a reminder at most every 3 days, when there are files to lose
+  if (risk?.nag && files && !remindedRecently()) {
+    toast(risk.text, 9000)
+    remindedNow()
+  }
+  const st = $('st-store')
+  st.textContent = '💾 ' + sizeText(files)
+  st.className = level
+  st.title = $('storage').title
+  if (level !== storageLevel && level !== 'ok') toast(level === 'full' ? 'Storage is almost full: download your files and delete folders you no longer need' : 'Storage is getting full', 6000)
+  storageLevel = level
+}
+setInterval(() => void updateStorage(), 30000)
+
+/** what this browser does with a site's files (null: nothing to warn about) */
+function browserRisk(persisted: boolean): { text: string; nag: boolean } | null {
+  const ua = navigator.userAgent
+  const ios = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+  const safari = /Safari/.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|EdgiOS|Edg\/|OPR|Android/.test(ua)
+  const installed = matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true
+  if ((ios || safari) && !installed)
+    return {
+      text: `${ios ? 'On iPhone and iPad' : 'Safari'}: files of a site not visited for 7 days are deleted. ${ios ? 'Add this site to the Home Screen (Share → Add to Home Screen)' : 'Add this site to the Dock (File → Add to Dock)'} to keep them, and use Download all for a copy.`,
+      nag: true,
+    }
+  if (persisted) return null
+  if (/Firefox\//.test(ua)) return { text: 'Firefox may delete these files when the disk runs low. ⋯ → Keep my files asks it not to; Download all keeps a copy.', nag: false }
+  return { text: 'The browser may delete these files when the disk runs low. ⋯ → Keep my files asks it not to; Download all keeps a copy.', nag: false }
+}
+
+const REMIND = 'xpp-editor-reminded'
+const remindedRecently = () => Date.now() - Number(store.get(REMIND) ?? 0) < 3 * 86400e3
+const remindedNow = () => store.set(REMIND, String(Date.now()))
+
 function ago(t: number) {
   const s = (Date.now() - t) / 1000
   if (s < 60) return 'just now'
@@ -635,6 +725,7 @@ async function refreshTree() {
 
 async function drawTree() {
   const all = await ws.folders()
+  void updateStorage(all)
   const ul = $('wstree')
   ul.replaceChildren()
   if (!all.length) {
@@ -651,8 +742,9 @@ async function drawTree() {
     li.innerHTML = `<span class="ic"></span><span class="nm"></span><span class="when"></span><button type="button" class="more" aria-label="More">⋯</button>`
     li.querySelector('.ic')!.textContent = open ? '▾' : '▸'
     li.querySelector('.nm')!.textContent = g.dir
-    li.querySelector('.when')!.textContent = ago(g.opened)
-    li.title = `${g.dir}: ${g.files.length} file${g.files.length === 1 ? '' : 's'}, opened ${new Date(g.opened).toLocaleString()}`
+    const bytes = g.files.reduce((n, f) => n + f.size, 0)
+    li.querySelector('.when')!.textContent = `${sizeText(bytes)} · ${ago(g.opened)}`
+    li.title = `${g.dir}: ${g.files.length} file${g.files.length === 1 ? '' : 's'}, ${sizeText(bytes)}, opened ${new Date(g.opened).toLocaleString()}`
     li.setAttribute('aria-expanded', String(open))
     li.addEventListener('click', (e) => {
       if ((e.target as HTMLElement).classList.contains('more')) return folderMenu(e as MouseEvent, g.dir, g.files.map((f) => f.name))
@@ -1542,6 +1634,11 @@ $('wsmenu').addEventListener('click', (e) =>
     ['Add files…', () => $('upinput').click()],
     null,
     ['Download all (.zip)', () => void downloadAll()],
+    ['Keep my files (ask the browser not to clear them)', async () => {
+      const ok = await navigator.storage?.persist?.().catch(() => false)
+      toast(ok ? 'The browser will keep your files' : 'The browser said no (it decides by how often you use the site); Download all keeps a copy', 5000)
+      void updateStorage()
+    }],
     ['Restore from .zip…', () => $('zipinput').click()],
     null,
     ['Delete everything…', async () => {
@@ -1556,6 +1653,11 @@ $('wsmenu').addEventListener('click', (e) =>
   ]),
 )
 $('st-problems').addEventListener('click', () => showPanel('problems'))
+$('st-store').addEventListener('click', () => {
+  setView('web')
+  if (touchy()) $('main').classList.add('side-open')
+  else $('main').classList.remove('no-side')
+})
 $('st-terminal').addEventListener('click', () => ($('panelwrap').classList.contains('closed') ? showPanel('terminal') : $('panelwrap').classList.add('closed')))
 $('panelclose').addEventListener('click', () => $('panelwrap').classList.add('closed'))
 document.addEventListener('keydown', (e) => {

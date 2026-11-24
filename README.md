@@ -303,8 +303,16 @@ working on XPP's files:
   any number of editor windows: **New window**). Drag a file onto a folder
   to move it. ⋯ next to a folder: Run, New file, Add files, Rename,
   Download (.zip), Delete. ⋯ at the top: New model, Add files, **Download
-  all (.zip)**, **Restore from .zip**. Clearing the site's data deletes
-  them, so download a copy of anything you want to keep.
+  all (.zip)**, **Restore from .zip**, **Keep my files**. Clearing the
+  site's data deletes them, so download a copy of anything you want to keep.
+  Each folder shows its size; a meter under the list (and 💾 in the status
+  bar) shows how much the files take and how full the browser's storage
+  for the site is: amber from 70 %, red from 90 % or under 50 MB left.
+  It also says what the browser may do with the files: Safari (and every
+  browser on iPhone and iPad) deletes a site's files after 7 days without a
+  visit unless the site is added to the Home Screen or Dock, so the editor
+  reminds you there every few days; other browsers may delete them when the
+  disk runs low, unless **Keep my files** was granted.
 - **Local files** is empty until you **Choose a folder** on your device;
   the folder is then remembered. Chrome and Edge on computers edit its
   files in place (the browser may ask once per visit). Other browsers
