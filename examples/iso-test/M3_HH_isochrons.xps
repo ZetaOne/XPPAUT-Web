@@ -1,0 +1,272 @@
+# M3_HH_isochrons.xps -- 20 HH isochrons by M3 in XPP's AUTO, looping over the presets in the tables
+# (see M3_HH_isochrons.ode).  File > Do script in XPPAUT 8.4 or XPPAUT-Web.  About 25 minutes native.
+# "autokeys esc" before main-window keys gives the keyboard focus back to the main window
+# (XQuartz gives it to the AUTO window; harmless elsewhere).
+speed 0.1
+msg "Gamma, frozen; AUTO numerics (Ntst 600, k = 3 periods, SuppBP 1)"
+keys i g
+keys g f f
+ans Color=0|Key=Gamma|Name=Gamma
+keys f a
+autokeys n
+ans Ntst=600|Nmax=1500|NPr=100000|Ds=0.01|Dsmin=1e-08|Dsmax=0.5|Par Min=-100|Par Max=55|Norm Max=1e6|ITNW=20|SuppBP=1
+
+# isochrons 2 3 4 5 6 7 8 9 11 14 15 16 17 18: Nmax 1500 (V up), 1500 (V down)
+for iso in 2 3 4 5 6 7 8 9 11 14 15 16 17 18
+  msg "isochron $iso of 20 (V up)"
+  set iso=$iso;dl=0
+  autokeys esc
+  keys i u
+  ans v
+  ans 1
+  ans p:tgv(iso)
+  ans w
+  ans 1
+  ans tgw(iso)
+  ans w0
+  ans 1
+  ans tgw(iso)
+  ans dl
+  ans 1
+  ans 0
+  keys esc
+  keys i g
+  autokeys n
+  ans Nmax=1500|Ds=0.01
+  autokeys r b
+  msg "isochron $iso of 20 (V down)"
+  set iso=$iso;dl=0
+  autokeys esc
+  keys i u
+  ans v
+  ans 1
+  ans p:tgv(iso)
+  ans w
+  ans 1
+  ans tgw(iso)
+  ans w0
+  ans 1
+  ans tgw(iso)
+  ans dl
+  ans 1
+  ans 0
+  keys esc
+  keys i g
+  autokeys n
+  ans Nmax=1500|Ds=-0.01
+  autokeys r b
+end
+
+# isochrons 1: Nmax 1500 (V up), 550 (V down)
+for iso in 1
+  msg "isochron $iso of 20 (V up)"
+  set iso=$iso;dl=0
+  autokeys esc
+  keys i u
+  ans v
+  ans 1
+  ans p:tgv(iso)
+  ans w
+  ans 1
+  ans tgw(iso)
+  ans w0
+  ans 1
+  ans tgw(iso)
+  ans dl
+  ans 1
+  ans 0
+  keys esc
+  keys i g
+  autokeys n
+  ans Nmax=1500|Ds=0.01
+  autokeys r b
+  msg "isochron $iso of 20 (V down)"
+  set iso=$iso;dl=0
+  autokeys esc
+  keys i u
+  ans v
+  ans 1
+  ans p:tgv(iso)
+  ans w
+  ans 1
+  ans tgw(iso)
+  ans w0
+  ans 1
+  ans tgw(iso)
+  ans dl
+  ans 1
+  ans 0
+  keys esc
+  keys i g
+  autokeys n
+  ans Nmax=550|Ds=-0.01
+  autokeys r b
+end
+
+# isochrons 10 12 13: Nmax 382 (V up), 1500 (V down)
+for iso in 10 12 13
+  msg "isochron $iso of 20 (V up)"
+  set iso=$iso;dl=0
+  autokeys esc
+  keys i u
+  ans v
+  ans 1
+  ans p:tgv(iso)
+  ans w
+  ans 1
+  ans tgw(iso)
+  ans w0
+  ans 1
+  ans tgw(iso)
+  ans dl
+  ans 1
+  ans 0
+  keys esc
+  keys i g
+  autokeys n
+  ans Nmax=382|Ds=0.01
+  autokeys r b
+  msg "isochron $iso of 20 (V down)"
+  set iso=$iso;dl=0
+  autokeys esc
+  keys i u
+  ans v
+  ans 1
+  ans p:tgv(iso)
+  ans w
+  ans 1
+  ans tgw(iso)
+  ans w0
+  ans 1
+  ans tgw(iso)
+  ans dl
+  ans 1
+  ans 0
+  keys esc
+  keys i g
+  autokeys n
+  ans Nmax=1500|Ds=-0.01
+  autokeys r b
+end
+
+# isochrons 19: Nmax 401 (V up), 1500 (V down)
+for iso in 19
+  msg "isochron $iso of 20 (V up)"
+  set iso=$iso;dl=0
+  autokeys esc
+  keys i u
+  ans v
+  ans 1
+  ans p:tgv(iso)
+  ans w
+  ans 1
+  ans tgw(iso)
+  ans w0
+  ans 1
+  ans tgw(iso)
+  ans dl
+  ans 1
+  ans 0
+  keys esc
+  keys i g
+  autokeys n
+  ans Nmax=401|Ds=0.01
+  autokeys r b
+  msg "isochron $iso of 20 (V down)"
+  set iso=$iso;dl=0
+  autokeys esc
+  keys i u
+  ans v
+  ans 1
+  ans p:tgv(iso)
+  ans w
+  ans 1
+  ans tgw(iso)
+  ans w0
+  ans 1
+  ans tgw(iso)
+  ans dl
+  ans 1
+  ans 0
+  keys esc
+  keys i g
+  autokeys n
+  ans Nmax=1500|Ds=-0.01
+  autokeys r b
+end
+
+# isochrons 20: Nmax 402 (V up), 1500 (V down)
+for iso in 20
+  msg "isochron $iso of 20 (V up)"
+  set iso=$iso;dl=0
+  autokeys esc
+  keys i u
+  ans v
+  ans 1
+  ans p:tgv(iso)
+  ans w
+  ans 1
+  ans tgw(iso)
+  ans w0
+  ans 1
+  ans tgw(iso)
+  ans dl
+  ans 1
+  ans 0
+  keys esc
+  keys i g
+  autokeys n
+  ans Nmax=402|Ds=0.01
+  autokeys r b
+  msg "isochron $iso of 20 (V down)"
+  set iso=$iso;dl=0
+  autokeys esc
+  keys i u
+  ans v
+  ans 1
+  ans p:tgv(iso)
+  ans w
+  ans 1
+  ans tgw(iso)
+  ans w0
+  ans 1
+  ans tgw(iso)
+  ans dl
+  ans 1
+  ans 0
+  keys esc
+  keys i g
+  autokeys n
+  ans Nmax=1500|Ds=-0.01
+  autokeys r b
+end
+
+msg "All isochrons to a file (AUTO File > Write pts), into the data browser, coloured by phase"
+autokeys f w
+ans M3_HH_isochrons.dat
+browser open
+browsekeys l
+ans M3_HH_isochrons.dat
+browsekeys p
+ans v
+ans t
+browsekeys p
+ans dl
+ans (tord(flr((w0+1)/2))-1)/20
+browser close
+msg "The isochrons in the phase plane, coloured by phase (0 blue ... 0.95 red), on Gamma and the nullclines"
+autokeys esc
+keys u c a
+ans dl
+ans c
+ans 0
+ans 0.95
+keys esc
+set lt=-2
+keys v 2
+ans X-axis=v|Y-axis=w|Xmin=-100|Ymin=0.3|Xmax=55|Ymax=0.8|Xlabel=V|Ylabel=n
+keys g x
+ans |||0|0
+keys r
+keys n n
+msg "Done: 20 isochrons of the reduced HH neuron, phases 0 ... 0.95, one loop over the tables. The AUTO window shows the same curves, n(0) against V(0)."

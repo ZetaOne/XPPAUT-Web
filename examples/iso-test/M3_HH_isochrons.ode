@@ -1,0 +1,83 @@
+# M3_HH_isochrons.ode -- 20 isochrons (phases 0, 0.05, ..., 0.95) of the reduced Hodgkin-Huxley neuron
+#              (Osinga & Moehlis 2010) by boundary value continuation (method M3) in XPP's AUTO,
+#              ONE script looping over a TABLE of presets.  Run M3_HH_isochrons.xps (File > Do script).
+#
+# ======================================================================================
+# THE PRESETS ARE IN TABLES (one value per isochron, iso = 1..20, phase = (iso-1)/20)
+# ======================================================================================
+#   M3_HH_isochrons_gv.tab, _gw.tab : gamma(theta) = (V, n), the point of Γ a time theta*T after gamma0
+#   M3_HH_isochrons_ev.tab, _ew.tab : e(theta), the isochron's direction there (the stable Floquet
+#                            direction, orthogonal to the adjoint Z(theta))
+#   The parameter iso picks one isochron: gv0, gw0, ev, ew are derived from the tables (!), and
+#   the script sets the initial conditions from them with Initialconds > formUla
+#   (v = tgv(iso), w = w0 = tgw(iso)).  For other phases, put other rows in the tables.
+#
+#   The continuation parameter p = v(0) must start at gv0 too.  A script's "set" takes numbers
+#   only, but a formula typed as  name:expression  (XPP's calculator syntax) assigns a
+#   parameter: the script answers the formula for v with  p:tgv(iso), which sets p and v(0)
+#   to gv0 in one go.  The AUTO window then shows all 20 isochrons, n(0) against V(0); the
+#   script also draws them in the main window, coloured by phase.
+#
+# ======================================================================================
+# STOPPING: Nmax (with SuppBP 1), found by one headless run each
+# ======================================================================================
+#     phases 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.50, 0.65, 0.70, 0.75, 0.80, 0.85:  V up: ends by itself; V down: ends by itself
+#     phases 0.00:  V up: ends by itself; V down: Nmax 550 (|dl| reaches 1e-4)
+#     phases 0.45, 0.55, 0.60:  V up: Nmax 382 (|dl| reaches 1e-4); V down: ends by itself
+#     phases 0.90:  V up: Nmax 401 (|dl| reaches 1e-4); V down: ends by itself
+#     phases 0.95:  V up: Nmax 402 (|dl| reaches 1e-4); V down: ends by itself
+#   "ends by itself": at x* (V up) or at Par Min/Max (V down); Nmax 1500 is just large enough.
+#   Otherwise the run stops at the last point where the end point's offset |dl| is still at
+#   most 1e-4 (the paper's eta).  Isochrons that share their two Nmax run in one loop.
+#
+#   The script takes a while (40 AUTO runs): about 25 minutes native, longer in the browser.
+#   Phase 0 alone, with colours like the paper's Figure 3: M3_HH.ode.
+# ======================================================================================
+
+# --- the continuation parameter p = v(0) (first, so that it is AUTO's Par1)
+par p=44.706379
+# --- which isochron (row of the tables)
+par iso=1
+table tgv M3_HH_isochrons_gv.tab
+table tgw M3_HH_isochrons_gw.tab
+table tev M3_HH_isochrons_ev.tab
+table tew M3_HH_isochrons_ew.tab
+table tord M3_HH_isochrons_ord.tab
+
+# --- the model: reduced Hodgkin-Huxley, Osinga & Moehlis (2010) eq. (4.1), I = 10; w is n
+am(x)=0.1*(x+40)/(1-exp(-(x+40)/10))
+bm(x)=4*exp(-(x+65)/18)
+an(x)=0.01*(x+55)/(1-exp(-(x+55)/10))
+bn(x)=0.125*exp(-(x+65)/80)
+minf(x)=am(x)/(am(x)+bm(x))
+fx(x,y)=iapp-gna*minf(x)^3*(0.8-y)*(x-ena)-gk*y^4*(x-ek)-gl*(x-el)
+fy(x,y)=an(x)*(1-y)-bn(x)*y
+par iapp=10,gna=120,gk=36,gl=0.3,ena=50,ek=-77,el=-54.4
+
+# --- the ingredients of isochron iso, from the tables
+par per=11.84628522, k=3
+!gv0=tgv(iso)
+!gw0=tgw(iso)
+!ev=tev(iso)
+!ew=tew(iso)
+
+# --- the segment in rescaled time, u' = kT F(u); dl and w0 = w(0) constant along it
+v'=k*per*fx(v,w)
+w'=k*per*fy(v,w)
+dl'=0
+w0'=0
+init v=44.706379,w=0.45973791,dl=0,w0=0.45973791
+
+# --- boundary conditions: end on the straight piece at gamma(theta); p = v(0)
+bndry v'-gv0-dl'*ev
+bndry w'-gw0-dl'*ew
+bndry v-p
+bndry w0-w
+
+@ meth=rk4, dt=0.0001, total=1, maxstor=200000, bound=1e6
+@ xp=v, yp=w, xlo=-100, xhi=55, ylo=0.3, yhi=0.8
+@ ntst=600, ncol=4, nmax=1500, npr=100000, ds=0.01, dsmin=1e-8, dsmax=0.5, parmin=-100, parmax=55
+@ normmax=1e6, epsl=1e-8, epsu=1e-8, epss=1e-6
+@ xnc=7, ync=1
+@ autovar=w0, autoxmin=-100, autoxmax=55, autoymin=0.3, autoymax=0.8
+done
