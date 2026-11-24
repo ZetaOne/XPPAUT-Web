@@ -18,6 +18,8 @@ val syncWeb by tasks.registering(Sync::class) {
         exclude("sw.js", "manifest.webmanifest", "videos/**") // browser-only
         // the website's voice engines and models: the app has its own (Voice.java)
         exclude("voice/vosk/**", "voice/whisper/**", "voice/ort/**", "voice/test/**", "assets/voice-*", "assets/ort-wasm*")
+        // the website's editor (a browser tab of its own; not in the app yet)
+        exclude("editor.html", "assets/editor-*", "assets/editor.*", "assets/gs-*")
     }
     into(webAssets.map { it.dir("www") })
     doFirst {

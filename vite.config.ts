@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto'
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { join, resolve, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 import { defineConfig, type Plugin } from 'vite'
 
 /** every file under `dir`, as paths relative to it ("assets/index-x.js") */
@@ -12,7 +15,10 @@ function walk(dir: string, sub = ''): string[] {
 
 /** voice engines (assets/voice-*) and their files (voice/): not kept offline
  *  with the page; the page downloads and keeps them when chosen */
-const isVoice = (f: string) => f.startsWith('voice/') || f.startsWith('assets/voice-') || /ort-wasm/.test(f)
+const isVoice = (f: string) =>
+  f.startsWith('voice/') || f.startsWith('assets/voice-') || /ort-wasm/.test(f) ||
+  // the editor's engines (Monaco, CodeMirror) and Ghostscript: when the editor is used
+  /^assets\/editor[.-]/.test(f) || /gs-worker|gs-[^/]*\.wasm/.test(f)
 
 /**
  * Writes dist/sw.js from pwa/sw.js after the build: the list of files to keep
@@ -56,15 +62,23 @@ export default defineConfig({
   resolve: {
     // Whisper (transformers.js) on ONNX Runtime's plain WebAssembly build (14 MB,
     // no WebGPU): the same everywhere, and the smaller download
-    alias: [{ find: /^onnxruntime-web\/webgpu$/, replacement: 'onnxruntime-web/wasm' }],
+    alias: [
+      { find: /^onnxruntime-web\/webgpu$/, replacement: 'onnxruntime-web/wasm' },
+      // Monaco's CSS files (its package exports map every path to .js)
+      { find: /^monaco-esm\//, replacement: resolve(__dirname, 'node_modules/monaco-editor/esm/vs') + '/' },
+    ],
   },
   build: {
     rollupOptions: {
+      // the editor is a page of its own (editor.html, opened in a new tab)
+      input: { main: resolve(__dirname, 'index.html'), editor: resolve(__dirname, 'editor.html') },
       output: {
         // the voice engines in their own files, loaded only when chosen
         manualChunks(id) {
           if (id.includes('node_modules/vosk-browser')) return 'voice-vosk'
           if (/node_modules\/(@huggingface|onnxruntime)/.test(id)) return 'voice-whisper'
+          if (id.includes('node_modules/monaco-editor') || id.includes('src/editor/monaco')) return 'editor-monaco'
+          if (/node_modules\/(@codemirror|@lezer|codemirror|crelt|style-mod|w3c-keyname)/.test(id) || id.includes('src/editor/cm.ts')) return 'editor-codemirror'
         },
       },
     },

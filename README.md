@@ -61,8 +61,8 @@ Last). Click a preview to play the full 2-minute video.*
   (see [below](#phones)), and [voice commands](#voice-commands).
 - **Install as an app**: its own icon and window, works offline, and offers
   updates when a new version is published (see [below](#install-as-an-app)).
-- **Model editor**, **XPP's terminal output**, **built-in help**, and
-  **ten colour themes**.
+- **Code editor** in its own tab ([below](#editor)), **XPP's terminal
+  output**, **built-in help**, and **ten colour themes**.
 - **Fast and private**: about 0.5 MB, near-native speed, and nothing leaves
   your browser.
 
@@ -289,6 +289,33 @@ The phone layout is chosen automatically (switch it under **Settings → View**)
 > networks and arrays), large storage (`maxstor`) and long AUTO continuations
 > (large `NMAX` or `NTST`) may be slow or fail. Use **Save session** often, or
 > run such models on a computer.
+
+## Editor
+
+**Editor** (at the top of the page) opens a code editor in a new browser tab,
+working on XPP's files:
+
+- **Files kept in the browser** (the workspace): what XPP saves, your models
+  and scripts stay between visits and are shared by XPP's tab and the
+  editor (and any number of editor windows: **New window**). ⋯ next to
+  Workspace: **Download all (.zip)**, **Restore from .zip**. Clearing the
+  site's data deletes them, so download a copy of anything you want to keep.
+- **Your own folder** (Chrome and Edge on computers): **Open folder** edits
+  the files of a folder on your computer in place. The editor reopens it
+  every time (the browser may ask once per visit).
+- **Two editors in one**: VS Code's editor (Monaco) on computers, a
+  touch-friendly one (CodeMirror) on phones and tablets; switch in ⚙.
+  Highlighting for `.ode` models and `.xps` scripts, and **live checking of
+  `.ode` files by XPP itself** (errors appear as you type, in **Problems**).
+- **Previews**: pictures (SVG, PNG, GIF), PDF, **PostScript** (drawn by
+  Ghostscript, downloaded the first time), and data files (`.dat`, `.csv`)
+  as a table with a plot.
+- **▶ Run**: a model restarts XPP with it, a script runs in XPP's tab (no
+  restart).
+- **Like a desktop editor**: tabs, **Split** (two groups side by side; drag
+  tabs between them, drag the dividers), resizable panels, ten themes (or
+  the site's), font size, line wrap, minimap, save automatically,
+  Ctrl/Cmd+S.
 
 ## Voice commands
 

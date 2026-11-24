@@ -131,7 +131,8 @@ const top = join(stage, 'XPPAUT-Web')
 // not the videos, nor the voice engines and models (about 100 MB; online only)
 cpSync(dist, join(top, 'site'), {
   recursive: true,
-  filter: (s) => !s.includes(`${dist}/videos`) && !s.includes(`${dist}/voice`) && !/assets\/(voice-|ort-wasm)/.test(s),
+  // (and Ghostscript, 16 MB: the editor's PostScript preview needs the internet once)
+  filter: (s) => !s.includes(`${dist}/videos`) && !s.includes(`${dist}/voice`) && !/assets\/(voice-|ort-wasm|gs-)/.test(s),
 })
 
 writeFileSync(

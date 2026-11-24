@@ -532,6 +532,15 @@ export class XppSession {
     this.mod.FS.writeFile('/work/' + name.replace(/[/\\]/g, '_'), data);
   }
 
+  /** delete a file from XPP's working folder (the editor deleted it) */
+  removeFile(name: string): void {
+    try {
+      this.mod.FS.unlink('/work/' + name.replace(/[/\\]/g, '_'));
+    } catch {
+      /* not there */
+    }
+  }
+
   /** The .ode file XPP was started with. */
   odeName = '';
 

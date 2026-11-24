@@ -10,6 +10,7 @@ import { Loupe, SliderDrawer } from './touch'
 import { ENGINES, WebVoice, canRun, type RealEngine, type WebEngine } from './webvoice'
 import { COMMANDS as CATALOG } from './commands'
 import { snap, type FlowOption } from './voiceflow'
+import * as ws from './workspace'
 import { COMMANDS as VOICE_COMMANDS, helpFor, interpret, learnWords, matchPhrase, plainWords, setOfflineWords, setTaught, spokenForm, vocabulary, words, type Action, type Context } from './voicecmd'
 import { FONT_NAMES, PRESETS, chosenFont, fontArgs, fontKey, saveFont, type FontChoice } from './fonts'
 
@@ -60,6 +61,7 @@ app.innerHTML = `
         </div>
       </details>
       <button type="button" class="micbtn" id="voicehdr" hidden aria-label="Voice commands" title="Voice: speak commands (tap again to stop)">🎤</button>
+      <button type="button" id="editorbtn" title="Open the editor in a new tab: XPP's files with tabs, previews (PostScript, SVG, PNG, data plots) and live checking of .ode files">Editor</button>
       <details class="settings" id="settings">
         <summary title="Exports, output and window options">Settings</summary>
         <div class="settings-panel">
@@ -350,6 +352,13 @@ function notice(msg: string) {
 
 // ---- starting XPP -----------------------------------------------------------
 async function launch(name: string, text: string, extras: Array<{ name: string; data: Uint8Array }> = [], id = name) {
+  // the workspace (files kept in the browser, shared with the editor): its
+  // files go into XPP's folder too; a file edited there wins over an
+  // example's own copy (not the model itself)
+  for (const f of await ws.readAll()) {
+    if (f.name === name || f.data.length > 20_000_000 || /^fort\.\d+$/.test(f.name)) continue
+    extras = [...extras.filter((e) => e.name !== f.name), { name: f.name, data: f.data }]
+  }
   // your own model (examples bring their files): ask for table files it names
   if (!id.includes('/')) {
     const ok = await neededFiles(name, text, extras)
@@ -368,6 +377,7 @@ async function launch(name: string, text: string, extras: Array<{ name: string; 
   $('status').textContent = statusText
   const q = new URLSearchParams(location.search)
   q.set('ode', id) // keep other parameters (e.g. engine=asyncify for testing)
+  q.delete('ws')
   history.replaceState(null, '', '?' + q.toString())
   // the user's click that started XPP can open the output window
   if (store.get('xpp-terminal') === 'window') termMode.value = terminal.setMode('window')
@@ -410,7 +420,8 @@ async function launch(name: string, text: string, extras: Array<{ name: string; 
   mobile.attach(session)
   ;(window as unknown as { xpp: XppSession }).xpp = session // for tests and debugging
   updateScriptCount()
-  setInterval(() => (updateFileCount(), updateScriptCount()), 2000)
+  syncToWorkspace()
+  setInterval(() => (updateFileCount(), updateScriptCount(), syncToWorkspace()), 2000)
   // XPP's WebAssembly started downloading when the page opened; wait for it
   let wasm: ArrayBuffer | undefined
   try {
@@ -534,8 +545,15 @@ fetch('odes/index.json')
     if (session) return
     const q = new URLSearchParams(location.search)
     const want = q.get('ode')
+    const fromWs = q.get('ws')
     const edited = restoreEdited(want)
-    if (edited) launch(edited.name, edited.text, edited.extras, edited.id)
+    if (fromWs) {
+      // the editor's "Run in XPP": a model from the workspace
+      void ws.read(fromWs).then((d) => {
+        if (d) launch(fromWs, ws.textOf(d), [], fromWs)
+        else notice(`${fromWs} is not in the workspace`)
+      })
+    } else if (edited) launch(edited.name, edited.text, edited.extras, edited.id)
     else if (want && splitId(want)[0]) {
       example.value = splitId(want)[0]!.id + '/' + splitId(want)[1]
       loadExample(want)
@@ -691,6 +709,7 @@ exportSelect.addEventListener('change', async () => {
 const pendingExports = new Map<string, ReturnType<typeof setTimeout>>()
 function exported(path: string) {
   const name = path.slice(path.lastIndexOf('/') + 1)
+  if (path.startsWith('/work/')) setTimeout(syncToWorkspace, 300)
   // AUTO's scratch files (fort.3, fort.7, ...) and its working results
   // (<model>.b/.d/.s, appended to on every run) are not exports
   if (/^fort\.\d+$/.test(name) || [odeName + '.b', odeName + '.d', odeName + '.s'].includes(name)) return
@@ -764,6 +783,13 @@ function renderFiles() {
       download(f.name, session!.readFile(f.name))
     })
     name.append(a)
+    const edit = document.createElement('button')
+    edit.type = 'button'
+    edit.className = 'small fedit'
+    edit.textContent = 'Edit'
+    edit.title = 'Open in the editor'
+    edit.addEventListener('click', () => openEditor(f.name))
+    name.append(' ', edit)
     const size = document.createElement('td')
     size.className = 'num'
     size.textContent = formatSize(f.size)
@@ -900,6 +926,72 @@ $('scdownload').addEventListener('click', () => {
   const n = saveScript()
   if (n) download(n, new Blob([$<HTMLTextAreaElement>('sctext').value], { type: 'text/plain' }))
 })
+// ---- the workspace (src/workspace.ts) and the editor (editor.html) ---------------
+/** what the workspace has of each of XPP's files ("size:mtime") */
+const wsSeen = new Map<string, string>()
+let wsBusy = false
+/** XPP's folder -> the workspace: new and changed files */
+async function syncToWorkspace() {
+  if (!session || wsBusy) return
+  wsBusy = true
+  try {
+    for (const f of session.listFiles()) {
+      const key = f.size + ':' + f.mtime
+      if (wsSeen.get(f.name) === key) continue
+      if (/^fort\.\d+$/.test(f.name) || f.size > 20_000_000) continue
+      wsSeen.set(f.name, key)
+      await ws.write(f.name, session.readFile(f.name))
+    }
+  } finally {
+    wsBusy = false
+  }
+}
+const seenNow = (name: string) => {
+  const f = session?.listFiles().find((x) => x.name === name)
+  if (f) wsSeen.set(name, f.size + ':' + f.mtime)
+}
+ws.onMessage(async (m) => {
+  if (m.t === 'hello') return ws.post({ t: 'xpp-here', ode: odeName })
+  if (!session) {
+    // no XPP running here: the editor asks to run a model -> start it
+    if (m.t === 'run-ode') location.href = location.pathname + '?ws=' + encodeURIComponent(m.name)
+    return
+  }
+  if (m.t === 'changed') {
+    const d = await ws.read(m.name)
+    if (d) {
+      session.writeFile(m.name, d)
+      seenNow(m.name)
+      renderFiles()
+      updateFileCount()
+      updateScriptCount()
+    }
+  } else if (m.t === 'deleted') {
+    session.removeFile(m.name)
+    wsSeen.delete(m.name)
+    updateFileCount()
+    updateScriptCount()
+  } else if (m.t === 'run-script') {
+    const d = await ws.read(m.name)
+    if (d) session.writeFile(m.name, d)
+    session.runScript(m.name)
+    notice('Running ' + m.name)
+  } else if (m.t === 'run-ode') {
+    // the edited model, with the workspace's files: a fresh start
+    leaveThen(() => (location.href = location.pathname + '?ws=' + encodeURIComponent(m.name)))
+  }
+})
+/** open the editor in its own tab (on `name`, if given) */
+function openEditor(name?: string) {
+  void syncToWorkspace().then(() => {
+    const w = window.open('editor.html' + (name ? '#' + encodeURIComponent(name) : ''), 'xpp-editor')
+    if (!w) notice('Allow pop-ups for this site to open the editor in a new tab')
+  })
+}
+$('editorbtn').addEventListener('click', () => openEditor())
+// the Android app: no browser tabs (the editor comes to the app later)
+if (inApp) $('editorbtn').hidden = true
+
 // ---- .ode editor --------------------------------------------------------------
 const editor = $<HTMLDialogElement>('editor')
 $('edit').addEventListener('click', () => {
@@ -1374,6 +1466,7 @@ if (!inApp) {
       { label: 'Font size', phrases: ['font size', 'font', 'text size', 'bigger font', 'smaller font'], run: () => openPanel('fontsize') },
       { label: 'Themes', phrases: ['themes', 'theme', 'colors', 'colours', 'change theme'], run: () => openPanel('themes') },
       { label: 'Voice tour', phrases: ['voice tour', 'tour', 'voice help', 'how does voice work'], run: () => voiceTour() },
+      { label: 'Editor', phrases: ['editor', 'open editor', 'open the editor', 'code editor'], run: () => openEditor() },
       { label: 'Dark mode', phrases: ['dark mode', 'dark theme', 'go dark'], run: () => clickTheme('Dark') },
       { label: 'Light mode', phrases: ['light mode', 'light theme', 'go light'], run: () => clickTheme('Light') },
     ]
