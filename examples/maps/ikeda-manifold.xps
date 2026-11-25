@@ -1,0 +1,14 @@
+# Bard's planar map (ikeda.ode): its orbit, the zero-change curves and the
+# stable manifold of a saddle, computed without the inverse map
+# (XPPAUT 8.4, 25 Nov 2026). Saved as ikeda-manifold.png.
+msg "A planar map: the orbit first"
+keys i g                     # Initialconds -> Go
+keys n n                     # Nullcline -> New: x=f(x,y) and y=g(x,y)
+msg "Zero-change curves: they cross at the fixed points"
+pause "Enter: the stable manifold of the saddle near (1.08, -2.41), drawn over them"
+keys s m                     # Sing pts -> Fixed point here ...
+click 1.08 -2.41             # ... near this point
+ans n                        # Print eigenvalues? no
+ans y                        # Draw invariant sets? yes: the stable manifold
+msg "The stable manifold of the saddle (1.083, -2.408)"
+shot ikeda-manifold.png

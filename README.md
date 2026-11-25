@@ -97,6 +97,9 @@ manifolds (8.4)**:
   (England, Krauskopf and Osinga, *SIAM J. Appl. Dyn. Syst.* 3 (2004)
   161–190). Its parameters: nUmerics → **stabLe manifold**. In `ikeda.ode`,
   Sing pts → Fixed point here near (1.08, −2.41) draws the folded manifold.
+- Scripts: `logistic-cobweb.xps` (cobwebs for r = 2.8, 3.2, 3.5, 3.9, each
+  saved as a picture) and `ikeda-manifold.xps` (orbit, zero-change curves,
+  then the stable manifold). Start the model, then File → Do script.
 
 XPPAUT 8.4 (November 2026) can run **scripts**: plain text files (`.xps`) of
 commands that XPP carries out for you, for reproducing a figure exactly, for a

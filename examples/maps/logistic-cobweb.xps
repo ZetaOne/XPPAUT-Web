@@ -1,0 +1,13 @@
+# Cobwebs of the logistic map x(n+1) = r x(n) (1-x(n)) (logistic.ode):
+# a fixed point, period 2, period 4 and chaos (XPPAUT 8.4, 25 Nov 2026).
+# Each one is saved as cobweb-r.png.
+for r in 2.8 3.2 3.5 3.9
+  set r=$r
+  keys i g                   # Initialconds -> Go
+  keys v c                   # Viewaxes -> Cobweb
+  ans "x|0|1"                  # Variable, Xmin, Xmax
+  msg "r = $r"
+  shot cobweb-$r.png
+  pause "Enter: the next r"
+end
+msg "Done: Viewaxes -> 2D goes back to x against t"
