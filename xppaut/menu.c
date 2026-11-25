@@ -63,9 +63,9 @@ void create_the_menus(base)
   char key[30];
   strcpy(key,"icndwakgufpemtsvxr3b");
   add_menu(base,MAIN_MENU,MAIN_ENTRIES,main_menu,key,main_hint);
-  strcpy(key,"tsrdniobmechpukva");
-  key[17]=27;
-  key[18]=0;
+  strcpy(key,"tsrdniobmechpukval");
+  key[18]=27;
+  key[19]=0;
   add_menu(base,NUM_MENU,NUM_ENTRIES,num_menu,key,num_hint);
   /* CLONE */
   strcpy(key,"pwracesbhqtiglxudo");

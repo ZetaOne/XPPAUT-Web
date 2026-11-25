@@ -106,6 +106,7 @@ typedef struct {
 
 void check_flags();
 extern int XNullColor,YNullColor,StableManifoldColor,UnstableManifoldColor;
+extern double MF_LEN,MF_INIT,MF_AMIN,MF_AMAX,MF_DAMIN,MF_DAMAX,MF_DMIN,MF_DMAX;
 int IX_PLT[10],IY_PLT[10],IZ_PLT[10],NPltV;
 int MultiWin=0;
 extern int SimulPlotFlag;
@@ -271,6 +272,14 @@ void notBothOptions(OptionsSet nasA,OptionsSet nasB)
    nasA.TOR_PER = (nasA.TOR_PER & nasB.TOR_PER);
    nasA.JAC_EPS = (nasA.JAC_EPS & nasB.JAC_EPS);
    nasA.NEWT_TOL = (nasA.NEWT_TOL & nasB.NEWT_TOL);
+   nasA.MFLEN = (nasA.MFLEN & nasB.MFLEN);
+   nasA.MFINIT = (nasA.MFINIT & nasB.MFINIT);
+   nasA.MFAMIN = (nasA.MFAMIN & nasB.MFAMIN);
+   nasA.MFAMAX = (nasA.MFAMAX & nasB.MFAMAX);
+   nasA.MFDAMIN = (nasA.MFDAMIN & nasB.MFDAMIN);
+   nasA.MFDAMAX = (nasA.MFDAMAX & nasB.MFDAMAX);
+   nasA.MFDMIN = (nasA.MFDMIN & nasB.MFDMIN);
+   nasA.MFDMAX = (nasA.MFDMAX & nasB.MFDMAX);
    nasA.NEWT_ITER = (nasA.NEWT_ITER & nasB.NEWT_ITER);
    nasA.FOLD = (nasA.FOLD & nasB.FOLD);
    nasA.DTMIN = (nasA.DTMIN & nasB.DTMIN);
@@ -570,6 +579,14 @@ void set_all_vals()
  if (notAlreadySet.EVEC_ERR){EVEC_ERR=.001;notAlreadySet.EVEC_ERR=0;};
  if (notAlreadySet.NULL_ERR){NULL_ERR=.001;notAlreadySet.NULL_ERR=0;};
  if (notAlreadySet.NEWT_ERR){NEWT_ERR=.001;notAlreadySet.NEWT_ERR=0;};
+ if (notAlreadySet.MFLEN){MF_LEN=100.0;notAlreadySet.MFLEN=0;};
+ if (notAlreadySet.MFINIT){MF_INIT=0.001;notAlreadySet.MFINIT=0;};
+ if (notAlreadySet.MFAMIN){MF_AMIN=0.2;notAlreadySet.MFAMIN=0;};
+ if (notAlreadySet.MFAMAX){MF_AMAX=0.3;notAlreadySet.MFAMAX=0;};
+ if (notAlreadySet.MFDAMIN){MF_DAMIN=1e-06;notAlreadySet.MFDAMIN=0;};
+ if (notAlreadySet.MFDAMAX){MF_DAMAX=1e-05;notAlreadySet.MFDAMAX=0;};
+ if (notAlreadySet.MFDMIN){MF_DMIN=1e-06;notAlreadySet.MFDMIN=0;};
+ if (notAlreadySet.MFDMAX){MF_DMAX=0.1;notAlreadySet.MFDMAX=0;};
  if (notAlreadySet.NULL_HERE){NULL_HERE=0;notAlreadySet.NULL_HERE=0;};
  del_stab_flag=DFNORMAL;
  if (notAlreadySet.DTMAX){HMAX=1.000;notAlreadySet.DTMAX=0;};
@@ -1542,6 +1559,78 @@ if(msc(yyl,s1)){
      	TOR_PERIOD=atof(s2);
      	TORUS=1;
 	notAlreadySet.TOR_PER=0;
+     }
+     return;
+   }
+   if(msc("MFLEN",s1)){
+     if ((notAlreadySet.MFLEN||force) || ((mask!=NULL)&&(mask->MFLEN==1)))
+     {
+	double mfv=atof(s2);
+	if(mfv>0.0)MF_LEN=mfv;
+	notAlreadySet.MFLEN=0;
+     }
+     return;
+   }
+   if(msc("MFINIT",s1)){
+     if ((notAlreadySet.MFINIT||force) || ((mask!=NULL)&&(mask->MFINIT==1)))
+     {
+	double mfv=atof(s2);
+	if(mfv>0.0)MF_INIT=mfv;
+	notAlreadySet.MFINIT=0;
+     }
+     return;
+   }
+   if(msc("MFAMIN",s1)){
+     if ((notAlreadySet.MFAMIN||force) || ((mask!=NULL)&&(mask->MFAMIN==1)))
+     {
+	double mfv=atof(s2);
+	if(mfv>0.0)MF_AMIN=mfv;
+	notAlreadySet.MFAMIN=0;
+     }
+     return;
+   }
+   if(msc("MFAMAX",s1)){
+     if ((notAlreadySet.MFAMAX||force) || ((mask!=NULL)&&(mask->MFAMAX==1)))
+     {
+	double mfv=atof(s2);
+	if(mfv>0.0)MF_AMAX=mfv;
+	notAlreadySet.MFAMAX=0;
+     }
+     return;
+   }
+   if(msc("MFDAMIN",s1)){
+     if ((notAlreadySet.MFDAMIN||force) || ((mask!=NULL)&&(mask->MFDAMIN==1)))
+     {
+	double mfv=atof(s2);
+	if(mfv>0.0)MF_DAMIN=mfv;
+	notAlreadySet.MFDAMIN=0;
+     }
+     return;
+   }
+   if(msc("MFDAMAX",s1)){
+     if ((notAlreadySet.MFDAMAX||force) || ((mask!=NULL)&&(mask->MFDAMAX==1)))
+     {
+	double mfv=atof(s2);
+	if(mfv>0.0)MF_DAMAX=mfv;
+	notAlreadySet.MFDAMAX=0;
+     }
+     return;
+   }
+   if(msc("MFDMIN",s1)){
+     if ((notAlreadySet.MFDMIN||force) || ((mask!=NULL)&&(mask->MFDMIN==1)))
+     {
+	double mfv=atof(s2);
+	if(mfv>0.0)MF_DMIN=mfv;
+	notAlreadySet.MFDMIN=0;
+     }
+     return;
+   }
+   if(msc("MFDMAX",s1)){
+     if ((notAlreadySet.MFDMAX||force) || ((mask!=NULL)&&(mask->MFDMAX==1)))
+     {
+	double mfv=atof(s2);
+	if(mfv>0.0)MF_DMAX=mfv;
+	notAlreadySet.MFDMAX=0;
      }
      return;
    }

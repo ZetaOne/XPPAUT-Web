@@ -147,7 +147,7 @@ export class MobileUI {
         num('Bounds', 'b', true), num('Ncline ctrl', 'n'), num('Sing pt ctrl', 'i'),
         num('Delay', 'e', true), num('Color code', 'c'), num('Poincaré map', 'p'),
         num('Stochastic', 'h'), num('Ruelle plot', 'u'), num('Lookup', 'k'),
-        num('Bndry val', 'v'), num('Averaging', 'a'),
+        num('Bndry val', 'v'), num('Averaging', 'a'), num('Map manifold', 'l'),
         { label: 'Done', hint: 'Esc', keys: ['Escape'], page: 'main' },
         ...common.slice(1),
       ],

@@ -79,6 +79,14 @@ typedef struct {
    int TOR_PER;
    int JAC_EPS;
    int NEWT_TOL;
+   int MFLEN;
+   int MFINIT;
+   int MFAMIN;
+   int MFAMAX;
+   int MFDAMIN;
+   int MFDAMAX;
+   int MFDMIN;
+   int MFDMAX;
    int NEWT_ITER;
    int FOLD;
    int DTMIN;

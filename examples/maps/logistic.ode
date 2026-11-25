@@ -1,0 +1,10 @@
+# The logistic map, for cobwebbing (XPPAUT 8.4, 25 Nov 2026)
+# Viewaxes -> Cobweb draws the cobweb of x(n+1) = r x(n) (1-x(n)) from the
+#   initial condition (it works for 1D maps). Change r: 2.8 (a fixed
+#   point), 3.2 (period 2), 3.5 (period 4), 3.9 (chaos).
+par r=3.7
+init x=0.2
+x'=r*x*(1-x)
+@ meth=discrete,total=200
+@ xp=t,yp=x,xlo=0,xhi=200,ylo=0,yhi=1
+d

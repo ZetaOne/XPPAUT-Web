@@ -1762,6 +1762,29 @@ KeySym XLookupKeysym(XKeyEvent *ev, int index)
   return ev->keycode <= MAX_KEYCODE ? keycode_sym[ev->keycode] : NoSymbol;
 }
 
+/* the name of a keysym (XPPAUT 8.4's XPP_KEYDEBUG messages): printable
+   ASCII and the keys XPP uses; others as hex */
+char *XKeysymToString(KeySym ks)
+{
+  static char buf[16];
+  static const struct { KeySym ks; const char *name; } names[] = {
+    {XK_Return, "Return"}, {XK_Escape, "Escape"}, {XK_Tab, "Tab"},
+    {XK_BackSpace, "BackSpace"}, {XK_Delete, "Delete"}, {XK_Left, "Left"},
+    {XK_Right, "Right"}, {XK_Up, "Up"}, {XK_Down, "Down"}, {XK_Home, "Home"},
+    {XK_End, "End"}, {XK_Prior, "Prior"}, {XK_Next, "Next"},
+    {XK_space, "space"},
+  };
+  if (ks == NoSymbol) return NULL;
+  for (size_t i = 0; i < sizeof names / sizeof names[0]; i++)
+    if (names[i].ks == ks) return (char *)names[i].name;
+  if (ks > 0x20 && ks < 0x7f) {
+    buf[0] = (char)ks;
+    buf[1] = 0;
+  } else
+    snprintf(buf, sizeof buf, "0x%lx", (unsigned long)ks);
+  return buf;
+}
+
 KeyCode XKeysymToKeycode(Display *d, KeySym ks)
 {
   (void)d;

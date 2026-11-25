@@ -56,7 +56,7 @@ export const COMMANDS: XppCommand[] = [
   ...menu('Freeze curves', 'g f', 'f:Freeze curve|d:Delete frozen curve|e:Edit frozen curve|r:Remove all frozen|k:Key|b:Import bif. diagram|c:Clear bif. diagram|o:Auto freeze on/off'),
   ...menu('Colormap', 'g c', 'n:Normal|p:Periodic|h:Hot|c:Cool|b:Blue-red|g:Gray|u:Cubehelix'),
   ...menu('Sing pts', 's', 'g:Sing pts|m:Fixed point here|r:Range|c:Monte Carlo'),
-  ...menu('View axes', 'v', '2:2D view|3:3D view|a:Array plot|t:Animation (toon)'),
+  ...menu('View axes', 'v', '2:2D view|3:3D view|a:Array plot|t:Animation (toon)|c:Cobweb (1D map)'),
   ...menu('Make window', 'm', 'c:Create window|k:Kill all windows|d:Destroy window|b:Window to bottom|a:Auto redraw|m:Manual redraw|s:Simultaneous plot'),
   ...menu('Text, markers', 't', 't:Text|a:Arrow|p:Pointer|m:Marker|d:Delete all|s:Markers from data'),
   ...menu('Text, markers', 't e', 'm:Move item|c:Change item|d:Delete item'),
@@ -66,7 +66,7 @@ export const COMMANDS: XppCommand[] = [
   ...menu('Edit equations', 'f e', 'r:Edit RHS|f:Edit functions|s:Save as'),
   // ---- Numerics (XPP stays in its Numerics menu: the Cmd panel shows that page)
   ...menu('Numerics', 'u', 't:Total*|s:Start time*|r:Transient*|d:Dt*|o:nOutput*|b:Bounds*|e:Delay*|' +
-    'n:Nullcline mesh|i:Sing pt control|u:Ruelle plot|v:BVP numerics|m:Method', { page: 'numerics' }),
+    'n:Nullcline mesh|i:Sing pt control|u:Ruelle plot|v:BVP numerics|m:Method|l:Map manifold (stable manifold of a planar map)', { page: 'numerics' }),
   ...menu('Method', 'u m', 'r:Runge-Kutta|q:Qualst. RK4 (adaptive)|5:Dormand-Prince 5|8:Dormand-Prince 8(3)|g:Gear|c:CVODE|' +
     's:Stiff|2:Rosenbrock 2(3)|b:Backward Euler|a:Adams|m:Modified Euler|e:Euler|d:Discrete|v:Volterra|y:Symplectic', { page: 'numerics' }),
   ...menu('Color code', 'u c', 'n:No color|v:Color by velocity|a:Color by another quantity', { page: 'numerics' }),

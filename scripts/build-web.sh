@@ -21,6 +21,7 @@ import json, os, shutil, sys
 root = sys.argv[1]
 groups = [  # folders relative to the project
     ("bard-renew", "bard-renew", "examples/bard-renew"),
+    ("maps", "Maps: cobweb, manifolds (8.4)", "examples/maps"),
     ("xpp82", "New in XPPAUT 8.2", "examples/xpp82"),
     ("xpp81", "New in XPPAUT 8.1", "examples/xpp81"),
     ("ode", "XPP examples", "xppaut/ode"),

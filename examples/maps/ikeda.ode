@@ -1,0 +1,14 @@
+# A planar map (Ikeda type), from Bard Ermentrout (XPPAUT 8.4, 25 Nov 2026)
+# Nullclines: the zero-change curves x=f(x,y), y=g(x,y); they cross at
+#   the fixed points.
+# Sing pts on a saddle computes its 1D stable manifold (England, Krauskopf
+#   and Osinga, SIAM J. Appl. Dyn. Syst. 3 (2004) 161-190); its parameters
+#   are in nUmerics -> stabLe manifold. Try Sing pts -> Fixed point here
+#   near the saddle (1.08,-2.41), then Draw invariant sets -> YES.
+par a=1,b=.9,e=1,phi=.4,q=6
+m=phi-q/(1+x^2+y^2)
+x'=a+b*x*cos(m)-e*y*sin(m)
+y'=b*y*cos(m)+e*x*sin(m)
+@ meth=discrete,total=200
+@ xp=x,yp=y,xlo=-9,xhi=2,ylo=-5,yhi=3
+d

@@ -43,6 +43,7 @@ extern int XPPBatch;
 
 int NullStyle=0; /* 1 is with little vertical/horizontal lines */
 extern int (*rhs)();
+extern int METHOD;
 void user_set_color_par(); /* XPPAUT-Web: return type must match the definition (wasm traps on mismatch) */
 double atof();
 extern int DRight,DLeft,DTop,DBottom;
@@ -956,6 +957,9 @@ float fnull( x, y)
   y1[null_iy-1]=(double)y;
   rhs(0.0,y1,ydot,NODE);
   /*  plintf(" %f  %f %f \n ", x,y,ydot[WHICH_CRV-1]); */
+  /* a map (x,y)->(f,g): the "nullclines" are the curves of zero change,
+     f(x,y)-x=0 and g(x,y)-y=0 */
+  if(METHOD==0)return((float)(ydot[WHICH_CRV-1]-y1[WHICH_CRV-1]));
   return((float)ydot[WHICH_CRV-1]);
  }
 

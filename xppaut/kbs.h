@@ -128,6 +128,7 @@ KBS kbs[400]={
   {M_V3,"v3"},
   {M_VA,"va"},
   {M_VT,"vt"},
+  {M_VC,"vc"},
   {M_UAN,"uan"},
   {M_UAM,"uam"},
   {M_UAA,"uaa"},

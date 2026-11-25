@@ -7,6 +7,7 @@
 #include "flags.h"
 #include "integrate.h"
 #include "abort.h"
+#include "mapview.h"
 
 #include <stdlib.h> 
 #include <math.h>
@@ -291,12 +292,17 @@ if(!PAR_FOL)
      get_evec(work,oldwork,b,bp,n,maxit,err,ipivot,eval[2*nege],ierr);
      if(*ierr==0)
      {
+       if(METHOD==0){
+	 /* maps cannot be run backwards: use the inverse-free algorithm */
+	 map_stable_manifold(x,eval[2*nege],b,n);
+       } else {
         change_current_linestyle(StableManifoldColor,&oldcol);
 	pr_evec(x,b,n,pr,eval[2*nege],-1);
       DELTA_T=-fabs(DELTA_T);
       shoot(bp,x,b,1);
       shoot(bp,x,b,-1);
         change_current_linestyle(oldcol,&dummy);
+       }
      }
      else
      err_msg("Failed to compute eigenvector");

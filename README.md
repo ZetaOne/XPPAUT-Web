@@ -84,6 +84,20 @@ points after the old ones, instead of starting again at label 1 (so no two
 points share a label). Example: `lecar-two-diagrams.xps`. Saved diagrams now
 keep every digit.
 
+**25 November 2026: maps (discrete dynamics).** Three new tools for
+`meth=discrete` models; examples in the Model list under **Maps: cobweb,
+manifolds (8.4)**:
+
+- **Viewaxes → Cobweb**: the cobweb diagram of a 1D map (`logistic.ode`;
+  change `r` and watch the period doubling).
+- **Nullclines** of a planar map are its zero-change curves, x = f(x,y)
+  and y = g(x,y); they cross at the fixed points (`ikeda.ode`).
+- **Stable manifolds of planar maps**: Sing pts at a saddle → Draw
+  invariant sets computes its 1D stable manifold without the inverse map
+  (England, Krauskopf and Osinga, *SIAM J. Appl. Dyn. Syst.* 3 (2004)
+  161–190). Its parameters: nUmerics → **stabLe manifold**. In `ikeda.ode`,
+  Sing pts → Fixed point here near (1.08, −2.41) draws the folded manifold.
+
 XPPAUT 8.4 (November 2026) can run **scripts**: plain text files (`.xps`) of
 commands that XPP carries out for you, for reproducing a figure exactly, for a
 tutorial with pauses, or for a parameter sweep. Bard Ermentrout's manual:

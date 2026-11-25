@@ -1118,7 +1118,8 @@ int *used;
   if(my_browser.xflag==0)return;
  XGetInputFocus(display,&w2,&rev);
 
- if(w==b->main||w==b->base||w==b->upper||w2==b->base)
+ /* as in auto_keypress: a scripted key goes to the window it was sent to */
+ if(w==b->main||w==b->base||w==b->upper||(w2==b->base&&!ev.xkey.send_event))
  {
   *used=1;
   

@@ -1337,7 +1337,9 @@ void auto_keypress_x(ev,used)
   if(Auto.exist==0)return;
   XGetInputFocus(display,&w2,&rev);
 
- if(w==AutoW.base||w==AutoW.canvas||w2==AutoW.base)
+ /* a key sent by a script (send_event) belongs to the window it was sent to; only a
+    real keystroke follows the keyboard focus (XQuartz gives the focus to new windows) */
+ if(w==AutoW.base||w==AutoW.canvas||(w2==AutoW.base&&!ev.xkey.send_event))
  {
    *used=1;
    rec_key_kind(2);                 /* recorded as autokeys (xpp_script.c) */

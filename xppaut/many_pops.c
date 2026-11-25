@@ -1,3 +1,4 @@
+#include "mapview.h"
 #include "xpplim.h"
 #include "many_pops.h"
 
@@ -992,6 +993,7 @@ void ps_restore()
  redraw_dfield();
  ps_do_color(0);
  if(MyGraph->Nullrestore){restore_nullclines();ps_stroke();}
+ map_overlay_redraw();
   }
  ps_last_pt_off(); 
 
@@ -1020,6 +1022,7 @@ void svg_restore()
   
   redraw_dfield();
  if(MyGraph->Nullrestore){restore_nullclines();}
+ map_overlay_redraw();
   svg_last_pt_off();
  /*ps_do_color(0);*/ 
  restore(0,my_browser.maxrow);
@@ -1150,6 +1153,7 @@ void do_expose(ev)
 		draw_label(graph[i].w);
 		draw_freeze(graph[i].w);
 		if(graph[i].Nullrestore)restore_nullclines();
+		map_overlay_redraw();
 	}
      }
   } /* namual expose */  

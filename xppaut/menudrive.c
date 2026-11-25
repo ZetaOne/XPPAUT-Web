@@ -1,4 +1,5 @@
 #include <stdlib.h>  
+#include "mapview.h"
 
 #include <sys/wait.h>
 #include <unistd.h>
@@ -343,6 +344,7 @@ void run_the_commands(int com)
   }
 
   if(com==M_EE){
+    map_overlay_clear();
     clr_all_scrns();
     DF_FLAG=0;
     return;
@@ -387,7 +389,7 @@ void run_the_commands(int com)
   }
   
   
-  if(com>=M_V2&&com<=M_VT)change_view_com(com-M_V2);
+  if(com>=M_V2&&com<=M_VC)change_view_com(com-M_V2);
   if((com>=M_UAN&&com<=M_UAR)||(com>=M_UAI&&com<=M_UAB)||com==M_UA2)make_adj_com(com-M_UAN);
   if(com>=M_UCN&&com<=M_UCA)set_col_par_com(com-M_UCN);
   if(com>=M_UPN&&com<=M_UPP)get_pmap_pars_com(com-M_UPN);
@@ -598,16 +600,16 @@ ch=(char)pop_up_list(&temp,"Bndry Value Prob",n,key,4,16,1,10,6*DCURY+8,
 void change_view()
 {
 Window temp=main_win;
- static char *n[]={"2D" ,"3D","Array","Toon"};
- static char key[]="23at"; 
+ static char *n[]={"2D" ,"3D","Array","Toon","Cobweb"};
+ static char key[]="23atc"; 
  char ch;
  int i;
  
- ch=(char)pop_up_list(&temp,"Axes",n,key,4,5,0,10,13*DCURY+8,
+ ch=(char)pop_up_list(&temp,"Axes",n,key,5,5,0,10,13*DCURY+8,
 		      view_hint,info_pop,info_message);
- for(i=0;i<4;i++)
+ for(i=0;i<5;i++)
    if(ch==key[i])break;
- if(i>=0&&i<4)run_the_commands(M_V2+i);
+ if(i>=0&&i<5)run_the_commands(M_V2+i);
 }
 
 

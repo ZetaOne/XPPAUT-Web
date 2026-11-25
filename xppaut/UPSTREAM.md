@@ -1,7 +1,7 @@
 # Upstream source
 
 This directory is the official XPPAUT 8.0 source release by Bard Ermentrout,
-updated to XPPAUT 8.1, 8.2 and 8.4 (including its updates of 21 and 23 November) with the source Bard sent in November 2026 (see
+updated to XPPAUT 8.1, 8.2 and 8.4 (including its updates of 21, 23 and 25 November) with the source Bard sent in November 2026 (see
 "XPPAUT 8.1", "XPPAUT 8.2" and "XPPAUT 8.4" below). Upstream files are kept unmodified apart from the
 patches listed here, so web-specific changes stay visible in git history.
 
@@ -266,3 +266,35 @@ Batch outputs: 144 SAME, 9 NOOUT. Checked with `lecar-two-diagrams.xps`
 diagram's points are labels 6 and 7 on branch 2 in the desktop build and in
 the browser (both engines); the 19 November build gave labels 1 and 2 on
 branch 1 again.
+
+### XPPAUT 8.4 update (Bard Ermentrout, 25 November 2026)
+
+`xppsrc8.4.tgz` (SHA-256 5fcc5336c63b00d4f7177092751740dce45d259d050e6b0e767d3212d80266e2),
+merged three-way on top of the 23 November source. Version still 8.4.2.
+Discrete dynamics (maps):
+
+- New files `mapview.c/.h` (overlay curves that survive redraws; Viewaxes ->
+  Cobweb for 1D maps) and `mapmanifold.c/.h` (1D stable manifold of a saddle
+  of a planar map without the inverse, after England, Krauskopf and Osinga,
+  SIAM J. Appl. Dyn. Syst. 3 (2004)). Also in `web/objects.txt`.
+- Nullclines of planar maps are the zero-change curves (`nullcline.c`);
+  Sing pts on a saddle of a map calls `map_stable_manifold` (`gear.c`);
+  nUmerics -> stabLe manifold sets its parameters (`numerics.c`); menu
+  entries in `menu.c`, `menudrive.c/.h`, `menus.h`, `many_pops.c`, `kbs.h`;
+  other changes in `auto_x11.c`, `browse.c`, `graf_par.c`, `init_conds.c`,
+  `load_eqn.c/.h`, `main.c`, `pop_list.c` (XPP_KEYDEBUG messages),
+  `xpp_script.c`, `Makefile`.
+
+Two conflicts, both ours vs. his includes/declarations: `menudrive.c` keeps
+our `<stdlib.h>` (not `stdfix.h`) and adds his `mapview.h`; `nullcline.c`
+keeps our `void user_set_color_par()` and adds his `extern int METHOD`.
+`pop_list.c` now calls `XKeysymToString`, added to our Xlib layer
+(`web/xlib/xlib.c`).
+
+Batch outputs: 144 SAME, 9 NOOUT. Checked in the browser and in the desktop
+build (Xvfb) with Bard's map (`examples/maps/ikeda.ode`): the same zero-change
+curves; at the saddle (1.0833, -2.408) both draw the same folded stable
+manifold (branch 1: 5333 points, left the region; branch 2: 50580 points,
+arclength 100). At the other saddle (0.5107, 0.2731; multipliers -0.306 and
+-2.39) both stop after 3 points ("step fell below Delta_min"). Cobweb on
+`examples/maps/logistic.ode` works.

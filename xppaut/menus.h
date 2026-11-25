@@ -10,7 +10,7 @@
 #define MAIN_ENTRIES 20
 /* CLONE */
 #define FILE_ENTRIES 18
-#define NUM_ENTRIES 18
+#define NUM_ENTRIES 19
 char *main_menu[]={
  "XPP","Initialconds","Continue","Nullcline",
  "Dir.field/flow","Window/zoom","phAsespace",
@@ -22,7 +22,8 @@ char *main_menu[]={
 char *num_menu[]={"NUMERICS","Total","Start time","tRansient",
 "Dt","Ncline ctrl","sIng pt ctrl","nOutput","Bounds","Method",
 "dElay","Color code","stocHast","Poincare map","rUelle plot",
-"looKup","bndVal","Averaging","[Esc]-exit"};
+"looKup","bndVal","Averaging","stabLe manifold",
+"[Esc]-exit"};
 /* CLONE change */  
 
 char *fileon_menu[]={
@@ -113,6 +114,7 @@ char *num_hint[]={
 "Modify lookup tables",
 "Numerical setup for boundary value solver",
 "Compute adjoint and averaged functions",
+"Stable manifolds of planar maps: parameters",
 "Return to main menu"
 };
 
@@ -268,7 +270,8 @@ char *view_hint[]={
   "Two-dimensional view settings",
   "Three-dimensional view settings",
   "Plot array ",
-  "Animation window"
+  "Animation window",
+  "Cobweb diagram for a map"
 };
 
 char *half_hint[]={

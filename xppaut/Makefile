@@ -133,7 +133,7 @@ HEADERS = abort.h browse.h do_fit.h iterativ.h my_rhs.h shoot.h \
 	  auto_x11.h derived.h histogram.h menus.h  rubber.h xAuto.h \
 	  axes2.h  diagram.h init_conds.h my_pars.h run_auto.h xpplim.h \
 	  band.h  dialog_box.h integrate.h my_ps.h  scrngif.h spgmr.h \
-	  arrayplot.h cv2.h  extra.h load_eqn.h newpars.h struct.h \
+	  arrayplot.h cv2.h  extra.h load_eqn.h newpars.h struct.h mapview.h mapmanifold.h \
 	  array_print.h comline.h endfile.h llnltyps.h newhome.h storage.h surface.h dde_po.h xpp_script.h  	
 
 BITMAPS = aniwin.bitmap alert.bitmap bc.bitmap eqns.bitmap info.bitmap ic.bitmap pp.bitmap\
@@ -178,7 +178,7 @@ OBJECTS = abort.o  cabs.o  delay_handle.o graf_par.o my_ps.o  simplenet.o \
 	  auto_nox.o cvspgmr.o fftn.o  lunch-new.o pp_shoot.o z_abs.o \
 	  auto_x11.o d_imag.o flags.o  main.o  r_lg10.o z_exp.o periodic_ic.o hopf_l1.o phase_red.o lyapunov.o \
 	  autpp.o  d_lg10.o form_ode.o many_pops.o read_dir.o z_log.o \
-	  axes2.o  d_sign.o gear.o  markov.o rubber.o \
+	  axes2.o  d_sign.o gear.o mapview.o mapmanifold.o  markov.o rubber.o \
 	  band.o  dae_fun.o ggets.o  menu.o  scrngif.o \
 	  browse.o del_stab.o del_spec.o gogoauto.o menudrive.o setubv2.o surface.o dde_po.o dde_po_xpp.o xpp_script.o\
 

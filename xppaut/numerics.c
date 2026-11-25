@@ -1,4 +1,5 @@
 
+#include "mapview.h"
 #include "numerics.h"
 #include <strings.h>
 
@@ -146,6 +147,10 @@ void  get_num_par(ch)
    switch(ch){
                case 'a':
                        make_adj();
+		       break;
+
+		case 'l':
+		       map_manifold_params();
 		       break;
 
 		case 't': flash(0);

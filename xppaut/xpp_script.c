@@ -211,6 +211,7 @@ void script_set_options(int nopause,int exitflag)
 int script_requested(void){return script_name[0]!=0;}
 int script_is_active(void){return active;}
 void script_set_top(int flag){at_top=flag;}
+int script_at_top(void){return at_top;}
 int script_nopause(void){return opt_nopause;}
 double script_key_delay(void){return opt_nopause?0.0:key_delay;}
 

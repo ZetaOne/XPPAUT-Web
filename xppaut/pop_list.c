@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <sys/time.h>
 #include <sys/select.h>
 #include "xpp_script.h"
@@ -1148,7 +1149,20 @@ void xpp_next_event(XEvent *ev)
       if(XPending(display)==0){
         r=script_poll(&ms,ev);
         if(r==1)continue;
-        if(r==3)return;       /* a scripted key press */
+        if(r==3){             /* a scripted key press */
+          if(getenv("XPP_KEYDEBUG")){
+            int script_at_top(void);
+            Window fw; int rv;
+            XGetInputFocus(display,&fw,&rv);
+            if(ev->type==KeyPress)
+              fprintf(stderr,"[keydebug] key %s -> window 0x%lx, focus 0x%lx, main loop %d\n",
+                      XKeysymToString(XLookupKeysym(&ev->xkey,0)),ev->xkey.window,fw,script_at_top());
+            else
+              fprintf(stderr,"[keydebug] button -> window 0x%lx, focus 0x%lx, main loop %d\n",
+                      ev->xbutton.window,fw,script_at_top());
+          }
+          return;
+        }
         if(r==2){
 #ifdef __EMSCRIPTEN__
           /* XPPAUT-Web: no X connection to select() on; let the page run
