@@ -603,8 +603,8 @@ export class MobileUI {
     d.setAttribute('aria-label', 'Touch tips')
     d.innerHTML = `<h3>XPP on a touch screen</h3>
       <ul>
-        <li><b>Tap</b> = click, <b>drag</b> = drag. <b>Hold</b> a finger to magnify
-          what is under it, with the graph's coordinates; a longer hold is a right click.</li>
+        <li><b>Tap</b> = click, <b>drag</b> = drag. <b>Hold</b> a finger on the graph to
+          magnify it, with its coordinates; a longer hold is a right click.</li>
         <li><b>Pinch</b> to zoom, <b>two fingers</b> to move; <b>Fit</b> fits the window.
           Turn the phone sideways for a larger graph.</li>
         <li><b>Cmd</b>: XPP's commands, one tap each: <i>Tap to start</i> (tap the graph to

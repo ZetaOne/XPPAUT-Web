@@ -1,6 +1,7 @@
 // Touch helpers around XPP's windows (phones and tablets only):
-//  - a loupe: holding a finger on a window magnifies what is under it and,
-//    over the graph, shows XPP's coordinates there;
+//  - a loupe: holding a finger on the graph magnifies what is under it and
+//    shows XPP's coordinates there (not over sliders, buttons or text, where
+//    it only got in the way of dragging);
 //  - a slider drawer: large sliders for parameters, which drive XPP's own
 //    three Par/Var sliders (so XPP re-runs the integration itself).
 // XPP's windows are not changed; these are page elements over them.
@@ -14,7 +15,7 @@ export class Loupe {
   private el: HTMLElement
   private lens: HTMLCanvasElement
   private label: HTMLElement
-  private finger: { id: number; timer: number; on: boolean; canvas: HTMLCanvasElement } | null = null
+  private finger: { id: number; timer: number; on: boolean; canvas: HTMLCanvasElement; x: number; y: number } | null = null
   enabled = () => true
   private session: () => XppSession | null
 
@@ -49,19 +50,23 @@ export class Loupe {
     const id = e.pointerId
     const [x, y] = [e.clientX, e.clientY]
     this.finger = {
-      id, canvas: c, on: false,
-      // a short hold shows it; a quick tap does not
+      id, canvas: c, on: false, x, y,
+      // a short, still hold on the graph shows it; a tap or a drag does not
       timer: window.setTimeout(() => {
-        if (this.finger?.id !== id) return
-        this.finger.on = true
-        this.show(x, y)
+        const f = this.finger
+        if (f?.id !== id) return
+        if (!this.session()?.graphAt(f.x, f.y, c)) return // a slider, button, text
+        f.on = true
+        this.show(f.x, f.y)
       }, 220),
     }
   }
 
   private move(e: PointerEvent) {
-    if (!this.finger || e.pointerId !== this.finger.id) return
-    if (this.finger.on) this.show(e.clientX, e.clientY)
+    const f = this.finger
+    if (!f || e.pointerId !== f.id) return
+    if (f.on) this.show(e.clientX, e.clientY)
+    else if (Math.hypot(e.clientX - f.x, e.clientY - f.y) > 8) this.hide() // dragging: no loupe
   }
 
   private up(e: PointerEvent) {

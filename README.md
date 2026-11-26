@@ -283,8 +283,9 @@ The phone layout is chosen automatically (switch it under **Settings → View**)
   stability and eigenvalues;
   **Sliders** gives large sliders for parameters (XPP re-runs as you move
   one); **Share graph**, **Data (CSV)** and **Share .ode** export in one tap.
-- **Hold a finger** on a window to magnify what is under it, with the
-  graph's coordinates (also on AUTO's bifurcation diagram).
+- **Hold a finger** on the graph to magnify what is under it, with its
+  coordinates (also on AUTO's bifurcation diagram). Sliders, buttons and
+  menus are left alone, and a drag never brings up the magnifier.
 - **Landscape**: the whole window fits the screen, with the controls at the
   sides. **Settings → Rotation** can lock portrait or landscape (in the
   Android app, or when installed).
