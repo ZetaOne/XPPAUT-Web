@@ -48,7 +48,7 @@ const root = document.getElementById('ed')!
 root.innerHTML = `
   <header class="ed-title">
     <button type="button" id="sidebtn" title="Files (explorer)" aria-label="Files">☰</button>
-    <span class="brand"><img src="./icon-192.png" alt="">XPPAUT editor</span>
+    <span class="brand"><img src="./editor-icon-192.png" alt="">XPPAUT editor</span>
     <button type="button" id="newbtn" title="New file in the workspace">New</button>
     <button type="button" id="upbtn" title="Add files to the workspace">Add files</button>
     <button type="button" id="folderbtn" class="wide" title="Open a folder on this computer: edit its files in place">Open folder</button>
