@@ -401,13 +401,13 @@ shows **Update** when a new version is published.
 
 ## Android app (in development)
 
-[**Download XPPAUT-1.10-dev.apk**](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.10-dev/XPPAUT-1.10-dev.apk)
+[**Download XPPAUT-1.11-dev.apk**](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.11-dev/XPPAUT-1.11-dev.apk)
 (13 MB, Android 10 or newer). Open it on the phone and allow installing from
 that app when Android asks. It updates an earlier version in place.
 
-The file is **13,422,867 bytes**, SHA-256
-`8406a669c18220e75f7fee7b0ebd582e396ab3969c3cafcadf5e5756288b6f6c`
-([checksum file](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.10-dev/XPPAUT-1.10-dev.apk.sha256)).
+The file is **13,707,912 bytes**, SHA-256
+`b232c09abc1cc0f38a0da494fe857ad616d8fea66933f3bc507752fac1d7020b`
+([checksum file](https://github.com/ZetaOne/XPPAUT-Web/releases/download/android-1.11-dev/XPPAUT-1.11-dev.apk.sha256)).
 If Android says *"package appears to be invalid"*, the download is usually
 incomplete: compare the size (Files app → Details) and download it again,
 then open it from the Files app.
@@ -424,6 +424,9 @@ The website in an app, working offline, with XPPAUT 8.4, plus:
   plotted data (curves, nullclines, direction field) and XPP's state.
 - **Back** = Esc, and the screen stays on while XPP computes.
 - **.ode editor** that checks the model with XPP's own parser as you type.
+- **The editor in the app** (**XPP | Editor** at the top; side by side on a
+  tablet): a folder per model, ▶ Run in XPP, the running script line in a
+  strip under XPP, and **Folder** to edit files in a folder on the phone.
 - **Voice control (🎤)**: XPP's commands, setting values ("set gk to 2.5"),
   your Cmd panel's buttons and your own phrases, and dictating `.ode` lines.
   It uses the phone's own speech recognition by default, or an offline model
